@@ -25,6 +25,9 @@ func TestNewMetrics_Constructs(t *testing.T) {
 	if m.UsageCredits == nil {
 		t.Fatal("UsageCredits counter is nil")
 	}
+	if m.UpstreamDuration == nil {
+		t.Fatal("UpstreamDuration histogram is nil")
+	}
 	// Constructing again in the same process must not panic — every
 	// Metrics uses its own private Registry, not the process default.
 	_ = NewMetrics()
@@ -42,6 +45,7 @@ func TestNewMetrics_HandlerExposesMetricNames(t *testing.T) {
 	m.AccountsActive.Set(0)
 	m.JobsInFlight.Set(0)
 	m.UsageCredits.WithLabelValues("video", "completed").Add(0)
+	m.UpstreamDuration.WithLabelValues("fetch_wallet", "200").Observe(0.001)
 
 	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
 	rec := httptest.NewRecorder()
@@ -60,10 +64,45 @@ func TestNewMetrics_HandlerExposesMetricNames(t *testing.T) {
 		"higgsgo_accounts_active",
 		"higgsgo_jobs_in_flight",
 		"higgsgo_usage_credits_hundredths_total",
+		"higgsgo_upstream_request_duration_seconds",
 	}
 	for _, name := range wantNames {
 		if !strings.Contains(text, name) {
 			t.Errorf("metrics body missing %q\n--body--\n%s", name, text)
 		}
 	}
+}
+
+// TestObserveUpstreamDuration verifies the observation reaches the Prometheus
+// histogram: after one call the scrape output must show a bucket sample with
+// the labelled series name.
+func TestObserveUpstreamDuration(t *testing.T) {
+	m := NewMetrics()
+	m.ObserveUpstreamDuration("fetch_wallet", "200", 0.123)
+
+	req := httptest.NewRequest(http.MethodGet, "/metrics", nil)
+	rec := httptest.NewRecorder()
+	m.Handler().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("Handler status = %d, want 200", rec.Code)
+	}
+	body, _ := io.ReadAll(rec.Body)
+	text := string(body)
+	if !strings.Contains(text, `higgsgo_upstream_request_duration_seconds_count{endpoint="fetch_wallet",status="200"} 1`) {
+		t.Errorf("expected count=1 series for (fetch_wallet,200) in body:\n%s", text)
+	}
+}
+
+// TestObserveUpstreamDurationNil documents that calling ObserveUpstreamDuration
+// on a nil receiver is a safe no-op. Callers wire the sink optionally, so a
+// nil Metrics must not panic.
+func TestObserveUpstreamDurationNil(t *testing.T) {
+	defer func() {
+		if r := recover(); r != nil {
+			t.Fatalf("panic on nil receiver: %v", r)
+		}
+	}()
+	var m *Metrics
+	m.ObserveUpstreamDuration("fetch_wallet", "200", 0.123)
 }

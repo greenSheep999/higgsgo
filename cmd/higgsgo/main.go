@@ -126,6 +126,7 @@ func run() error {
 	// early so the recorder can be handed a non-nil *Metrics at
 	// construction time.
 	metrics := observability.NewMetrics()
+	upstreamClient.Metrics = metrics
 
 	// Metering recorder: shared by the sync proxy path and the async
 	// pollworker. Both invoke OnJobTerminal at the terminal transition so

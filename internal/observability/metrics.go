@@ -36,6 +36,14 @@ type Metrics struct {
 	// here so the collector goroutine and the recorder can share the
 	// same Metrics pointer without another refactor.
 	UsageCredits *prometheus.CounterVec // labels: media_type, status
+
+	// Upstream calls to higgsfield.ai.
+	//
+	// Wall-clock duration of a single logical upstream call (from the
+	// upstream.Client's perspective) with the terminal HTTP status. A
+	// 401 -> remint -> 200 sequence is one observation with
+	// status="200", not two.
+	UpstreamDuration *prometheus.HistogramVec // labels: endpoint, status
 }
 
 // NewMetrics builds a Metrics with all collectors registered against a
@@ -69,6 +77,14 @@ func NewMetrics() *Metrics {
 			Name: "higgsgo_usage_credits_hundredths_total",
 			Help: "Total credits (in hundredths) charged, partitioned by media_type and terminal job status.",
 		}, []string{"media_type", "status"}),
+		UpstreamDuration: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    "higgsgo_upstream_request_duration_seconds",
+				Help:    "Duration of upstream requests to higgsfield.ai, in seconds.",
+				Buckets: []float64{0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60, 120, 300},
+			},
+			[]string{"endpoint", "status"},
+		),
 	}
 	reg.MustRegister(
 		m.HTTPRequests,
@@ -77,8 +93,19 @@ func NewMetrics() *Metrics {
 		m.AccountsActive,
 		m.JobsInFlight,
 		m.UsageCredits,
+		m.UpstreamDuration,
 	)
 	return m
+}
+
+// ObserveUpstreamDuration records a single terminal upstream call duration.
+// Safe to call with a nil receiver or an uninitialized UpstreamDuration so
+// callers can wire the metrics sink optionally without nil-checking.
+func (m *Metrics) ObserveUpstreamDuration(endpoint, status string, seconds float64) {
+	if m == nil || m.UpstreamDuration == nil {
+		return
+	}
+	m.UpstreamDuration.WithLabelValues(endpoint, status).Observe(seconds)
 }
 
 // Handler returns an http.Handler that serves the Prometheus text-format

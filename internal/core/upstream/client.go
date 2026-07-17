@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,11 +23,25 @@ import (
 	"github.com/greensheep999/higgsgo/internal/ports"
 )
 
+// MetricsSink is the narrow subset of the observability metrics surface the
+// upstream client depends on. Defined locally to keep this package free of
+// a hard dependency on internal/observability and to keep the unit tests
+// self-contained (they can pass a fake without pulling in a Prometheus
+// registry).
+type MetricsSink interface {
+	ObserveUpstreamDuration(endpoint, status string, seconds float64)
+}
+
 // Client submits jobs to fnf.higgsfield.ai and polls their status.
 type Client struct {
 	http    ports.UpstreamClient
 	jwt     *jwt.Minter
 	baseURL string
+
+	// Metrics, when non-nil, receives one ObserveUpstreamDuration call
+	// per terminal doWithRetry outcome. Wiring is optional: callers that
+	// do not care about metrics leave this nil.
+	Metrics MetricsSink
 }
 
 // Config controls Client construction.
@@ -82,7 +97,7 @@ func (c *Client) CreateJob(ctx context.Context, r CreateRequest) (*CreateRespons
 		return req, nil
 	}
 
-	resp, err := c.doWithRetry(ctx, r.Account, build)
+	resp, err := c.doWithRetry(ctx, "create_job", r.Account, build)
 	if err != nil {
 		return nil, fmt.Errorf("upstream: %w", err)
 	}
@@ -138,7 +153,7 @@ func (c *Client) FetchStatus(ctx context.Context, account *domain.Account, jobID
 		c.setStdHeaders(req, account, token, false)
 		return req, nil
 	}
-	resp, err := c.doWithRetry(ctx, account, build)
+	resp, err := c.doWithRetry(ctx, "fetch_status", account, build)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +182,7 @@ func (c *Client) FetchJob(ctx context.Context, account *domain.Account, jobID st
 		c.setStdHeaders(req, account, token, false)
 		return req, nil
 	}
-	resp, err := c.doWithRetry(ctx, account, build)
+	resp, err := c.doWithRetry(ctx, "fetch_job", account, build)
 	if err != nil {
 		return nil, err
 	}
@@ -278,7 +293,7 @@ func (c *Client) FetchUser(ctx context.Context, account *domain.Account) (*UserS
 		c.setStdHeaders(req, account, token, false)
 		return req, nil
 	}
-	resp, err := c.doWithRetry(ctx, account, build)
+	resp, err := c.doWithRetry(ctx, "fetch_user", account, build)
 	if err != nil {
 		return nil, err
 	}
@@ -307,7 +322,7 @@ func (c *Client) FetchWallet(ctx context.Context, account *domain.Account) (*Wal
 		c.setStdHeaders(req, account, token, false)
 		return req, nil
 	}
-	resp, err := c.doWithRetry(ctx, account, build)
+	resp, err := c.doWithRetry(ctx, "fetch_wallet", account, build)
 	if err != nil {
 		return nil, err
 	}
@@ -341,20 +356,37 @@ func (c *Client) FetchWallet(ctx context.Context, account *domain.Account) (*Wal
 // This makes the client self-healing when clerk revokes a cached JWT before
 // its exp claim (account bans, key rotation, clock drift): the first call
 // sees 401, we invalidate and re-mint, and the second call succeeds.
-func (c *Client) doWithRetry(ctx context.Context, account *domain.Account, buildReq func(token string) (*http.Request, error)) (*http.Response, error) {
+//
+// endpoint is a low-cardinality label used only for Prometheus histogram
+// observations (e.g. "fetch_wallet"). Timing covers the full logical call
+// including a retry: a 401 -> remint -> 200 sequence records exactly one
+// observation with status="200" and the total elapsed wall time.
+func (c *Client) doWithRetry(ctx context.Context, endpoint string, account *domain.Account, buildReq func(token string) (*http.Request, error)) (*http.Response, error) {
+	start := time.Now()
+	var finalStatus string
+	defer func() {
+		if c.Metrics != nil {
+			c.Metrics.ObserveUpstreamDuration(endpoint, finalStatus, time.Since(start).Seconds())
+		}
+	}()
+
 	tok, err := c.jwt.Get(ctx, account)
 	if err != nil {
+		finalStatus = "network_error"
 		return nil, fmt.Errorf("mint jwt: %w", err)
 	}
 	req, err := buildReq(tok.JWT)
 	if err != nil {
+		finalStatus = "network_error"
 		return nil, err
 	}
 	resp, err := c.http.Do(ctx, req)
 	if err != nil {
+		finalStatus = "network_error"
 		return nil, err
 	}
 	if resp.StatusCode != http.StatusUnauthorized {
+		finalStatus = statusCodeString(resp.StatusCode)
 		return resp, nil
 	}
 
@@ -367,13 +399,51 @@ func (c *Client) doWithRetry(ctx context.Context, account *domain.Account, build
 	c.jwt.Invalidate(account.ID)
 	tok2, err := c.jwt.Get(ctx, account)
 	if err != nil {
+		finalStatus = "network_error"
 		return nil, fmt.Errorf("remint jwt after 401: %w", err)
 	}
 	req2, err := buildReq(tok2.JWT)
 	if err != nil {
+		finalStatus = "network_error"
 		return nil, err
 	}
-	return c.http.Do(ctx, req2)
+	resp2, err := c.http.Do(ctx, req2)
+	if err != nil {
+		finalStatus = "network_error"
+		return nil, err
+	}
+	finalStatus = statusCodeString(resp2.StatusCode)
+	return resp2, nil
+}
+
+// statusCodeString renders an HTTP status code as a low-cardinality label
+// value for the upstream latency histogram. Common codes get pre-interned
+// strings; anything else falls back to strconv.Itoa. Keeping this list short
+// intentionally bounds the label cardinality.
+func statusCodeString(code int) string {
+	switch code {
+	case 200:
+		return "200"
+	case 201:
+		return "201"
+	case 400:
+		return "400"
+	case 401:
+		return "401"
+	case 403:
+		return "403"
+	case 404:
+		return "404"
+	case 429:
+		return "429"
+	case 500:
+		return "500"
+	case 502:
+		return "502"
+	case 503:
+		return "503"
+	}
+	return strconv.Itoa(code)
 }
 
 // setStdHeaders applies the exact header set a real Chrome browser sends
