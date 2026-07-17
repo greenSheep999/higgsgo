@@ -31,8 +31,8 @@ func TestOpenAppliesMigrations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query schema_versions: %v", err)
 	}
-	if v < 4 {
-		t.Fatalf("expected schema_versions.version >= 4, got %d (migration 004 not applied?)", v)
+	if v < 6 {
+		t.Fatalf("expected schema_versions.version >= 6, got %d (migration 006 not applied?)", v)
 	}
 
 	// accounts table should exist and be empty.
@@ -73,6 +73,24 @@ func TestOpenAppliesMigrations(t *testing.T) {
 	}
 	if cpaCount != 1 {
 		t.Fatalf("api_keys.cpa_partner_id column missing (migration 004 not applied)")
+	}
+
+	// Migration 006 adds composite indexes for list / purge / usage hot
+	// paths. Sanity check a couple by name; the migration_perf_test.go
+	// suite covers each new index individually.
+	for _, idx := range []string{
+		"idx_jobs_api_key_request_ts",
+		"idx_usage_api_key_ts",
+	} {
+		var idxCount int
+		if err := db.QueryRow(
+			`SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name = ?`, idx,
+		).Scan(&idxCount); err != nil {
+			t.Fatalf("query sqlite_master (%s): %v", idx, err)
+		}
+		if idxCount != 1 {
+			t.Fatalf("index %s missing (migration 006 not applied)", idx)
+		}
 	}
 }
 
