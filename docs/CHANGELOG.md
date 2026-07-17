@@ -144,6 +144,33 @@ Commits referenced inline as `[hash]` are reachable from `main`; run
   / `actor` / `resource_type` / `resource_id` / `method` filters
   matching the AuditFilter port. Same response shape as
   `/admin/usage`. Commit [c773bc5].
+- **Audit middleware extended to `/internal/*`** so CPA plugin
+  writes land in `audit_events` too. The lookup table maps
+  `/internal/register` and `/internal/{partner_id}` to
+  `resource_type=cpa_partner`, `/internal/execute` to
+  `cpa_execute`, `/internal/registrations/{id}` to
+  `cpa_registration`. Commit [1b8427e].
+
+#### Key lifecycle
+- **`/admin/keys/{id}/rotate|pause|resume|reset_usage`** POST
+  endpoints back the four missing key states operators previously
+  had to reach with raw SQL. Rotate mints a fresh `sk-hg-<40hex>`
+  and returns the plaintext once; pause and resume flip
+  `active` <-> `paused` (revoked stays terminal); reset_usage
+  zeros `monthly_used` without touching the quota. The
+  APIKeyAuth middleware now rejects paused keys with 401
+  `api_key_paused` and revoked with 401 `api_key_revoked` so
+  clients can branch on the two. Migration 008 adds
+  `api_keys.updated_at` so operators can order by last-modified.
+  Commit [7da0839].
+
+#### Registry hot-reload
+- **`POST /admin/models/reload`** reloads
+  `data/reference/verified-models.json` in place. Response
+  includes `previous_count` / `current_count` for a quick "did it
+  pick up the new file" sanity check. Wrapped in a 30 s ctx;
+  errors surface as `500 reload_failed`. Nil registry -> 503.
+  Commit [df7e130].
 
 #### Documentation
 - **Operations runbook + API reference** covering deploy, backup,
