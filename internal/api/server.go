@@ -14,6 +14,7 @@ import (
 	"github.com/greensheep999/higgsgo/internal/api/middleware"
 	"github.com/greensheep999/higgsgo/internal/api/v1"
 	"github.com/greensheep999/higgsgo/internal/config"
+	"github.com/greensheep999/higgsgo/internal/observability"
 	"github.com/greensheep999/higgsgo/internal/ports"
 )
 
@@ -24,11 +25,12 @@ type Server struct {
 	Config   *config.Config
 	Logger   *slog.Logger
 	V1       *v1.Handler
-	APIKeys  ports.APIKeyStore     // required for /v1 auth and /admin/keys
-	Accounts ports.AccountStore    // required for /admin/accounts and /admin/stats
-	Jobs     ports.JobStore        // optional; used by /admin/stats
-	Usage    ports.UsageEventStore // optional; used by /admin/usage
-	Groups   ports.GroupStore      // optional; used by /admin/groups
+	APIKeys  ports.APIKeyStore      // required for /v1 auth and /admin/keys
+	Accounts ports.AccountStore     // required for /admin/accounts and /admin/stats
+	Jobs     ports.JobStore         // optional; used by /admin/stats
+	Usage    ports.UsageEventStore  // optional; used by /admin/usage
+	Groups   ports.GroupStore       // optional; used by /admin/groups
+	Metrics  *observability.Metrics // optional; enables /metrics + per-request instrumentation
 
 	public   *http.Server
 	admin    *http.Server
@@ -38,7 +40,7 @@ type Server struct {
 // New builds a Server. Handlers are wired up here; concrete route
 // registrations (v1 / admin / internal) live in sibling files as they are
 // implemented.
-func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore) *Server {
+func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore, metrics *observability.Metrics) *Server {
 	s := &Server{
 		Config:   cfg,
 		Logger:   logger,
@@ -48,6 +50,7 @@ func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys
 		Jobs:     jobs,
 		Usage:    usage,
 		Groups:   groups,
+		Metrics:  metrics,
 	}
 
 	s.public = &http.Server{
@@ -119,8 +122,18 @@ func (s *Server) publicRouter() http.Handler {
 	r.Use(chimw.Recoverer)
 	r.Use(chimw.RequestID)
 	r.Use(middleware.AccessLog(s.Logger))
+	if s.Metrics != nil {
+		r.Use(middleware.HTTPMetrics(s.Metrics, middleware.DefaultRoutePattern))
+	}
 
 	r.Get("/health", s.healthHandler)
+	if s.Metrics != nil {
+		// Public /metrics has no auth for now — Prometheus scrapers
+		// typically hit an unauthenticated endpoint bound to a private
+		// interface. TODO: gate with an IP allowlist or move behind the
+		// admin listener once we have a Prom scraper story.
+		r.Method(http.MethodGet, "/metrics", s.Metrics.Handler())
+	}
 
 	if s.V1 != nil {
 		r.Route("/v1", func(r chi.Router) {
@@ -159,6 +172,9 @@ func (s *Server) adminRouter() http.Handler {
 	r := chi.NewRouter()
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.AccessLog(s.Logger))
+	if s.Metrics != nil {
+		r.Use(middleware.HTTPMetrics(s.Metrics, middleware.DefaultRoutePattern))
+	}
 
 	r.Get("/health", s.healthHandler)
 

@@ -219,8 +219,22 @@ func run() error {
 		go tk.Run(ctx)
 	}
 
+	// Prometheus metrics: one Registry, shared with the HTTP middleware
+	// and the pool collector goroutine below. Constructed after storage
+	// so we can start the collector immediately.
+	metrics := observability.NewMetrics()
+	poolCollector := &observability.PoolCollector{
+		Accounts: accountStore,
+		Jobs:     jobStore,
+		Metrics:  metrics,
+		Interval: 15 * time.Second,
+		Logger:   logger,
+	}
+	go poolCollector.Run(ctx)
+	logger.Info("pool collector started", slog.Duration("interval", poolCollector.Interval))
+
 	// Boot API server.
-	srv := api.New(cfg, logger, v1h, apiKeyStore, accountStore, jobStore, usageStore, groupStore)
+	srv := api.New(cfg, logger, v1h, apiKeyStore, accountStore, jobStore, usageStore, groupStore, metrics)
 	if err := srv.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("serve: %w", err)
 	}
