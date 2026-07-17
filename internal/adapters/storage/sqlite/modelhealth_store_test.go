@@ -133,3 +133,91 @@ func TestModelHealthStore_LatestPerJST(t *testing.T) {
 		t.Errorf("veo3 verdict: got %q want failed", veo3.Verdict)
 	}
 }
+
+func TestModelHealthStore_List_Empty(t *testing.T) {
+	db := openMem(t)
+	store := NewModelHealthStore(db)
+	rows, err := store.List(context.Background())
+	if err != nil {
+		t.Fatalf("list empty: %v", err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("empty table: got %d rows want 0", len(rows))
+	}
+}
+
+func TestModelHealthStore_List_OrderByCheckedAtDesc(t *testing.T) {
+	db := openMem(t)
+	store := NewModelHealthStore(db)
+	ctx := context.Background()
+
+	base := time.Now().UTC().Truncate(time.Second)
+	// Insert 3 rows for different jsts with rising checked_at so
+	// DESC order is oldest last.
+	rows := []struct {
+		jst  string
+		at   time.Time
+		vdc  domain.JobStatus
+	}{
+		{"seedance_2_0", base.Add(-2 * time.Hour), domain.JobCompleted},
+		{"veo3_1", base.Add(-1 * time.Hour), domain.JobFailed},
+		{"text2image_soul", base, domain.JobCompleted},
+	}
+	for _, r := range rows {
+		if err := store.Insert(ctx, r.jst, r.at, r.vdc, 200, 0, 1); err != nil {
+			t.Fatalf("insert %s: %v", r.jst, err)
+		}
+	}
+
+	got, err := store.List(ctx)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("row count: got %d want 3", len(got))
+	}
+	want := []string{"text2image_soul", "veo3_1", "seedance_2_0"}
+	for i, w := range want {
+		if got[i].JST != w {
+			t.Errorf("row %d: got %q want %q", i, got[i].JST, w)
+		}
+	}
+}
+
+func TestModelHealthStore_List_MultipleVerdicts(t *testing.T) {
+	db := openMem(t)
+	store := NewModelHealthStore(db)
+	ctx := context.Background()
+	base := time.Now().UTC().Truncate(time.Second)
+
+	rows := []struct {
+		jst string
+		vdc domain.JobStatus
+	}{
+		{"a", domain.JobCompleted},
+		{"b", domain.JobFailed},
+		{"c", domain.JobPending},
+	}
+	for i, r := range rows {
+		if err := store.Insert(ctx, r.jst, base.Add(time.Duration(i)*time.Minute), r.vdc, 200, 0, 1); err != nil {
+			t.Fatalf("insert %s: %v", r.jst, err)
+		}
+	}
+
+	got, err := store.List(ctx)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("row count: got %d want 3", len(got))
+	}
+	seen := map[domain.JobStatus]bool{}
+	for _, r := range got {
+		seen[r.Verdict] = true
+	}
+	for _, want := range []domain.JobStatus{domain.JobCompleted, domain.JobFailed, domain.JobPending} {
+		if !seen[want] {
+			t.Errorf("verdict %q missing from list", want)
+		}
+	}
+}

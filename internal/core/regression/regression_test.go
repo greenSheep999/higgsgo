@@ -117,6 +117,20 @@ func (h *fakeHealthStore) Latest(ctx context.Context, jst string) (*ports.ModelH
 	return nil, nil
 }
 
+// List satisfies the ports.ModelHealthStore interface. The regression
+// ticker never calls List itself; this shim exists so the fake still
+// implements the full interface after /admin/model-health added the
+// List method.
+func (h *fakeHealthStore) List(context.Context) ([]ports.ModelHealthRow, error) {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	out := make([]ports.ModelHealthRow, 0, len(h.latest))
+	for _, row := range h.latest {
+		out = append(out, row)
+	}
+	return out, nil
+}
+
 func (h *fakeHealthStore) seedLatest(jst string, checkedAt time.Time) {
 	h.mu.Lock()
 	defer h.mu.Unlock()

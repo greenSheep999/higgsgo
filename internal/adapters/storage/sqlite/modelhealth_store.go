@@ -80,6 +80,32 @@ func (s *ModelHealthStore) Latest(ctx context.Context, jst string) (*ports.Model
 	return scanModelHealth(row)
 }
 
+// List returns every row in model_health, newest probe first
+// (ORDER BY checked_at DESC). The table is bounded by the model
+// catalog size, so pagination is intentionally omitted — admin
+// surfaces consume it in one shot.
+func (s *ModelHealthStore) List(ctx context.Context) ([]ports.ModelHealthRow, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT jst, checked_at, verdict, http_status, cost, poll_time_sec
+		FROM model_health
+		ORDER BY checked_at DESC`)
+	if err != nil {
+		return nil, fmt.Errorf("list model health: %w", err)
+	}
+	defer rows.Close()
+	var out []ports.ModelHealthRow
+	for rows.Next() {
+		r, err := scanModelHealth(rows)
+		if err != nil {
+			return nil, err
+		}
+		if r != nil {
+			out = append(out, *r)
+		}
+	}
+	return out, rows.Err()
+}
+
 // scanModelHealth reads one model_health row into a ports.ModelHealthRow.
 // Returns (nil, nil) when the row set is empty so Latest can distinguish
 // "never checked" from actual errors.

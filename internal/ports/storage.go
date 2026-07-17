@@ -265,6 +265,11 @@ type ProxyFilter struct {
 type ModelHealthStore interface {
 	Insert(ctx context.Context, jst string, checkedAt time.Time, verdict domain.JobStatus, httpStatus int, cost int64, pollSec int) error
 	Latest(ctx context.Context, jst string) (*ModelHealthRow, error)
+	// List returns every model_health row across all jst values, newest
+	// first (ORDER BY checked_at DESC). No pagination: the table is
+	// bounded by the model catalog size (~130 jsts × recent history),
+	// which is small enough for admin surfaces to consume in one shot.
+	List(ctx context.Context) ([]ModelHealthRow, error)
 }
 
 // ModelHealthRow is one row from the model_health table.

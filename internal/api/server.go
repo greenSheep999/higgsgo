@@ -31,6 +31,7 @@ type Server struct {
 	Jobs      ports.JobStore         // optional; used by /admin/stats
 	Usage     ports.UsageEventStore  // optional; used by /admin/usage
 	Groups    ports.GroupStore       // optional; used by /admin/groups
+	Health    ports.ModelHealthStore // optional; used by /admin/model-health
 	Metrics   *observability.Metrics // optional; enables /metrics + per-request instrumentation
 	CPAPlugin *cpaplugin.Handler     // optional; enables /internal/* (Mode B)
 
@@ -42,7 +43,7 @@ type Server struct {
 // New builds a Server. Handlers are wired up here; concrete route
 // registrations (v1 / admin / internal) live in sibling files as they are
 // implemented.
-func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore, metrics *observability.Metrics, cpa *cpaplugin.Handler) *Server {
+func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore, metrics *observability.Metrics, cpa *cpaplugin.Handler, health ports.ModelHealthStore) *Server {
 	s := &Server{
 		Config:    cfg,
 		Logger:    logger,
@@ -52,6 +53,7 @@ func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys
 		Jobs:      jobs,
 		Usage:     usage,
 		Groups:    groups,
+		Health:    health,
 		Metrics:   metrics,
 		CPAPlugin: cpa,
 	}
@@ -198,6 +200,9 @@ func (s *Server) adminRouter() http.Handler {
 		}
 		if s.Groups != nil {
 			admin.NewGroupsHandler(s.Groups).Register(r)
+		}
+		if s.Health != nil {
+			admin.NewModelHealthHandler(s.Health).Register(r)
 		}
 	})
 	return r
