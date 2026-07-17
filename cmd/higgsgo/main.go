@@ -154,6 +154,7 @@ func run() error {
 		Clock:            ports.RealClock{},
 		AsyncByDefault:   true,
 		SyncPollDeadline: 3 * time.Minute,
+		APIKeys:          apiKeyStore,
 		Meter:            meter,
 		Webhooks:         webhooks,
 	}
@@ -169,6 +170,7 @@ func run() error {
 	worker.Accounts = accountStore
 	worker.Upstream = upstreamClient
 	worker.Logger = logger
+	worker.APIKeys = apiKeyStore
 	worker.Meter = meter
 	worker.Webhooks = webhooks
 	go worker.Run(ctx)

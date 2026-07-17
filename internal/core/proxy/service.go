@@ -34,6 +34,14 @@ type Service struct {
 	Logger   *slog.Logger
 	Clock    ports.Clock
 
+	// APIKeys, when non-nil, is consulted at the terminal transition to look
+	// up the caller's APIKey.MarkupPct so the Recorder can apply the
+	// operator-configured markup on top of the actual upstream credits. If
+	// the lookup fails or the key row is missing, we fall through with
+	// markupPct=0 (Recorder treats that as 1.0, i.e. no markup) and log a
+	// warning — metering must never block on this.
+	APIKeys ports.APIKeyStore
+
 	// Meter, when non-nil, receives a usage event after each terminal job.
 	// The service only fires it on the sync path — the pollworker owns
 	// metering for async jobs.
@@ -340,7 +348,8 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 			// when it detects a zero or negative balance delta.
 			freshAcc = acc
 		}
-		if err := s.Meter.OnJobTerminal(ctx, mJob, freshAcc, preBalance, 0); err != nil && s.Logger != nil {
+		markup := s.resolveMarkup(ctx, req.APIKeyID)
+		if err := s.Meter.OnJobTerminal(ctx, mJob, freshAcc, preBalance, markup); err != nil && s.Logger != nil {
 			s.Logger.Warn("metering failed",
 				slog.String("job_id", created.JobID),
 				slog.String("err", err.Error()))
@@ -448,6 +457,30 @@ func mapUpstreamError(err error, spec *domain.ModelSpec) error {
 	// for future account-switching retries.
 	_ = spec
 	return err
+}
+
+// resolveMarkup looks up APIKey.MarkupPct for the given key id. Returns 0
+// when APIKeys is nil, the key id is empty, or the lookup fails — the
+// Recorder treats 0 as "no markup" (multiplier 1.0). A missing row after
+// auth already verified the key is unlikely (revoked mid-flight) so we log
+// at warn level and continue; accounting must not block on this.
+func (s *Service) resolveMarkup(ctx context.Context, apiKeyID string) float64 {
+	if s.APIKeys == nil || apiKeyID == "" {
+		return 0
+	}
+	k, err := s.APIKeys.Get(ctx, apiKeyID)
+	if err != nil {
+		if s.Logger != nil {
+			s.Logger.Warn("resolve markup failed",
+				slog.String("api_key_id", apiKeyID),
+				slog.String("err", err.Error()))
+		}
+		return 0
+	}
+	if k == nil {
+		return 0
+	}
+	return k.MarkupPct
 }
 
 func (s *Service) now() time.Time {

@@ -63,6 +63,13 @@ type Worker struct {
 	Upstream UpstreamPoller
 	Logger   *slog.Logger
 
+	// APIKeys, when non-nil, is consulted at the terminal transition to look
+	// up APIKey.MarkupPct so the Recorder can apply the operator-configured
+	// markup on top of the actual upstream credits. Lookup failures fall
+	// back to markup=0 (Recorder treats 0 as multiplier 1.0). Metering
+	// must never block on this.
+	APIKeys ports.APIKeyStore
+
 	// TickInterval is how often the worker wakes up. Default 8s.
 	TickInterval time.Duration
 
@@ -280,7 +287,8 @@ func (w *Worker) pollOne(ctx context.Context, j *domain.Job, now time.Time) {
 		if getErr != nil || freshAcc == nil {
 			freshAcc = acc
 		}
-		if err := w.Meter.OnJobTerminal(ctx, j, freshAcc, j.PreBalanceH, 0); err != nil {
+		markup := w.resolveMarkup(ctx, j.APIKeyID)
+		if err := w.Meter.OnJobTerminal(ctx, j, freshAcc, j.PreBalanceH, markup); err != nil {
 			w.Logger.Warn("metering failed",
 				slog.String("job_id", j.ID),
 				slog.String("err", err.Error()))
@@ -328,7 +336,8 @@ func (w *Worker) markTimeout(ctx context.Context, j *domain.Job) {
 	// consumed credits before we gave up.
 	if w.Meter != nil {
 		if acc, aerr := w.Accounts.Get(ctx, j.AccountID); aerr == nil && acc != nil {
-			if err := w.Meter.OnJobTerminal(ctx, j, acc, j.PreBalanceH, 0); err != nil {
+			markup := w.resolveMarkup(ctx, j.APIKeyID)
+			if err := w.Meter.OnJobTerminal(ctx, j, acc, j.PreBalanceH, markup); err != nil {
 				w.Logger.Warn("metering failed",
 					slog.String("job_id", j.ID),
 					slog.String("err", err.Error()))
@@ -345,6 +354,28 @@ func (w *Worker) markTimeout(ctx context.Context, j *domain.Job) {
 	if w.OnTerminal != nil {
 		w.OnTerminal(j)
 	}
+}
+
+// resolveMarkup looks up APIKey.MarkupPct for the caller behind this job.
+// Returns 0 when APIKeys is nil, the job carries no api_key_id, the key row
+// is missing, or the lookup errors — Recorder treats 0 as multiplier 1.0.
+// Failures are logged at warn level but never propagated: metering must not
+// block a terminal transition.
+func (w *Worker) resolveMarkup(ctx context.Context, apiKeyID string) float64 {
+	if w.APIKeys == nil || apiKeyID == "" {
+		return 0
+	}
+	k, err := w.APIKeys.Get(ctx, apiKeyID)
+	if err != nil {
+		w.Logger.Warn("resolve markup failed",
+			slog.String("api_key_id", apiKeyID),
+			slog.String("err", err.Error()))
+		return 0
+	}
+	if k == nil {
+		return 0
+	}
+	return k.MarkupPct
 }
 
 // isTerminal matches upstream's terminal statuses.
