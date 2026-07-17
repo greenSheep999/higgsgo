@@ -323,6 +323,149 @@ func TestRotateKey(t *testing.T) {
 	}
 }
 
+func TestPauseKey(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	store := sqlite.NewAPIKeyStore(db)
+
+	createAPIKey(t, ctx, db, "key_pause", "to pause", 0, 0)
+
+	var buf bytes.Buffer
+	if err := pauseKeyExec(ctx, &buf, store, "key_pause"); err != nil {
+		t.Fatalf("pauseKeyExec: %v", err)
+	}
+
+	var res pauseKeyResult
+	if err := json.Unmarshal(buf.Bytes(), &res); err != nil {
+		t.Fatalf("output not valid JSON: %v\n%s", err, buf.String())
+	}
+	if res.ID != "key_pause" || res.Status != "paused" {
+		t.Errorf("unexpected result: %+v", res)
+	}
+
+	// Confirm the row actually flipped in the underlying store, not just
+	// that the CLI printed the string.
+	got, err := store.Get(ctx, "key_pause")
+	if err != nil {
+		t.Fatalf("get after pause: %v", err)
+	}
+	if got.Status != "paused" {
+		t.Errorf("row status = %q, want paused", got.Status)
+	}
+}
+
+func TestPauseKey_NotFound(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	store := sqlite.NewAPIKeyStore(db)
+
+	var buf bytes.Buffer
+	err := pauseKeyExec(ctx, &buf, store, "does_not_exist")
+	if err == nil {
+		t.Fatalf("expected error when pausing missing key, got nil")
+	}
+	if err != domain.ErrAPIKeyNotFound {
+		t.Errorf("expected ErrAPIKeyNotFound, got %v", err)
+	}
+}
+
+func TestResumeKey(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	store := sqlite.NewAPIKeyStore(db)
+
+	createAPIKey(t, ctx, db, "key_resume", "to resume", 0, 0)
+	if err := store.Pause(ctx, "key_resume"); err != nil {
+		t.Fatalf("pause before resume: %v", err)
+	}
+
+	var buf bytes.Buffer
+	if err := resumeKeyExec(ctx, &buf, store, "key_resume"); err != nil {
+		t.Fatalf("resumeKeyExec: %v", err)
+	}
+
+	var res resumeKeyResult
+	if err := json.Unmarshal(buf.Bytes(), &res); err != nil {
+		t.Fatalf("output not valid JSON: %v\n%s", err, buf.String())
+	}
+	if res.ID != "key_resume" || res.Status != "active" {
+		t.Errorf("unexpected result: %+v", res)
+	}
+
+	got, err := store.Get(ctx, "key_resume")
+	if err != nil {
+		t.Fatalf("get after resume: %v", err)
+	}
+	if got.Status != "active" {
+		t.Errorf("row status = %q, want active", got.Status)
+	}
+}
+
+func TestResumeKey_Revoked(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	store := sqlite.NewAPIKeyStore(db)
+
+	createAPIKey(t, ctx, db, "key_revoked", "already revoked", 0, 0)
+	if err := store.Revoke(ctx, "key_revoked"); err != nil {
+		t.Fatalf("revoke before resume: %v", err)
+	}
+
+	var buf bytes.Buffer
+	err := resumeKeyExec(ctx, &buf, store, "key_revoked")
+	if err == nil {
+		t.Fatalf("expected error when resuming revoked key, got nil")
+	}
+	if err != domain.ErrAPIKeyRevoked {
+		t.Errorf("expected ErrAPIKeyRevoked, got %v", err)
+	}
+}
+
+func TestResetUsage(t *testing.T) {
+	ctx := context.Background()
+	db := openTestDB(t)
+	store := sqlite.NewAPIKeyStore(db)
+
+	createAPIKey(t, ctx, db, "key_reset", "to reset", 10_000, 0)
+	if err := store.IncrementUsage(ctx, "key_reset", 500); err != nil {
+		t.Fatalf("increment usage: %v", err)
+	}
+
+	// Sanity-check the increment landed before we reset it.
+	before, err := store.Get(ctx, "key_reset")
+	if err != nil {
+		t.Fatalf("get before reset: %v", err)
+	}
+	if before.MonthlyUsed != 500 {
+		t.Fatalf("pre-reset monthly_used = %d, want 500", before.MonthlyUsed)
+	}
+
+	var buf bytes.Buffer
+	if err := resetUsageExec(ctx, &buf, store, "key_reset"); err != nil {
+		t.Fatalf("resetUsageExec: %v", err)
+	}
+
+	var res resetUsageResult
+	if err := json.Unmarshal(buf.Bytes(), &res); err != nil {
+		t.Fatalf("output not valid JSON: %v\n%s", err, buf.String())
+	}
+	if res.ID != "key_reset" || res.MonthlyUsed != 0 {
+		t.Errorf("unexpected result: %+v", res)
+	}
+
+	after, err := store.Get(ctx, "key_reset")
+	if err != nil {
+		t.Fatalf("get after reset: %v", err)
+	}
+	if after.MonthlyUsed != 0 {
+		t.Errorf("row monthly_used = %d, want 0", after.MonthlyUsed)
+	}
+	// Quota must stay intact — reset only zeroes the counter.
+	if after.MonthlyQuota != 10_000 {
+		t.Errorf("row monthly_quota = %d, want 10000", after.MonthlyQuota)
+	}
+}
+
 // TestListJobs_AccountFilter is a small extra guard on the -account flag path
 // so filter composition (status+account) is covered too.
 func TestListJobs_AccountFilter(t *testing.T) {

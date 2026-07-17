@@ -9,6 +9,9 @@
 //	show-usage [flags]        aggregate usage_events by model over a time window
 //	disable-key <id>          mark an api key revoked
 //	rotate-key <id>           mint a new secret, rotate the hash, print plaintext once
+//	pause-key <id>            flip an api key to status=paused
+//	resume-key <id>           flip a paused api key back to status=active
+//	reset-usage <id>          zero the monthly_used counter for an api key
 package main
 
 import (
@@ -66,6 +69,12 @@ func dispatch(cmd string, args []string) error {
 		return cmdDisableKey(args)
 	case "rotate-key":
 		return cmdRotateKey(args)
+	case "pause-key":
+		return cmdPauseKey(args)
+	case "resume-key":
+		return cmdResumeKey(args)
+	case "reset-usage":
+		return cmdResetUsage(args)
 	case "help", "-h", "--help":
 		usage()
 		return nil
@@ -84,6 +93,9 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  show-usage [-config PATH] [-format ...] [-hours N]")
 	fmt.Fprintln(os.Stderr, "  disable-key [-config PATH] <api_key_id>          mark a key revoked")
 	fmt.Fprintln(os.Stderr, "  rotate-key  [-config PATH] <api_key_id>          rotate a key and print the new secret once")
+	fmt.Fprintln(os.Stderr, "  pause-key   [-config PATH] <api_key_id>          flip a key to status=paused")
+	fmt.Fprintln(os.Stderr, "  resume-key  [-config PATH] <api_key_id>          flip a paused key back to status=active")
+	fmt.Fprintln(os.Stderr, "  reset-usage [-config PATH] <api_key_id>          zero the monthly_used counter for a key")
 }
 
 // openDB reads the config file (or its default location) and opens the
@@ -516,6 +528,118 @@ func rotateKeyExec(ctx context.Context, out io.Writer, db *sql.DB, id string) er
 	enc := json.NewEncoder(out)
 	enc.SetIndent("", "  ")
 	return enc.Encode(&payload)
+}
+
+// ---------- pause-key ----------
+
+// pauseKeyResult is the JSON payload written on a successful pause. Keeping
+// status in the payload (rather than a free-form message) mirrors the shape
+// of resumeKeyResult / resetUsageResult so tooling can parse all three the
+// same way.
+type pauseKeyResult struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+}
+
+func cmdPauseKey(args []string) error {
+	fs, cfgPath := newFlagSet("pause-key")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() < 1 {
+		return errors.New("pause-key: missing <api_key_id>")
+	}
+	db, err := openDB(*cfgPath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	store := sqlite.NewAPIKeyStore(db)
+	return pauseKeyExec(context.Background(), os.Stdout, store, fs.Arg(0))
+}
+
+// pauseKeyExec flips the api key with the given id to status=paused via
+// APIKeyStore.Pause. domain.ErrAPIKeyRevoked / domain.ErrAPIKeyNotFound are
+// returned verbatim so main() (and tests) can distinguish the two.
+func pauseKeyExec(ctx context.Context, out io.Writer, store ports.APIKeyStore, id string) error {
+	if err := store.Pause(ctx, id); err != nil {
+		return err
+	}
+	enc := json.NewEncoder(out)
+	enc.SetIndent("", "  ")
+	return enc.Encode(&pauseKeyResult{ID: id, Status: "paused"})
+}
+
+// ---------- resume-key ----------
+
+type resumeKeyResult struct {
+	ID     string `json:"id"`
+	Status string `json:"status"`
+}
+
+func cmdResumeKey(args []string) error {
+	fs, cfgPath := newFlagSet("resume-key")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() < 1 {
+		return errors.New("resume-key: missing <api_key_id>")
+	}
+	db, err := openDB(*cfgPath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	store := sqlite.NewAPIKeyStore(db)
+	return resumeKeyExec(context.Background(), os.Stdout, store, fs.Arg(0))
+}
+
+// resumeKeyExec flips the api key with the given id back to status=active
+// via APIKeyStore.Resume. Attempting to resume a revoked key surfaces
+// domain.ErrAPIKeyRevoked so the caller sees the terminal-state signal.
+func resumeKeyExec(ctx context.Context, out io.Writer, store ports.APIKeyStore, id string) error {
+	if err := store.Resume(ctx, id); err != nil {
+		return err
+	}
+	enc := json.NewEncoder(out)
+	enc.SetIndent("", "  ")
+	return enc.Encode(&resumeKeyResult{ID: id, Status: "active"})
+}
+
+// ---------- reset-usage ----------
+
+type resetUsageResult struct {
+	ID          string `json:"id"`
+	MonthlyUsed int64  `json:"monthly_used"`
+}
+
+func cmdResetUsage(args []string) error {
+	fs, cfgPath := newFlagSet("reset-usage")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if fs.NArg() < 1 {
+		return errors.New("reset-usage: missing <api_key_id>")
+	}
+	db, err := openDB(*cfgPath)
+	if err != nil {
+		return err
+	}
+	defer db.Close()
+	store := sqlite.NewAPIKeyStore(db)
+	return resetUsageExec(context.Background(), os.Stdout, store, fs.Arg(0))
+}
+
+// resetUsageExec zeros the monthly_used counter for the given api key via
+// APIKeyStore.ResetMonthlyUsage. The response echoes monthly_used=0 so a
+// consumer can confirm the post-reset value without a follow-up Get.
+func resetUsageExec(ctx context.Context, out io.Writer, store ports.APIKeyStore, id string) error {
+	if err := store.ResetMonthlyUsage(ctx, id); err != nil {
+		return err
+	}
+	enc := json.NewEncoder(out)
+	enc.SetIndent("", "  ")
+	return enc.Encode(&resetUsageResult{ID: id, MonthlyUsed: 0})
 }
 
 // generateAPIKeyPair mirrors internal/core/apikey.Generate without pulling
