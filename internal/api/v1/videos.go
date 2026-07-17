@@ -19,10 +19,9 @@ type videoRequest struct {
 	MediaID     string `json:"media_id,omitempty"`
 	Async       bool   `json:"async,omitempty"`
 	CallbackURL string `json:"callback_url,omitempty"`
-	// GroupID, when set, restricts the pool pick to a specific account group.
-	// TODO(groups): auto-resolve GroupID from the api key's binding via
-	// GroupStore.ListGroupsForAPIKey when the caller does not set it. That
-	// change lands with the multi-group routing policy work.
+	// GroupID, when set, restricts the pool pick to a specific account
+	// group. When empty, the handler auto-resolves the group from the
+	// caller's api key bindings via resolveGroup.
 	GroupID string         `json:"group_id,omitempty"`
 	Extra   map[string]any `json:"-"` // populated by unmarshal below
 }
@@ -73,16 +72,28 @@ func (h *Handler) HandleVideoGeneration(w http.ResponseWriter, r *http.Request) 
 	// Note whether the client explicitly set async. When absent we let the
 	// service decide (see Service.AsyncByDefault).
 	_, syncRequested := extraMap["async"]
+
+	// Resolve which group scopes the pool pick. When the caller sets
+	// group_id we honour it; otherwise the api key's bindings are queried
+	// via GroupStore.
+	var apiKeyID string
+	if key, ok := middleware.APIKeyFromContext(r.Context()); ok {
+		apiKeyID = key.ID
+	}
+	groupID, herr := resolveGroup(r.Context(), h.Groups, h.Logger, apiKeyID, vr.GroupID)
+	if herr != nil {
+		writeError(w, herr.Status, herr.Kind, herr.Message)
+		return
+	}
+
 	greq := proxy.GenerationRequest{
 		Model:         vr.Model,
 		UserParams:    userParams,
 		Async:         vr.Async,
 		SyncRequested: syncRequested,
 		CallbackURL:   vr.CallbackURL,
-		GroupID:       vr.GroupID,
-	}
-	if key, ok := middleware.APIKeyFromContext(r.Context()); ok {
-		greq.APIKeyID = key.ID
+		GroupID:       groupID,
+		APIKeyID:      apiKeyID,
 	}
 	if vr.MediaID != "" {
 		greq.Media = &proxy.MediaInput{PreUploadedID: vr.MediaID, Type: "image", URL: vr.ImageURL}

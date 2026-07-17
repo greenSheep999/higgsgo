@@ -19,10 +19,9 @@ type imageRequest struct {
 	ImageID     string `json:"media_id,omitempty"` // pre-uploaded higgsfield media
 	Async       bool   `json:"async,omitempty"`
 	CallbackURL string `json:"callback_url,omitempty"`
-	// GroupID, when set, restricts the pool pick to a specific account group.
-	// TODO(groups): auto-resolve GroupID from the api key's binding via
-	// GroupStore.ListGroupsForAPIKey when the caller does not set it. That
-	// change lands with the multi-group routing policy work.
+	// GroupID, when set, restricts the pool pick to a specific account
+	// group. When empty, the handler auto-resolves the group from the
+	// caller's api key bindings via resolveGroup.
 	GroupID string `json:"group_id,omitempty"`
 }
 
@@ -68,16 +67,28 @@ func (h *Handler) HandleImageGeneration(w http.ResponseWriter, r *http.Request) 
 	}
 
 	_, syncRequested := extraMap["async"]
+
+	// Resolve which group scopes the pool pick. When the caller sets
+	// group_id we honour it; otherwise the api key's bindings are queried
+	// via GroupStore.
+	var apiKeyID string
+	if key, ok := middleware.APIKeyFromContext(r.Context()); ok {
+		apiKeyID = key.ID
+	}
+	groupID, herr := resolveGroup(r.Context(), h.Groups, h.Logger, apiKeyID, ir.GroupID)
+	if herr != nil {
+		writeError(w, herr.Status, herr.Kind, herr.Message)
+		return
+	}
+
 	greq := proxy.GenerationRequest{
 		Model:         ir.Model,
 		UserParams:    userParams,
 		Async:         ir.Async,
 		SyncRequested: syncRequested,
 		CallbackURL:   ir.CallbackURL,
-		GroupID:       ir.GroupID,
-	}
-	if key, ok := middleware.APIKeyFromContext(r.Context()); ok {
-		greq.APIKeyID = key.ID
+		GroupID:       groupID,
+		APIKeyID:      apiKeyID,
 	}
 	if ir.ImageID != "" {
 		greq.Media = &proxy.MediaInput{PreUploadedID: ir.ImageID, Type: "image"}

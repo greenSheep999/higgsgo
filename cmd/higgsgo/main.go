@@ -157,7 +157,8 @@ func run() error {
 		Meter:            meter,
 		Webhooks:         webhooks,
 	}
-	v1h := v1.New(svc, registry, jobStore)
+	v1h := v1.New(svc, registry, jobStore, groupStore)
+	v1h.Logger = logger
 
 	// Background poll worker: catches slow B-class models that finish
 	// after the sync HTTP request has returned. Without this, users would

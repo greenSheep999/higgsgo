@@ -11,8 +11,10 @@
 package v1
 
 import (
+	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -24,12 +26,15 @@ import (
 type Handler struct {
 	Service  *proxy.Service
 	Registry ports.ModelRegistry
-	Jobs     ports.JobStore // optional; when nil, /v1/jobs/{id} returns 503
+	Jobs     ports.JobStore   // optional; when nil, /v1/jobs/{id} returns 503
+	Groups   ports.GroupStore // optional; when non-nil, missing group_id is auto-resolved from the api key's bindings
+	Logger   *slog.Logger     // optional; used for warnings during best-effort auto-resolution
 }
 
-// New builds a Handler.
-func New(svc *proxy.Service, reg ports.ModelRegistry, jobs ports.JobStore) *Handler {
-	return &Handler{Service: svc, Registry: reg, Jobs: jobs}
+// New builds a Handler. The groups argument is optional and enables the
+// api-key → group auto-resolution behaviour for /v1 generation endpoints.
+func New(svc *proxy.Service, reg ports.ModelRegistry, jobs ports.JobStore, groups ports.GroupStore) *Handler {
+	return &Handler{Service: svc, Registry: reg, Jobs: jobs, Groups: groups}
 }
 
 // HandleModelsList serves GET /v1/models.
@@ -91,4 +96,58 @@ func writeError(w http.ResponseWriter, status int, kind, message string) {
 			"message": message,
 		},
 	})
+}
+
+// httpError describes a client-facing error produced by internal helpers so
+// the caller (an HTTP handler) can render it via writeError. It is not an
+// exported type because it is only used to hand results back within the
+// package.
+type httpError struct {
+	Status  int
+	Kind    string
+	Message string
+}
+
+// resolveGroup returns the group ID that should scope a /v1 generation
+// request. If the caller explicitly set a group in the request body, that
+// value is returned verbatim. Otherwise, when the handler has a GroupStore,
+// the api key's bindings are queried:
+//
+//   - zero bindings: returns "" and no error (caller uses the default group).
+//   - one binding:   returns that group's ID.
+//   - multiple:      returns an ambiguous_group httpError so the caller has
+//     to disambiguate by setting group_id explicitly.
+//
+// Store errors are treated as best-effort failures: they are logged (when
+// logger is non-nil) but not surfaced to the caller — the request continues
+// with an empty group scope.
+func resolveGroup(ctx context.Context, groups ports.GroupStore, logger *slog.Logger, apiKeyID, requested string) (string, *httpError) {
+	if requested != "" {
+		return requested, nil
+	}
+	if groups == nil || apiKeyID == "" {
+		return "", nil
+	}
+	bound, err := groups.ListGroupsForAPIKey(ctx, apiKeyID)
+	if err != nil {
+		if logger != nil {
+			logger.Warn("group resolve failed",
+				slog.String("api_key_id", apiKeyID),
+				slog.String("err", err.Error()),
+			)
+		}
+		return "", nil
+	}
+	switch len(bound) {
+	case 0:
+		return "", nil
+	case 1:
+		return bound[0].ID, nil
+	default:
+		return "", &httpError{
+			Status:  http.StatusBadRequest,
+			Kind:    "ambiguous_group",
+			Message: "api key is bound to multiple groups; please specify group_id in the request",
+		}
+	}
 }
