@@ -94,6 +94,21 @@ func newAuditRouter(store ports.AuditStore, handler http.HandlerFunc) chi.Router
 	return r
 }
 
+// newInternalAuditRouter mirrors newAuditRouter but registers the
+// /internal/* routes owned by the CPA plugin. It exists so the audit
+// middleware's resource_type / resource_id resolution is exercised
+// against the exact patterns wired in server.internalRouter().
+func newInternalAuditRouter(store ports.AuditStore, handler http.HandlerFunc) chi.Router {
+	logger := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelError}))
+	r := chi.NewRouter()
+	r.Use(Audit(store, logger))
+	r.Post("/internal/register", handler)
+	r.Post("/internal/execute", handler)
+	r.Post("/internal/refresh_jwt/{partner_id}", handler)
+	r.Delete("/internal/{partner_id}", handler)
+	return r
+}
+
 func writeStatus(status int) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(status)
@@ -338,5 +353,108 @@ func TestAudit_JSONBodyStable(t *testing.T) {
 	e := store.waitEvent(t)
 	if len(e.BodyHash) != 64 { // sha256 hex length
 		t.Fatalf("body_hash length: got %d want 64", len(e.BodyHash))
+	}
+}
+
+// TestAudit_InternalRegisterResourceType drives the CPA-plugin
+// register endpoint through the audit middleware and asserts that
+// the resulting row is tagged with resource_type=cpa_partner. The
+// endpoint has no id in the URL so resource_id is expected empty.
+func TestAudit_InternalRegisterResourceType(t *testing.T) {
+	store := newRecorderStore()
+	r := newInternalAuditRouter(store, writeStatus(http.StatusCreated))
+
+	body := []byte(`{"partner_id":"cpa_xyz"}`)
+	req := httptest.NewRequest(http.MethodPost, "/internal/register", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status: got %d want 201", rec.Code)
+	}
+	e := store.waitEvent(t)
+	if e.Route != "/internal/register" {
+		t.Errorf("route: got %q want /internal/register", e.Route)
+	}
+	if e.ResourceType != "cpa_partner" {
+		t.Errorf("resource_type: got %q want cpa_partner", e.ResourceType)
+	}
+	if e.ResourceID != "" {
+		t.Errorf("resource_id: got %q want empty (no {id} in route)", e.ResourceID)
+	}
+	if e.BodyHash == "" {
+		t.Errorf("body_hash: empty; want non-empty")
+	}
+}
+
+// TestAudit_InternalExecuteResourceType covers POST /internal/execute
+// — the proxy invocation path. resource_type must be cpa_execute so
+// operators can separate execute rows from register/delete/refresh
+// entries when browsing the audit log.
+func TestAudit_InternalExecuteResourceType(t *testing.T) {
+	store := newRecorderStore()
+	r := newInternalAuditRouter(store, writeStatus(http.StatusOK))
+
+	body := []byte(`{"model":"veo3","cpa_partner_id":"cpa_xyz"}`)
+	req := httptest.NewRequest(http.MethodPost, "/internal/execute", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	e := store.waitEvent(t)
+	if e.Route != "/internal/execute" {
+		t.Errorf("route: got %q want /internal/execute", e.Route)
+	}
+	if e.ResourceType != "cpa_execute" {
+		t.Errorf("resource_type: got %q want cpa_execute", e.ResourceType)
+	}
+}
+
+// TestAudit_InternalRefreshJWTResourceID asserts that the {partner_id}
+// URL param is copied onto AuditEvent.ResourceID and that the route
+// pattern is captured verbatim. This is the primary way operators
+// correlate a jwt-refresh audit row back to the partner it hit.
+func TestAudit_InternalRefreshJWTResourceID(t *testing.T) {
+	store := newRecorderStore()
+	r := newInternalAuditRouter(store, writeStatus(http.StatusOK))
+
+	req := httptest.NewRequest(http.MethodPost, "/internal/refresh_jwt/partner_abc", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	e := store.waitEvent(t)
+	if e.Route != "/internal/refresh_jwt/{partner_id}" {
+		t.Errorf("route: got %q want /internal/refresh_jwt/{partner_id}", e.Route)
+	}
+	if e.ResourceType != "cpa_partner" {
+		t.Errorf("resource_type: got %q want cpa_partner", e.ResourceType)
+	}
+	if e.ResourceID != "partner_abc" {
+		t.Errorf("resource_id: got %q want partner_abc", e.ResourceID)
+	}
+}
+
+// TestAudit_InternalDeleteResourceID covers DELETE /internal/{partner_id}
+// — the partner soft-delete path. The route pattern is deliberately
+// permissive (any single-segment DELETE hits it), but that's safe on
+// the internal listener where only the CPA plugin is mounted; the
+// admin listener does not register a DELETE /{id} sibling. Should the
+// two ever share a router, this test would need to be revisited.
+func TestAudit_InternalDeleteResourceID(t *testing.T) {
+	store := newRecorderStore()
+	r := newInternalAuditRouter(store, writeStatus(http.StatusOK))
+
+	req := httptest.NewRequest(http.MethodDelete, "/internal/partner_abc", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	e := store.waitEvent(t)
+	if e.Route != "/internal/{partner_id}" {
+		t.Errorf("route: got %q want /internal/{partner_id}", e.Route)
+	}
+	if e.ResourceType != "cpa_partner" {
+		t.Errorf("resource_type: got %q want cpa_partner", e.ResourceType)
+	}
+	if e.ResourceID != "partner_abc" {
+		t.Errorf("resource_id: got %q want partner_abc", e.ResourceID)
 	}
 }

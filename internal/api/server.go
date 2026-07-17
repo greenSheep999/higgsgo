@@ -243,6 +243,13 @@ func (s *Server) internalRouter() http.Handler {
 
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.BearerAuth(s.Config.Server.InternalBearer))
+		// The /internal/* surface performs writes (register, execute,
+		// delete, refresh_jwt) driven by the upstream CPA platform.
+		// Audit those the same way we audit /admin/* so operators have
+		// a single write history to correlate against usage_events.
+		if s.Audit != nil {
+			r.Use(middleware.Audit(s.Audit, s.Logger))
+		}
 		if s.CPAPlugin != nil {
 			s.CPAPlugin.Register(r)
 		}

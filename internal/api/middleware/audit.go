@@ -66,13 +66,16 @@ var auditResourceType = map[string]string{
 	// jobs
 	"/jobs/purge": "job",
 	"/jobs/{id}":  "job",
-	// cpa partner (currently the internal listener carries its own
-	// bearer; the entries stay cheap and future-proof a shared audit
-	// chain).
-	"/internal/register":                 "partner",
-	"/internal/execute":                  "partner",
-	"/internal/refresh_jwt/{partner_id}": "partner",
-	"/internal/{partner_id}":             "partner",
+	// cpa plugin (/internal/*): the same middleware is mounted on the
+	// internal listener so operators see a single write history across
+	// admin and cpa surfaces. The resource_type values are namespaced
+	// with a "cpa_" prefix so audit consumers can filter partner-driven
+	// writes apart from admin-driven ones without inspecting the route.
+	"/internal/register":                 "cpa_partner",
+	"/internal/execute":                  "cpa_execute",
+	"/internal/refresh_jwt/{partner_id}": "cpa_partner",
+	"/internal/{partner_id}":             "cpa_partner",
+	"/internal/registrations/{id}":       "cpa_registration",
 }
 
 // auditResourceParams lists which chi.URLParam names the middleware
