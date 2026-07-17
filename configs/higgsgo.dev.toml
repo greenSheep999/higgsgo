@@ -9,6 +9,11 @@ public_url      = "http://localhost:18080"
 admin_bearer    = "dev-admin"
 internal_bearer = "dev-internal"
 
+# Per-API-key token bucket. Slightly looser in dev for quick iteration.
+[server.rate_limit]
+rps   = 10
+burst = 20
+
 [storage]
 driver = "sqlite"
 [storage.sqlite]

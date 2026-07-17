@@ -136,6 +136,15 @@ func (s *Server) publicRouter() http.Handler {
 				if s.APIKeys != nil {
 					r.Use(middleware.APIKeyAuth(s.APIKeys, false))
 				}
+				// Per-API-key token bucket. Sits AFTER auth so it can key
+				// off the resolved APIKey.ID in ctx; unauthenticated
+				// requests would already have been rejected above.
+				rl := &middleware.RateLimit{
+					RPS:    s.Config.Server.RateLimit.RPS,
+					Burst:  s.Config.Server.RateLimit.Burst,
+					Logger: s.Logger,
+				}
+				r.Use(rl.Middleware)
 				r.Post("/videos/generations", s.V1.HandleVideoGeneration)
 				r.Post("/images/generations", s.V1.HandleImageGeneration)
 				r.Get("/jobs", s.V1.HandleJobsList)

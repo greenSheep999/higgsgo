@@ -12,6 +12,12 @@ public_url      = "http://localhost:8080"
 admin_bearer    = "change-me-admin"
 internal_bearer = "change-me-internal"
 
+# Per-API-key token bucket on /v1/*. Applied AFTER APIKey auth.
+# Absent / zero values fall back to defaults (rps=5, burst=10).
+[server.rate_limit]
+rps   = 5
+burst = 10
+
 [storage]
 driver = "sqlite"                # "sqlite" | "postgres"
 [storage.sqlite]

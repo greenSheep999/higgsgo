@@ -38,6 +38,16 @@ type ServerConfig struct {
 	PublicURL      string `toml:"public_url"`
 	AdminBearer    string `toml:"admin_bearer"`    // shared secret for /admin/*
 	InternalBearer string `toml:"internal_bearer"` // shared secret for /internal/* (CPA plugin)
+
+	RateLimit RateLimitConfig `toml:"rate_limit"`
+}
+
+// RateLimitConfig controls the per-API-key token bucket applied on /v1/*
+// after authentication succeeds. Zero values fall back to the middleware's
+// safe defaults (see internal/api/middleware/ratelimit.go).
+type RateLimitConfig struct {
+	RPS   float64 `toml:"rps"`
+	Burst int     `toml:"burst"`
 }
 
 type StorageConfig struct {
@@ -190,6 +200,7 @@ func defaults() *Config {
 		Server: ServerConfig{
 			Listen:      "0.0.0.0:8080",
 			AdminListen: "127.0.0.1:8081",
+			RateLimit:   RateLimitConfig{RPS: 5, Burst: 10},
 		},
 		Storage: StorageConfig{
 			Driver: "sqlite",
