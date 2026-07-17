@@ -10,18 +10,21 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/greensheep999/higgsgo/internal/api/admin"
 	"github.com/greensheep999/higgsgo/internal/api/middleware"
 	"github.com/greensheep999/higgsgo/internal/api/v1"
 	"github.com/greensheep999/higgsgo/internal/config"
+	"github.com/greensheep999/higgsgo/internal/ports"
 )
 
 // Server is the higgsgo HTTP server. It listens on three ports (public,
 // admin, internal). The three routers share middleware but expose different
 // endpoints.
 type Server struct {
-	Config *config.Config
-	Logger *slog.Logger
-	V1     *v1.Handler
+	Config  *config.Config
+	Logger  *slog.Logger
+	V1      *v1.Handler
+	APIKeys ports.APIKeyStore // required for /v1 auth and /admin/keys
 
 	public   *http.Server
 	admin    *http.Server
@@ -31,8 +34,8 @@ type Server struct {
 // New builds a Server. Handlers are wired up here; concrete route
 // registrations (v1 / admin / internal) live in sibling files as they are
 // implemented.
-func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler) *Server {
-	s := &Server{Config: cfg, Logger: logger, V1: v1Handler}
+func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore) *Server {
+	s := &Server{Config: cfg, Logger: logger, V1: v1Handler, APIKeys: apiKeys}
 
 	s.public = &http.Server{
 		Addr:              cfg.Server.Listen,
@@ -108,11 +111,22 @@ func (s *Server) publicRouter() http.Handler {
 
 	if s.V1 != nil {
 		r.Route("/v1", func(r chi.Router) {
-			r.Get("/models", s.V1.HandleModelsList)
-			r.Get("/models/{alias}", s.V1.HandleModelDetail)
-			r.Post("/videos/generations", s.V1.HandleVideoGeneration)
-			r.Post("/images/generations", s.V1.HandleImageGeneration)
-			r.Get("/jobs/{id}", s.V1.HandleJobFetch)
+			// /v1/models and /v1/models/{alias} are discoverable without
+			// authentication so integrators can probe capabilities.
+			r.Group(func(r chi.Router) {
+				r.Use(middleware.APIKeyAuth(s.APIKeys, true /* optional */))
+				r.Get("/models", s.V1.HandleModelsList)
+				r.Get("/models/{alias}", s.V1.HandleModelDetail)
+			})
+			// Everything else requires a valid API key.
+			r.Group(func(r chi.Router) {
+				if s.APIKeys != nil {
+					r.Use(middleware.APIKeyAuth(s.APIKeys, false))
+				}
+				r.Post("/videos/generations", s.V1.HandleVideoGeneration)
+				r.Post("/images/generations", s.V1.HandleImageGeneration)
+				r.Get("/jobs/{id}", s.V1.HandleJobFetch)
+			})
 		})
 	}
 	return r
@@ -127,7 +141,9 @@ func (s *Server) adminRouter() http.Handler {
 
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.BearerAuth(s.Config.Server.AdminBearer))
-		// admin/* routes registered here in future patches.
+		if s.APIKeys != nil {
+			admin.NewKeysHandler(s.APIKeys).Register(r)
+		}
 	})
 	return r
 }

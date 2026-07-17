@@ -67,6 +67,7 @@ func run() error {
 	var (
 		accountStore ports.AccountStore
 		jobStore     ports.JobStore
+		apiKeyStore  ports.APIKeyStore
 	)
 	switch cfg.Storage.Driver {
 	case "sqlite":
@@ -78,6 +79,7 @@ func run() error {
 		logger.Info("sqlite opened", slog.String("path", db.Path()))
 		accountStore = sqlite.NewAccountStore(db)
 		jobStore = sqlite.NewJobStore(db)
+		apiKeyStore = sqlite.NewAPIKeyStore(db)
 	case "postgres":
 		return errors.New("postgres storage adapter not implemented yet")
 	}
@@ -131,7 +133,7 @@ func run() error {
 	go worker.Run(ctx)
 
 	// Boot API server.
-	srv := api.New(cfg, logger, v1h)
+	srv := api.New(cfg, logger, v1h, apiKeyStore)
 	if err := srv.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("serve: %w", err)
 	}

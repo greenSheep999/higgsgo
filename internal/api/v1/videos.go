@@ -5,6 +5,7 @@ import (
 	"errors"
 	"net/http"
 
+	"github.com/greensheep999/higgsgo/internal/api/middleware"
 	"github.com/greensheep999/higgsgo/internal/core/proxy"
 	"github.com/greensheep999/higgsgo/internal/domain"
 )
@@ -71,6 +72,9 @@ func (h *Handler) HandleVideoGeneration(w http.ResponseWriter, r *http.Request) 
 		UserParams:    userParams,
 		Async:         vr.Async,
 		SyncRequested: syncRequested,
+	}
+	if key, ok := middleware.APIKeyFromContext(r.Context()); ok {
+		greq.APIKeyID = key.ID
 	}
 	if vr.MediaID != "" {
 		greq.Media = &proxy.MediaInput{PreUploadedID: vr.MediaID, Type: "image", URL: vr.ImageURL}

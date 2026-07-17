@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/greensheep999/higgsgo/internal/api/middleware"
 	"github.com/greensheep999/higgsgo/internal/core/proxy"
 )
 
@@ -66,6 +67,9 @@ func (h *Handler) HandleImageGeneration(w http.ResponseWriter, r *http.Request) 
 		UserParams:    userParams,
 		Async:         ir.Async,
 		SyncRequested: syncRequested,
+	}
+	if key, ok := middleware.APIKeyFromContext(r.Context()); ok {
+		greq.APIKeyID = key.ID
 	}
 	if ir.ImageID != "" {
 		greq.Media = &proxy.MediaInput{PreUploadedID: ir.ImageID, Type: "image"}
