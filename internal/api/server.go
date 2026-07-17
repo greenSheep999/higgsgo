@@ -15,6 +15,8 @@ import (
 	"github.com/greensheep999/higgsgo/internal/api/middleware"
 	"github.com/greensheep999/higgsgo/internal/api/v1"
 	"github.com/greensheep999/higgsgo/internal/config"
+	"github.com/greensheep999/higgsgo/internal/core/refresher"
+	"github.com/greensheep999/higgsgo/internal/core/regression"
 	"github.com/greensheep999/higgsgo/internal/core/webhook"
 	"github.com/greensheep999/higgsgo/internal/observability"
 	"github.com/greensheep999/higgsgo/internal/ports"
@@ -34,8 +36,10 @@ type Server struct {
 	Groups    ports.GroupStore       // optional; used by /admin/groups
 	Health    ports.ModelHealthStore // optional; used by /admin/model-health
 	Metrics   *observability.Metrics // optional; enables /metrics + per-request instrumentation
-	CPAPlugin *cpaplugin.Handler     // optional; enables /internal/* (Mode B)
-	Webhooks  *webhook.Dispatcher    // optional; enables /admin/webhooks/stats
+	CPAPlugin  *cpaplugin.Handler   // optional; enables /internal/* (Mode B)
+	Webhooks   *webhook.Dispatcher  // optional; enables /admin/webhooks/stats
+	Refresher  *refresher.Refresher // optional; enables /admin/tickers/refresher
+	Regression *regression.Ticker   // optional; enables /admin/tickers/regression
 
 	public   *http.Server
 	admin    *http.Server
@@ -45,7 +49,7 @@ type Server struct {
 // New builds a Server. Handlers are wired up here; concrete route
 // registrations (v1 / admin / internal) live in sibling files as they are
 // implemented.
-func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore, metrics *observability.Metrics, cpa *cpaplugin.Handler, health ports.ModelHealthStore, webhooks *webhook.Dispatcher) *Server {
+func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore, metrics *observability.Metrics, cpa *cpaplugin.Handler, health ports.ModelHealthStore, webhooks *webhook.Dispatcher, rf *refresher.Refresher, rg *regression.Ticker) *Server {
 	s := &Server{
 		Config:    cfg,
 		Logger:    logger,
@@ -57,8 +61,10 @@ func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys
 		Groups:    groups,
 		Health:    health,
 		Metrics:   metrics,
-		CPAPlugin: cpa,
-		Webhooks:  webhooks,
+		CPAPlugin:  cpa,
+		Webhooks:   webhooks,
+		Refresher:  rf,
+		Regression: rg,
 	}
 
 	s.public = &http.Server{
@@ -210,6 +216,7 @@ func (s *Server) adminRouter() http.Handler {
 		if s.Webhooks != nil {
 			admin.NewWebhooksHandler(s.Webhooks).Register(r)
 		}
+		admin.NewTickersHandler(s.Refresher, s.Regression, s.Logger).Register(r)
 	})
 	return r
 }

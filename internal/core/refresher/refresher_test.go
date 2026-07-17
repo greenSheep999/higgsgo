@@ -331,6 +331,55 @@ func TestRefresher_ConcurrencyBound(t *testing.T) {
 	}
 }
 
+func TestRefresher_TriggerOnce(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/workspaces/wallet":
+			_, _ = w.Write([]byte(walletJSON))
+		case "/user":
+			_, _ = w.Write([]byte(userJSON))
+		default:
+			http.Error(w, "not found", http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	store := &countingAccountStore{
+		fakeAccountStore: fakeAccountStore{
+			accounts: []domain.Account{
+				mkAccount("acc_1", "m1"),
+			},
+		},
+	}
+	r := newRefresher(t, srv, store, 1)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	r.TriggerOnce(ctx)
+
+	if got := atomic.LoadInt32(&store.listCalls); got != 1 {
+		t.Fatalf("expected AccountStore.List to be called once, got %d", got)
+	}
+	if len(store.balances) != 1 {
+		t.Fatalf("expected 1 UpdateBalance call, got %d", len(store.balances))
+	}
+	if len(store.entitles) != 1 {
+		t.Fatalf("expected 1 UpdateEntitlements call, got %d", len(store.entitles))
+	}
+}
+
+// countingAccountStore wraps fakeAccountStore to count List invocations, so
+// TestRefresher_TriggerOnce can assert exactly one tick executed.
+type countingAccountStore struct {
+	fakeAccountStore
+	listCalls int32
+}
+
+func (c *countingAccountStore) List(ctx context.Context, filter ports.AccountFilter) ([]domain.Account, error) {
+	atomic.AddInt32(&c.listCalls, 1)
+	return c.fakeAccountStore.List(ctx, filter)
+}
+
 func TestRefresher_HandlesEmptyPool(t *testing.T) {
 	var hits int32
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

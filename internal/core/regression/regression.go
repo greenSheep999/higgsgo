@@ -133,6 +133,15 @@ func (t *Ticker) Run(ctx context.Context) {
 	}
 }
 
+// TriggerOnce runs a single probe pass synchronously. Intended for admin
+// endpoints that want to force an immediate regression sweep without
+// waiting for the ticker interval. Failures inside tick / probeOne are
+// already logged per-model, so this wrapper has nothing to return.
+func (t *Ticker) TriggerOnce(ctx context.Context) {
+	t.applyDefaults()
+	t.tick(ctx)
+}
+
 // applyDefaults fills zero-valued config fields with package defaults.
 // Broken out so tests can call it directly instead of going through Run.
 func (t *Ticker) applyDefaults() {

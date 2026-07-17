@@ -459,3 +459,29 @@ func TestTicker_PicksOldestFirst(t *testing.T) {
 		t.Errorf("second tick: got %v want [old-1]", got)
 	}
 }
+
+func TestTicker_TriggerOnce(t *testing.T) {
+	// One image spec: TriggerOnce should synchronously call the fake proxy
+	// exactly once and write one row to the health store.
+	reg := &fakeRegistry{specs: []*domain.ModelSpec{
+		{Alias: "img-trigger", JST: "img_trigger", Output: "image"},
+	}}
+	health := newFakeHealth()
+	fake := &fakeProxy{}
+
+	tk := &Ticker{
+		Health:      health,
+		Registry:    reg,
+		Proxy:       fake,
+		SampleSize:  1,
+		Concurrency: 1,
+	}
+	tk.TriggerOnce(context.Background())
+
+	if got := fake.calledAliases(); len(got) != 1 || got[0] != "img-trigger" {
+		t.Fatalf("proxy calls: got %v want [img-trigger]", got)
+	}
+	if len(health.inserts) != 1 {
+		t.Fatalf("health inserts: got %d want 1", len(health.inserts))
+	}
+}

@@ -87,6 +87,18 @@ func (r *Refresher) Run(ctx context.Context) {
 	}
 }
 
+// TriggerOnce runs a single tick synchronously. Intended for admin
+// endpoints that want to force an immediate refresh without waiting for
+// the ticker interval. Errors from the underlying tick are already logged
+// per-account inside tick / refreshOne, so this wrapper has nothing to
+// return.
+func (r *Refresher) TriggerOnce(ctx context.Context) {
+	if r.Concurrency <= 0 {
+		r.Concurrency = defaultConcurrency
+	}
+	r.tick(ctx)
+}
+
 // tick refreshes every currently-active account. A single failing account
 // never blocks the others: each fan-out worker isolates errors with a
 // warn-level log line.

@@ -211,6 +211,9 @@ func run() error {
 	// once per Interval and records the outcome to model_health. Only
 	// enabled when the operator flipped [tickers.a_regression].enabled
 	// in the config; otherwise silent so dev boots do not burn credits.
+	// Hoisted above the if block so /admin/tickers/regression can trigger
+	// it manually even when the background schedule is disabled.
+	var tk *regression.Ticker
 	if cfg.Tickers.ARegression.Enabled {
 		interval, err := time.ParseDuration(cfg.Tickers.ARegression.Interval)
 		if err != nil || interval <= 0 {
@@ -218,7 +221,7 @@ func run() error {
 				slog.String("value", cfg.Tickers.ARegression.Interval))
 			interval = 24 * time.Hour
 		}
-		tk := &regression.Ticker{
+		tk = &regression.Ticker{
 			Health:       modelHealthStore,
 			Registry:     registry,
 			Proxy:        svc,
@@ -260,7 +263,7 @@ func run() error {
 	}
 
 	// Boot API server.
-	srv := api.New(cfg, logger, v1h, apiKeyStore, accountStore, jobStore, usageStore, groupStore, metrics, cpaHandler, modelHealthStore, webhooks)
+	srv := api.New(cfg, logger, v1h, apiKeyStore, accountStore, jobStore, usageStore, groupStore, metrics, cpaHandler, modelHealthStore, webhooks, rf, tk)
 	if err := srv.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("serve: %w", err)
 	}
