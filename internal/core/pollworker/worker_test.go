@@ -65,6 +65,12 @@ func (s *fakeJobStore) ListByAPIKey(context.Context, string, ports.JobFilter) ([
 	return nil, nil
 }
 
+// ListAll is a no-op here for the same reason: pollworker never lists
+// admin-scoped jobs; the method exists solely to satisfy the interface.
+func (s *fakeJobStore) ListAll(context.Context, ports.JobFilter) ([]domain.Job, error) {
+	return nil, nil
+}
+
 type fakeAccountStore struct {
 	acc *domain.Account
 }

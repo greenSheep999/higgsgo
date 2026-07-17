@@ -59,6 +59,13 @@ func (f *fakeJobStoreForList) ListByAPIKey(_ context.Context, apiKeyID string, f
 	return f.rows, nil
 }
 
+// ListAll is not exercised by the /v1/jobs surface; the interface requires
+// it, so this stub panics to keep the /v1 handler honest — it must never
+// dip into the admin-scoped code path.
+func (f *fakeJobStoreForList) ListAll(context.Context, ports.JobFilter) ([]domain.Job, error) {
+	panic("not implemented")
+}
+
 // newJobsListRouter mounts HandleJobsList onto a chi router, injecting a
 // stub APIKey into the request context so the handler's caller-scoping
 // path (which reads middleware.APIKeyFromContext) has something to work

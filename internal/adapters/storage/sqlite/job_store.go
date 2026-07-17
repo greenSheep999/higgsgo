@@ -194,6 +194,88 @@ func (s *JobStore) ListByAPIKey(ctx context.Context, apiKeyID string, filter por
 	return out, rows.Err()
 }
 
+// ListAll returns jobs across the entire table, newest first.
+//
+// Unlike ListByAPIKey there is no mandatory scope: every JobFilter field
+// is optional. When all filters are empty the query returns the newest
+// Limit rows (defaultJobListLimit, capped at maxJobListLimit). Intended
+// for the operator-facing /admin/jobs surface; the public /v1/jobs path
+// keeps its api_key_id scoping via ListByAPIKey.
+func (s *JobStore) ListAll(ctx context.Context, filter ports.JobFilter) ([]domain.Job, error) {
+	var clauses []string
+	var args []any
+	if filter.Status != "" {
+		clauses = append(clauses, "status = ?")
+		args = append(args, string(filter.Status))
+	}
+	if filter.AccountID != "" {
+		clauses = append(clauses, "account_id = ?")
+		args = append(args, filter.AccountID)
+	}
+	if filter.APIKeyID != "" {
+		clauses = append(clauses, "api_key_id = ?")
+		args = append(args, filter.APIKeyID)
+	}
+	if filter.GroupID != "" {
+		clauses = append(clauses, "group_id = ?")
+		args = append(args, filter.GroupID)
+	}
+	if filter.ModelAlias != "" {
+		clauses = append(clauses, "model_alias = ?")
+		args = append(args, filter.ModelAlias)
+	}
+	// request_ts is persisted as an RFC3339 string (see fmtTime); RFC3339
+	// is lexicographically sortable so string comparison matches temporal
+	// order. Same trick used by ListByAPIKey above.
+	if !filter.Since.IsZero() {
+		clauses = append(clauses, "request_ts >= ?")
+		args = append(args, fmtTime(filter.Since))
+	}
+	if !filter.Until.IsZero() {
+		clauses = append(clauses, "request_ts < ?")
+		args = append(args, fmtTime(filter.Until))
+	}
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = defaultJobListLimit
+	}
+	if limit > maxJobListLimit {
+		limit = maxJobListLimit
+	}
+	offset := filter.Offset
+	if offset < 0 {
+		offset = 0
+	}
+	sqlStr := `
+		SELECT id, api_key_id, cpa_partner_id, group_id, account_id,
+		       model_alias, jst, endpoint, request_body_json, request_ts,
+		       upstream_job_id, upstream_cost, result_url,
+		       status, error_type, error_detail, finished_at,
+		       latency_ms, poll_count,
+		       actual_credits_h, charged_credits_h, refunded,
+		       callback_url, pre_balance_h
+		FROM jobs`
+	if len(clauses) > 0 {
+		sqlStr += "\n\t\tWHERE " + strings.Join(clauses, " AND ")
+	}
+	sqlStr += "\n\t\tORDER BY request_ts DESC\n\t\tLIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+	rows, err := s.db.QueryContext(ctx, sqlStr, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list all jobs: %w", err)
+	}
+	defer rows.Close()
+	var out []domain.Job
+	for rows.Next() {
+		j, err := scanJob(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *j)
+	}
+	return out, rows.Err()
+}
+
 // ListPending returns all jobs whose status is queued or in_progress.
 // Ordered by request_ts ascending so oldest jobs poll first — this is what
 // the background worker consumes.

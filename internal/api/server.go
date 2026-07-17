@@ -171,6 +171,9 @@ func (s *Server) adminRouter() http.Handler {
 			admin.NewAccountsHandler(s.Accounts).Register(r)
 			admin.NewStatsHandler(s.Accounts, s.Jobs).Register(r)
 		}
+		if s.Jobs != nil {
+			admin.NewJobsHandler(s.Jobs).Register(r)
+		}
 		if s.Usage != nil {
 			admin.NewUsageHandler(s.Usage).Register(r)
 		}

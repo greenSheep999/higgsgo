@@ -82,19 +82,35 @@ type JobStore interface {
 	// no rows" so a misconfigured caller cannot accidentally dump the
 	// full jobs table.
 	ListByAPIKey(ctx context.Context, apiKeyID string, filter JobFilter) ([]domain.Job, error)
+	// ListAll returns jobs across every api_key_id / account_id, newest
+	// first (ORDER BY request_ts DESC). Intended for the /admin/jobs
+	// operator surface — the public /v1/jobs path must keep using
+	// ListByAPIKey so callers cannot peek at other callers' rows.
+	//
+	// Every JobFilter field is optional. When all filters are empty the
+	// call returns the newest Limit rows across the whole table.
+	ListAll(ctx context.Context, filter JobFilter) ([]domain.Job, error)
 }
 
-// JobFilter narrows a JobStore.ListByAPIKey call.
+// JobFilter narrows a JobStore.ListByAPIKey / JobStore.ListAll call.
 //
 // All fields are optional; zero values mean "no filter". Limit defaults to
 // 100 and is capped at 500 by the store implementation to keep a single
 // call from paging the whole table.
+//
+// AccountID / APIKeyID / GroupID / ModelAlias are ignored by ListByAPIKey
+// (which always scopes to its explicit apiKeyID arg) and only apply to
+// ListAll where every dimension is optional.
 type JobFilter struct {
-	Status domain.JobStatus // empty means any status
-	Since  time.Time        // inclusive lower bound on request_ts
-	Until  time.Time        // exclusive upper bound on request_ts
-	Limit  int
-	Offset int
+	Status     domain.JobStatus // empty means any status
+	Since      time.Time        // inclusive lower bound on request_ts
+	Until      time.Time        // exclusive upper bound on request_ts
+	AccountID  string           // ListAll only; empty means any account
+	APIKeyID   string           // ListAll only; empty means any api key
+	GroupID    string           // ListAll only; empty means any group
+	ModelAlias string           // ListAll only; empty means any model alias
+	Limit      int
+	Offset     int
 }
 
 // JobMeta carries the outcome fields written on status transitions.
