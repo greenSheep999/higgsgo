@@ -18,6 +18,10 @@ type registerRequest struct {
 	MarkupPct    float64 `json:"markup_pct,omitempty"`    // 1.0 = no markup
 	MonthlyLimit int64   `json:"monthly_limit,omitempty"` // credits * 100, 0 = unlimited
 	Name         string  `json:"name,omitempty"`
+	// GroupID, when non-empty, wires the minted key to a single pool
+	// group via the api_keys.group_id direct-binding column (migration
+	// 005). Leave unset for the traditional M:N binding table workflow.
+	GroupID string `json:"group_id,omitempty"`
 }
 
 // HandleRegister mints a new higgsgo API key scoped to a CPA partner and
@@ -70,6 +74,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		Name:         name,
 		CreatedBy:    cpaRegisterCreatedBy,
 		CPAPartnerID: req.PartnerID,
+		GroupID:      req.GroupID,
 		Status:       "active",
 		MonthlyQuota: req.MonthlyLimit,
 		MarkupPct:    req.MarkupPct,
@@ -83,6 +88,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		"api_key_id":     k.ID,
 		"key":            plaintext,
 		"cpa_partner_id": req.PartnerID,
+		"group_id":       k.GroupID,
 		"markup_pct":     k.MarkupPct,
 		"monthly_limit":  k.MonthlyQuota,
 		"display_hint":   "Store this key now — it will not be shown again.",

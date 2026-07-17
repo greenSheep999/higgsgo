@@ -19,6 +19,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/greensheep999/higgsgo/internal/core/proxy"
+	"github.com/greensheep999/higgsgo/internal/domain"
 	"github.com/greensheep999/higgsgo/internal/ports"
 )
 
@@ -26,15 +27,19 @@ import (
 type Handler struct {
 	Service  *proxy.Service
 	Registry ports.ModelRegistry
-	Jobs     ports.JobStore   // optional; when nil, /v1/jobs/{id} returns 503
-	Groups   ports.GroupStore // optional; when non-nil, missing group_id is auto-resolved from the api key's bindings
-	Logger   *slog.Logger     // optional; used for warnings during best-effort auto-resolution
+	Jobs     ports.JobStore    // optional; when nil, /v1/jobs/{id} returns 503
+	Groups   ports.GroupStore  // optional; when non-nil, missing group_id is auto-resolved from the api key's bindings
+	APIKeys  ports.APIKeyStore // optional; enables the api_keys.group_id direct 1:1 binding shortcut in resolveGroup
+	Logger   *slog.Logger      // optional; used for warnings during best-effort auto-resolution
 }
 
 // New builds a Handler. The groups argument is optional and enables the
 // api-key → group auto-resolution behaviour for /v1 generation endpoints.
-func New(svc *proxy.Service, reg ports.ModelRegistry, jobs ports.JobStore, groups ports.GroupStore) *Handler {
-	return &Handler{Service: svc, Registry: reg, Jobs: jobs, Groups: groups}
+// The apiKeys argument is also optional and enables the api_keys.group_id
+// direct 1:1 binding shortcut: when the caller's API key row carries a
+// non-empty GroupID, resolveGroup returns it without consulting Groups.
+func New(svc *proxy.Service, reg ports.ModelRegistry, jobs ports.JobStore, groups ports.GroupStore, apiKeys ports.APIKeyStore) *Handler {
+	return &Handler{Service: svc, Registry: reg, Jobs: jobs, Groups: groups, APIKeys: apiKeys}
 }
 
 // HandleModelsList serves GET /v1/models.
@@ -109,30 +114,44 @@ type httpError struct {
 }
 
 // resolveGroup returns the group ID that should scope a /v1 generation
-// request. If the caller explicitly set a group in the request body, that
-// value is returned verbatim. Otherwise, when the handler has a GroupStore,
-// the api key's bindings are queried:
+// request. Resolution proceeds in tiers and short-circuits on the first
+// match:
 //
-//   - zero bindings: returns "" and no error (caller uses the default group).
-//   - one binding:   returns that group's ID.
-//   - multiple:      returns an ambiguous_group httpError so the caller has
-//     to disambiguate by setting group_id explicitly.
+//  1. An explicit `group_id` in the request body wins outright — the
+//     canonical way for a caller to disambiguate a multi-binding key.
+//  2. Direct 1:1 binding on api_keys.group_id (migration 005): when the
+//     caller's APIKey row carries a non-empty GroupID, it is used
+//     verbatim and the M:N table is not consulted. This is the fast
+//     path for the common CPA case (one partner key → one pool group).
+//  3. Fall back to the M:N apikey_group_bindings table via GroupStore:
+//     - zero bindings: returns "" and no error (default group scope).
+//     - one binding:   returns that group's ID.
+//     - multiple:      returns an ambiguous_group httpError so the
+//     caller disambiguates by setting group_id explicitly.
 //
-// Store errors are treated as best-effort failures: they are logged (when
-// logger is non-nil) but not surfaced to the caller — the request continues
-// with an empty group scope.
-func resolveGroup(ctx context.Context, groups ports.GroupStore, logger *slog.Logger, apiKeyID, requested string) (string, *httpError) {
+// GroupStore errors are treated as best-effort failures: they are logged
+// (when logger is non-nil) but not surfaced to the caller — the request
+// continues with an empty group scope so a transient DB blip cannot
+// black-hole every generation request.
+//
+// apiKey may be nil; that skips both tier 2 and tier 3.
+func resolveGroup(ctx context.Context, groups ports.GroupStore, logger *slog.Logger, apiKey *domain.APIKey, requested string) (string, *httpError) {
 	if requested != "" {
 		return requested, nil
 	}
-	if groups == nil || apiKeyID == "" {
+	// Tier 2: direct 1:1 binding wins over the M:N table.
+	if apiKey != nil && apiKey.GroupID != "" {
+		return apiKey.GroupID, nil
+	}
+	// Tier 3: fall back to the M:N binding table.
+	if groups == nil || apiKey == nil || apiKey.ID == "" {
 		return "", nil
 	}
-	bound, err := groups.ListGroupsForAPIKey(ctx, apiKeyID)
+	bound, err := groups.ListGroupsForAPIKey(ctx, apiKey.ID)
 	if err != nil {
 		if logger != nil {
 			logger.Warn("group resolve failed",
-				slog.String("api_key_id", apiKeyID),
+				slog.String("api_key_id", apiKey.ID),
 				slog.String("err", err.Error()),
 			)
 		}

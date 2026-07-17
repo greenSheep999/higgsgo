@@ -20,7 +20,7 @@ func NewAPIKeyStore(db *DB) *APIKeyStore { return &APIKeyStore{db: db} }
 
 // apiKeyColumns lists the columns scanAPIKey expects in order. Kept as
 // a constant so every SELECT stays in sync with the scanner.
-const apiKeyColumns = `id, key_hash, name, created_by, cpa_partner_id, status,
+const apiKeyColumns = `id, key_hash, name, created_by, cpa_partner_id, group_id, status,
 	monthly_quota, monthly_used, markup_pct,
 	created_at, last_used_at`
 
@@ -45,11 +45,11 @@ func (s *APIKeyStore) GetByHash(ctx context.Context, keyHash string) (*domain.AP
 func (s *APIKeyStore) Create(ctx context.Context, k *domain.APIKey) error {
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO api_keys (
-			id, key_hash, name, created_by, cpa_partner_id, status,
+			id, key_hash, name, created_by, cpa_partner_id, group_id, status,
 			monthly_quota, monthly_used, markup_pct,
 			created_at, last_used_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		k.ID, k.KeyHash, k.Name, nullStr(k.CreatedBy), k.CPAPartnerID, defaultStatus(k.Status),
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		k.ID, k.KeyHash, k.Name, nullStr(k.CreatedBy), k.CPAPartnerID, k.GroupID, defaultStatus(k.Status),
 		k.MonthlyQuota, k.MonthlyUsed, defaultMarkup(k.MarkupPct),
 		fmtTime(defaultTime(k.CreatedAt)), fmtTime(k.LastUsedAt),
 	)
@@ -143,12 +143,13 @@ func scanAPIKey(sc scanner) (*domain.APIKey, error) {
 		k            domain.APIKey
 		createdBy    sql.NullString
 		cpaPartnerID sql.NullString
+		groupID      sql.NullString
 		lastUsedAt   sql.NullString
 		createdAt    string
 		markupPct    float64
 	)
 	if err := sc.Scan(
-		&k.ID, &k.KeyHash, &k.Name, &createdBy, &cpaPartnerID, &k.Status,
+		&k.ID, &k.KeyHash, &k.Name, &createdBy, &cpaPartnerID, &groupID, &k.Status,
 		&k.MonthlyQuota, &k.MonthlyUsed, &markupPct,
 		&createdAt, &lastUsedAt,
 	); err != nil {
@@ -159,6 +160,7 @@ func scanAPIKey(sc scanner) (*domain.APIKey, error) {
 	}
 	k.CreatedBy = createdBy.String
 	k.CPAPartnerID = cpaPartnerID.String
+	k.GroupID = groupID.String
 	k.MarkupPct = markupPct
 	k.CreatedAt = parseTime(createdAt)
 	k.LastUsedAt = parseTime(lastUsedAt.String)

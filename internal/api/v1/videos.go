@@ -74,13 +74,18 @@ func (h *Handler) HandleVideoGeneration(w http.ResponseWriter, r *http.Request) 
 	_, syncRequested := extraMap["async"]
 
 	// Resolve which group scopes the pool pick. When the caller sets
-	// group_id we honour it; otherwise the api key's bindings are queried
-	// via GroupStore.
-	var apiKeyID string
+	// group_id we honour it; otherwise resolveGroup walks the direct
+	// api_keys.group_id column first and falls back to the M:N binding
+	// table via GroupStore.
+	var (
+		apiKey   *domain.APIKey
+		apiKeyID string
+	)
 	if key, ok := middleware.APIKeyFromContext(r.Context()); ok {
+		apiKey = key
 		apiKeyID = key.ID
 	}
-	groupID, herr := resolveGroup(r.Context(), h.Groups, h.Logger, apiKeyID, vr.GroupID)
+	groupID, herr := resolveGroup(r.Context(), h.Groups, h.Logger, apiKey, vr.GroupID)
 	if herr != nil {
 		writeError(w, herr.Status, herr.Kind, herr.Message)
 		return

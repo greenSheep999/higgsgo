@@ -13,6 +13,7 @@ type APIKey struct {
 	Name         string
 	CreatedBy    string
 	CPAPartnerID string // when non-empty, this key is scoped to a CPA partner
+	GroupID      string // when non-empty, this key is bound 1:1 to this pool group
 	Status       string // "active" | "revoked"
 
 	// Quota tracking (credits * 100).
