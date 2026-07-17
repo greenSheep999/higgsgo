@@ -1,7 +1,9 @@
 package admin
 
 import (
+	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -31,6 +33,86 @@ func NewJobsHandler(j ports.JobStore) *JobsHandler {
 func (h *JobsHandler) Register(r chi.Router) {
 	r.Get("/jobs", h.List)
 	r.Get("/jobs/{id}", h.Get)
+	r.Post("/jobs/purge", h.Purge)
+}
+
+// defaultPurgeStatuses is applied when the caller omits `statuses` on the
+// purge request. Only terminal states are included so in-flight jobs the
+// pollworker still owns (pending / queued / in_progress) survive the sweep
+// even when an operator forgets to constrain the request.
+var defaultPurgeStatuses = []domain.JobStatus{
+	domain.JobCompleted,
+	domain.JobFailed,
+	domain.JobRefunded,
+	domain.JobTimeout,
+}
+
+// purgeRequest is the JSON body for POST /admin/jobs/purge. `older_than`
+// is required (RFC3339); `statuses` is optional and defaults to the four
+// terminal states above.
+type purgeRequest struct {
+	OlderThan string   `json:"older_than"`
+	Statuses  []string `json:"statuses,omitempty"`
+}
+
+// Purge serves POST /admin/jobs/purge. Body:
+//
+//	{
+//	  "older_than": "2026-06-01T00:00:00Z",
+//	  "statuses":   ["completed", "failed"]   // optional
+//	}
+//
+// Deletes jobs whose finished_at is strictly older than `older_than` and
+// whose status matches one of the provided (or default) statuses. Returns
+// {"purged": N, "older_than": "...", "statuses": [...]}. The usage_events
+// table is intentionally untouched: the accounting rows survive so
+// historical billing queries still work after the jobs row is gone.
+func (h *JobsHandler) Purge(w http.ResponseWriter, r *http.Request) {
+	raw, err := io.ReadAll(io.LimitReader(r.Body, 8192))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid_body", err.Error())
+		return
+	}
+	var req purgeRequest
+	if len(raw) > 0 {
+		if err := json.Unmarshal(raw, &req); err != nil {
+			writeErr(w, http.StatusBadRequest, "invalid_body", err.Error())
+			return
+		}
+	}
+	if req.OlderThan == "" {
+		writeErr(w, http.StatusBadRequest, "invalid_body", "older_than is required")
+		return
+	}
+	olderThan, err := time.Parse(time.RFC3339, req.OlderThan)
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid_body", "older_than: expected RFC3339")
+		return
+	}
+	statuses := defaultPurgeStatuses
+	if len(req.Statuses) > 0 {
+		statuses = make([]domain.JobStatus, 0, len(req.Statuses))
+		for _, s := range req.Statuses {
+			if s == "" {
+				continue
+			}
+			statuses = append(statuses, domain.JobStatus(s))
+		}
+	}
+	n, err := h.Jobs.Purge(r.Context(), olderThan.UTC(), statuses)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	echoed := make([]string, len(statuses))
+	for i, st := range statuses {
+		echoed[i] = string(st)
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"purged":     n,
+		"older_than": olderThan.UTC().Format(time.RFC3339),
+		"statuses":   echoed,
+	})
 }
 
 // defaultAdminJobsLimit / maxAdminJobsLimit mirror the store-side caps so

@@ -71,6 +71,13 @@ func (s *fakeJobStore) ListAll(context.Context, ports.JobFilter) ([]domain.Job, 
 	return nil, nil
 }
 
+// Purge is a no-op here: the pollworker never purges jobs; the method
+// exists solely to satisfy ports.JobStore so the interface stays
+// implementable by the fake.
+func (s *fakeJobStore) Purge(context.Context, time.Time, []domain.JobStatus) (int, error) {
+	return 0, nil
+}
+
 type fakeAccountStore struct {
 	acc *domain.Account
 }

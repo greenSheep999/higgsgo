@@ -90,6 +90,9 @@ func (s *stubJobStore) ListByAPIKey(ctx context.Context, k string, f ports.JobFi
 func (s *stubJobStore) ListAll(context.Context, ports.JobFilter) ([]domain.Job, error) {
 	return nil, nil
 }
+func (s *stubJobStore) Purge(context.Context, time.Time, []domain.JobStatus) (int, error) {
+	return 0, nil
+}
 
 func TestPoolCollector_UpdatesGauges(t *testing.T) {
 	accts := &stubAccountStore{

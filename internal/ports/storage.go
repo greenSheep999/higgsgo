@@ -90,6 +90,22 @@ type JobStore interface {
 	// Every JobFilter field is optional. When all filters are empty the
 	// call returns the newest Limit rows across the whole table.
 	ListAll(ctx context.Context, filter JobFilter) ([]domain.Job, error)
+
+	// Purge deletes finished jobs whose finished_at is strictly older than
+	// olderThan and whose status is in statuses. It is meant for periodic
+	// housekeeping — usage_events retains the accounting rows, so deleting
+	// the jobs row does not lose billing state.
+	//
+	// Callers should restrict statuses to terminal states (completed /
+	// failed / refunded / timeout); passing an in-flight status like
+	// pending or in_progress would delete jobs the pollworker still owns.
+	// An empty statuses slice is a no-op: the method returns (0, nil)
+	// so a mis-configured caller cannot accidentally wipe every finished
+	// job by omitting the filter.
+	//
+	// Implementations must run the delete inside a transaction and return
+	// the number of rows removed.
+	Purge(ctx context.Context, olderThan time.Time, statuses []domain.JobStatus) (int, error)
 }
 
 // JobFilter narrows a JobStore.ListByAPIKey / JobStore.ListAll call.

@@ -15,8 +15,10 @@ package admin
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -39,6 +41,13 @@ type fakeAdminJobStore struct {
 	getResult *domain.Job
 	getErr    error
 	lastGetID string
+
+	// Purge behaviour.
+	purgeResult     int
+	purgeErr        error
+	lastPurgeCutoff time.Time
+	lastPurgeStatus []domain.JobStatus
+	purgeCallCount  int
 }
 
 func (f *fakeAdminJobStore) ListAll(_ context.Context, filter ports.JobFilter) ([]domain.Job, error) {
@@ -74,6 +83,16 @@ func (f *fakeAdminJobStore) ListPending(context.Context) ([]domain.Job, error) {
 
 func (f *fakeAdminJobStore) ListByAPIKey(context.Context, string, ports.JobFilter) ([]domain.Job, error) {
 	panic("not implemented")
+}
+
+func (f *fakeAdminJobStore) Purge(_ context.Context, olderThan time.Time, statuses []domain.JobStatus) (int, error) {
+	f.purgeCallCount++
+	f.lastPurgeCutoff = olderThan
+	f.lastPurgeStatus = statuses
+	if f.purgeErr != nil {
+		return 0, f.purgeErr
+	}
+	return f.purgeResult, nil
 }
 
 // newAdminJobsRouter builds a chi router with the JobsHandler mounted so
@@ -274,5 +293,141 @@ func TestAdminJobsHandler_Get_NotFound(t *testing.T) {
 	}
 	if errObj["type"] != "not_found" {
 		t.Errorf("error.type: got %v want not_found", errObj["type"])
+	}
+}
+
+// TestJobsHandler_Purge_Success drives POST /admin/jobs/purge with an
+// explicit older_than / statuses body and asserts the handler both
+// forwards the parsed values to the store and echoes them in the JSON
+// response along with the row count.
+func TestJobsHandler_Purge_Success(t *testing.T) {
+	store := &fakeAdminJobStore{purgeResult: 5}
+	r := newAdminJobsRouter(store)
+
+	body := `{"older_than":"2026-06-01T00:00:00Z","statuses":["completed","failed"]}`
+	req := httptest.NewRequest(http.MethodPost, "/jobs/purge", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status: got %d want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	if store.purgeCallCount != 1 {
+		t.Fatalf("Purge calls: got %d want 1", store.purgeCallCount)
+	}
+	want := time.Date(2026, 6, 1, 0, 0, 0, 0, time.UTC)
+	if !store.lastPurgeCutoff.Equal(want) {
+		t.Errorf("cutoff: got %v want %v", store.lastPurgeCutoff, want)
+	}
+	if len(store.lastPurgeStatus) != 2 ||
+		store.lastPurgeStatus[0] != domain.JobCompleted ||
+		store.lastPurgeStatus[1] != domain.JobFailed {
+		t.Errorf("statuses forwarded: got %v", store.lastPurgeStatus)
+	}
+	var resp map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v; raw=%s", err, rec.Body.String())
+	}
+	if got, want := resp["purged"], float64(5); got != want {
+		t.Errorf("resp.purged: got %v want %v", got, want)
+	}
+	if resp["older_than"] != "2026-06-01T00:00:00Z" {
+		t.Errorf("resp.older_than: got %v", resp["older_than"])
+	}
+	statuses, ok := resp["statuses"].([]any)
+	if !ok || len(statuses) != 2 {
+		t.Fatalf("resp.statuses shape: got %v", resp["statuses"])
+	}
+}
+
+// TestJobsHandler_Purge_DefaultStatuses confirms that omitting `statuses`
+// falls back to the four terminal defaults (completed / failed / refunded
+// / timeout) — an operator who forgets the field should never accidentally
+// wipe pending / in-flight rows.
+func TestJobsHandler_Purge_DefaultStatuses(t *testing.T) {
+	store := &fakeAdminJobStore{purgeResult: 0}
+	r := newAdminJobsRouter(store)
+
+	body := `{"older_than":"2026-06-01T00:00:00Z"}`
+	req := httptest.NewRequest(http.MethodPost, "/jobs/purge", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status: got %d want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	if len(store.lastPurgeStatus) != len(defaultPurgeStatuses) {
+		t.Fatalf("default statuses len: got %d want %d", len(store.lastPurgeStatus), len(defaultPurgeStatuses))
+	}
+	seen := map[domain.JobStatus]bool{}
+	for _, s := range store.lastPurgeStatus {
+		seen[s] = true
+	}
+	for _, want := range defaultPurgeStatuses {
+		if !seen[want] {
+			t.Errorf("default statuses missing %q", want)
+		}
+	}
+}
+
+// TestJobsHandler_Purge_InvalidOlderThan asserts both the empty-body path
+// (older_than missing) and the malformed-timestamp path return 400 and
+// never touch the store.
+func TestJobsHandler_Purge_InvalidOlderThan(t *testing.T) {
+	cases := []struct {
+		name string
+		body string
+	}{
+		{"missing", `{}`},
+		{"empty", `{"older_than":""}`},
+		{"malformed", `{"older_than":"not-a-time"}`},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			store := &fakeAdminJobStore{}
+			r := newAdminJobsRouter(store)
+
+			req := httptest.NewRequest(http.MethodPost, "/jobs/purge", strings.NewReader(tc.body))
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+			r.ServeHTTP(rec, req)
+
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("status: got %d want 400; body=%s", rec.Code, rec.Body.String())
+			}
+			if store.purgeCallCount != 0 {
+				t.Errorf("Purge must not be called on 400; got %d calls", store.purgeCallCount)
+			}
+		})
+	}
+}
+
+// TestJobsHandler_Purge_StoreError confirms that when the store's Purge
+// returns an error the handler surfaces a 500 with the error envelope.
+func TestJobsHandler_Purge_StoreError(t *testing.T) {
+	store := &fakeAdminJobStore{purgeErr: errors.New("db is on fire")}
+	r := newAdminJobsRouter(store)
+
+	body := `{"older_than":"2026-06-01T00:00:00Z"}`
+	req := httptest.NewRequest(http.MethodPost, "/jobs/purge", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status: got %d want 500; body=%s", rec.Code, rec.Body.String())
+	}
+	var resp map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	errObj, ok := resp["error"].(map[string]any)
+	if !ok {
+		t.Fatalf("resp.error missing or wrong type: %T", resp["error"])
+	}
+	if errObj["type"] != "internal" {
+		t.Errorf("error.type: got %v want internal", errObj["type"])
 	}
 }

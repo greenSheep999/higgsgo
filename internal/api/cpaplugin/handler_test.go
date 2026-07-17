@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/greensheep999/higgsgo/internal/core/proxy"
@@ -158,6 +159,9 @@ func (f *fakeJobStore) ListByAPIKey(context.Context, string, ports.JobFilter) ([
 }
 func (f *fakeJobStore) ListAll(context.Context, ports.JobFilter) ([]domain.Job, error) {
 	return nil, nil
+}
+func (f *fakeJobStore) Purge(context.Context, time.Time, []domain.JobStatus) (int, error) {
+	return 0, nil
 }
 
 // fakeProxy records the last request and returns a canned response.

@@ -66,6 +66,13 @@ func (f *fakeJobStoreForList) ListAll(context.Context, ports.JobFilter) ([]domai
 	panic("not implemented")
 }
 
+// Purge is not exercised by the /v1/jobs surface either; the interface
+// requires it, so this stub panics to keep the /v1 handler honest — the
+// public path must never reach into the admin-scoped purge code.
+func (f *fakeJobStoreForList) Purge(context.Context, time.Time, []domain.JobStatus) (int, error) {
+	panic("not implemented")
+}
+
 // newJobsListRouter mounts HandleJobsList onto a chi router, injecting a
 // stub APIKey into the request context so the handler's caller-scoping
 // path (which reads middleware.APIKeyFromContext) has something to work

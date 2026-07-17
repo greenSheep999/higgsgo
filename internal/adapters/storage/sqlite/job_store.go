@@ -276,6 +276,50 @@ func (s *JobStore) ListAll(ctx context.Context, filter ports.JobFilter) ([]domai
 	return out, rows.Err()
 }
 
+// Purge deletes terminal-status jobs whose finished_at is strictly older
+// than olderThan. Callers pass the terminal statuses they want to sweep
+// (completed / failed / refunded / timeout); passing an empty slice is a
+// no-op so a mis-configured caller cannot wipe every finished job by
+// omitting the filter.
+//
+// Runs inside a transaction and returns the number of rows removed. The
+// usage_events table is intentionally untouched: the accounting detail
+// rows survive so operators can still query historical billing after the
+// jobs row is gone.
+func (s *JobStore) Purge(ctx context.Context, olderThan time.Time, statuses []domain.JobStatus) (int, error) {
+	if len(statuses) == 0 {
+		return 0, nil
+	}
+	placeholders := make([]string, len(statuses))
+	args := make([]any, 0, len(statuses)+1)
+	for i, st := range statuses {
+		placeholders[i] = "?"
+		args = append(args, string(st))
+	}
+	args = append(args, fmtTime(olderThan))
+	q := `DELETE FROM jobs
+		WHERE status IN (` + strings.Join(placeholders, ",") + `)
+		  AND finished_at IS NOT NULL
+		  AND finished_at < ?`
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return 0, fmt.Errorf("purge begin: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	res, err := tx.ExecContext(ctx, q, args...)
+	if err != nil {
+		return 0, fmt.Errorf("purge exec: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("purge rows affected: %w", err)
+	}
+	if err := tx.Commit(); err != nil {
+		return 0, fmt.Errorf("purge commit: %w", err)
+	}
+	return int(n), nil
+}
+
 // ListPending returns all jobs whose status is queued or in_progress.
 // Ordered by request_ts ascending so oldest jobs poll first — this is what
 // the background worker consumes.
