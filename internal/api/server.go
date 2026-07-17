@@ -21,10 +21,13 @@ import (
 // admin, internal). The three routers share middleware but expose different
 // endpoints.
 type Server struct {
-	Config  *config.Config
-	Logger  *slog.Logger
-	V1      *v1.Handler
-	APIKeys ports.APIKeyStore // required for /v1 auth and /admin/keys
+	Config   *config.Config
+	Logger   *slog.Logger
+	V1       *v1.Handler
+	APIKeys  ports.APIKeyStore     // required for /v1 auth and /admin/keys
+	Accounts ports.AccountStore    // required for /admin/accounts and /admin/stats
+	Jobs     ports.JobStore        // optional; used by /admin/stats
+	Usage    ports.UsageEventStore // optional; used by /admin/usage
 
 	public   *http.Server
 	admin    *http.Server
@@ -34,8 +37,16 @@ type Server struct {
 // New builds a Server. Handlers are wired up here; concrete route
 // registrations (v1 / admin / internal) live in sibling files as they are
 // implemented.
-func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore) *Server {
-	s := &Server{Config: cfg, Logger: logger, V1: v1Handler, APIKeys: apiKeys}
+func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore) *Server {
+	s := &Server{
+		Config:   cfg,
+		Logger:   logger,
+		V1:       v1Handler,
+		APIKeys:  apiKeys,
+		Accounts: accounts,
+		Jobs:     jobs,
+		Usage:    usage,
+	}
 
 	s.public = &http.Server{
 		Addr:              cfg.Server.Listen,
@@ -143,6 +154,13 @@ func (s *Server) adminRouter() http.Handler {
 		r.Use(middleware.BearerAuth(s.Config.Server.AdminBearer))
 		if s.APIKeys != nil {
 			admin.NewKeysHandler(s.APIKeys).Register(r)
+		}
+		if s.Accounts != nil {
+			admin.NewAccountsHandler(s.Accounts).Register(r)
+			admin.NewStatsHandler(s.Accounts, s.Jobs).Register(r)
+		}
+		if s.Usage != nil {
+			admin.NewUsageHandler(s.Usage).Register(r)
 		}
 	})
 	return r

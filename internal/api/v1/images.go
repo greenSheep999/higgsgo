@@ -11,13 +11,14 @@ import (
 // imageRequest mirrors OpenAI's POST /v1/images/generations shape with a
 // few passthrough keys we forward to higgsfield's params.
 type imageRequest struct {
-	Model   string `json:"model"`
-	Prompt  string `json:"prompt"`
-	N       int    `json:"n,omitempty"`
-	Size    string `json:"size,omitempty"`     // "1024x1024"
-	Quality string `json:"quality,omitempty"`  // "standard" | "hd"
-	ImageID string `json:"media_id,omitempty"` // pre-uploaded higgsfield media
-	Async   bool   `json:"async,omitempty"`
+	Model       string `json:"model"`
+	Prompt      string `json:"prompt"`
+	N           int    `json:"n,omitempty"`
+	Size        string `json:"size,omitempty"`     // "1024x1024"
+	Quality     string `json:"quality,omitempty"`  // "standard" | "hd"
+	ImageID     string `json:"media_id,omitempty"` // pre-uploaded higgsfield media
+	Async       bool   `json:"async,omitempty"`
+	CallbackURL string `json:"callback_url,omitempty"`
 }
 
 // HandleImageGeneration serves POST /v1/images/generations.
@@ -39,7 +40,7 @@ func (h *Handler) HandleImageGeneration(w http.ResponseWriter, r *http.Request) 
 	// Forward unknown keys.
 	var extraMap map[string]any
 	_ = json.Unmarshal(raw, &extraMap)
-	known := map[string]bool{"model": true, "prompt": true, "n": true, "size": true, "quality": true, "media_id": true, "async": true}
+	known := map[string]bool{"model": true, "prompt": true, "n": true, "size": true, "quality": true, "media_id": true, "async": true, "callback_url": true}
 	userParams := make(map[string]any)
 	if ir.Prompt != "" {
 		userParams["prompt"] = ir.Prompt
@@ -67,6 +68,7 @@ func (h *Handler) HandleImageGeneration(w http.ResponseWriter, r *http.Request) 
 		UserParams:    userParams,
 		Async:         ir.Async,
 		SyncRequested: syncRequested,
+		CallbackURL:   ir.CallbackURL,
 	}
 	if key, ok := middleware.APIKeyFromContext(r.Context()); ok {
 		greq.APIKeyID = key.ID

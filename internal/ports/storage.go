@@ -14,6 +14,10 @@ type AccountStore interface {
 	List(ctx context.Context, filter AccountFilter) ([]domain.Account, error)
 	Upsert(ctx context.Context, a *domain.Account) error
 	UpdateBalance(ctx context.Context, id string, sub, credits, pkg int64) error
+	// UpdateEntitlements refreshes the API-side permission flags observed via
+	// GET /user (plan_type / has_unlim / has_flex_unlim / is_pro_veo3_available /
+	// cohort). Called by the balance refresher ticker.
+	UpdateEntitlements(ctx context.Context, id string, e EntitlementUpdate) error
 	UpdateInFlight(ctx context.Context, id string, delta int) error
 	MarkStatus(ctx context.Context, id string, status domain.AccountStatus, reason string) error
 
@@ -27,6 +31,18 @@ type AccountStore interface {
 
 	// Unlock releases the in_flight increment claimed by PickAndLock.
 	Unlock(ctx context.Context, id string, lockToken string) error
+}
+
+// EntitlementUpdate carries the API-side permission fields refreshed from
+// GET /user by the balance refresher ticker.
+type EntitlementUpdate struct {
+	PlanType           domain.PlanType
+	HasUnlim           bool
+	HasFlexUnlim       bool
+	IsProVeo3Available bool
+	Cohort             string
+	TotalPlanCredits   int64 // credits × 100
+	PlanEndsAt         time.Time
 }
 
 // AccountFilter narrows an AccountStore.List call.
@@ -127,6 +143,7 @@ type UsageQuery struct {
 	AccountID    string
 	GroupID      string
 	ModelAlias   string
+	Status       string // domain.JobStatus value ("completed", "failed", ...)
 	Limit        int
 	Offset       int
 }

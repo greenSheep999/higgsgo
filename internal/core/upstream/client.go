@@ -238,6 +238,56 @@ type Wallet struct {
 	OnDemandCredits     float64 `json:"on_demand_credits"`
 }
 
+// UserSnapshot mirrors GET /user. Values expressed in "dollars" here are
+// credits in float form; balance-refresher logic converts them to the int64
+// hundredths unit used by the accounts table.
+type UserSnapshot struct {
+	ID                  string  `json:"id"`
+	Email               string  `json:"email"`
+	PlanType            string  `json:"plan_type"`
+	SubscriptionCredits float64 `json:"subscription_credits"`
+	PackageCredits      float64 `json:"package_credits"`
+	DailyCredits        float64 `json:"daily_credits"`
+	TotalPlanCredits    float64 `json:"total_plan_credits"`
+	BillingPeriod       string  `json:"billing_period"`
+	PlanEndsAt          string  `json:"plan_ends_at"`
+	HasUnlim            bool    `json:"has_unlim"`
+	HasFlexUnlim        bool    `json:"has_flex_unlim"`
+	IsProVeo3Available  bool    `json:"is_pro_plan_veo3_available"`
+	Cohort              string  `json:"cohort"`
+	WorkspaceID         string  `json:"workspace_id"`
+}
+
+// FetchUser calls GET /user and returns the per-account entitlement snapshot.
+// This is the canonical source for plan_type, has_unlim, has_flex_unlim,
+// is_pro_plan_veo3_available and cohort — /workspaces/wallet only exposes
+// balances, not entitlement flags.
+func (c *Client) FetchUser(ctx context.Context, account *domain.Account) (*UserSnapshot, error) {
+	tok, err := c.jwt.Get(ctx, account)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequest(http.MethodGet, c.baseURL+"/user", nil)
+	if err != nil {
+		return nil, err
+	}
+	c.setStdHeaders(req, account, tok.JWT, false)
+	resp, err := c.http.Do(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("user: HTTP %d: %s", resp.StatusCode, snip(raw))
+	}
+	var u UserSnapshot
+	if err := json.Unmarshal(raw, &u); err != nil {
+		return nil, err
+	}
+	return &u, nil
+}
+
 // FetchWallet calls GET /workspaces/wallet.
 func (c *Client) FetchWallet(ctx context.Context, account *domain.Account) (*Wallet, error) {
 	tok, err := c.jwt.Get(ctx, account)

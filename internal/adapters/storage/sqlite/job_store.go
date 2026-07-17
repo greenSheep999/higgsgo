@@ -19,7 +19,9 @@ type JobStore struct {
 // NewJobStore returns a JobStore rooted at the given DB.
 func NewJobStore(db *DB) *JobStore { return &JobStore{db: db} }
 
-// Create inserts a new job record.
+// Create inserts a new job record. callback_url and pre_balance_h are
+// persisted verbatim (both default to empty/zero when omitted); the async
+// pollworker consumes them at terminal transition.
 func (s *JobStore) Create(ctx context.Context, j *domain.Job) error {
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO jobs (
@@ -28,14 +30,16 @@ func (s *JobStore) Create(ctx context.Context, j *domain.Job) error {
 			upstream_job_id, upstream_cost, result_url,
 			status, error_type, error_detail,
 			latency_ms, poll_count,
-			actual_credits_h, charged_credits_h, refunded
-		) VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?, ?,?,?, ?,?, ?,?,?)`,
+			actual_credits_h, charged_credits_h, refunded,
+			callback_url, pre_balance_h
+		) VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?, ?,?,?, ?,?, ?,?,?, ?,?)`,
 		j.ID, nullStr(j.APIKeyID), nullStr(j.CPAPartnerID), nullStr(j.GroupID), j.AccountID,
 		j.ModelAlias, j.JST, j.Endpoint, j.RequestBodyJSON, fmtTime(j.RequestTS),
 		nullStr(j.UpstreamJobID), nullInt(j.UpstreamCost), nullStr(j.ResultURL),
 		string(j.Status), nullStr(string(j.ErrorType)), nullStr(j.ErrorDetail),
 		j.LatencyMS, j.PollCount,
 		nullInt(j.ActualCreditsHundredths), nullInt(j.ChargedCreditsHundredths), boolToInt(j.Refunded),
+		j.CallbackURL, j.PreBalanceH,
 	)
 	if err != nil {
 		return fmt.Errorf("insert job %s: %w", j.ID, err)
@@ -109,7 +113,8 @@ func (s *JobStore) Get(ctx context.Context, id string) (*domain.Job, error) {
 		       upstream_job_id, upstream_cost, result_url,
 		       status, error_type, error_detail, finished_at,
 		       latency_ms, poll_count,
-		       actual_credits_h, charged_credits_h, refunded
+		       actual_credits_h, charged_credits_h, refunded,
+		       callback_url, pre_balance_h
 		FROM jobs WHERE id = ?`, id)
 	return scanJob(row)
 }
@@ -124,7 +129,8 @@ func (s *JobStore) ListPending(ctx context.Context) ([]domain.Job, error) {
 		       upstream_job_id, upstream_cost, result_url,
 		       status, error_type, error_detail, finished_at,
 		       latency_ms, poll_count,
-		       actual_credits_h, charged_credits_h, refunded
+		       actual_credits_h, charged_credits_h, refunded,
+		       callback_url, pre_balance_h
 		FROM jobs
 		WHERE status IN ('pending','queued','in_progress')
 		ORDER BY request_ts ASC`)
@@ -143,7 +149,8 @@ func (s *JobStore) ListPending(ctx context.Context) ([]domain.Job, error) {
 	return out, rows.Err()
 }
 
-// scanJob reads one jobs row into a domain.Job.
+// scanJob reads one jobs row into a domain.Job. Column order must match
+// the SELECT lists in Get / ListPending exactly.
 func scanJob(sc scanner) (*domain.Job, error) {
 	var (
 		j              domain.Job
@@ -161,6 +168,8 @@ func scanJob(sc scanner) (*domain.Job, error) {
 		refunded       int
 		statusStr      string
 		requestTS      string
+		callbackURL    string
+		preBalanceH    int64
 	)
 	if err := sc.Scan(
 		&j.ID, &apiKeyID, &cpaPartnerID, &groupID, &j.AccountID,
@@ -169,6 +178,7 @@ func scanJob(sc scanner) (*domain.Job, error) {
 		&statusStr, &errorType, &errorDetail, &finishedAt,
 		&j.LatencyMS, &j.PollCount,
 		&actualCredits, &chargedCredits, &refunded,
+		&callbackURL, &preBalanceH,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrJobNotFound
@@ -189,6 +199,8 @@ func scanJob(sc scanner) (*domain.Job, error) {
 	j.ActualCreditsHundredths = actualCredits.Int64
 	j.ChargedCreditsHundredths = chargedCredits.Int64
 	j.Refunded = intToBool(refunded)
+	j.CallbackURL = callbackURL
+	j.PreBalanceH = preBalanceH
 	return &j, nil
 }
 

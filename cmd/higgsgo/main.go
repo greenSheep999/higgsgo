@@ -28,9 +28,12 @@ import (
 	"github.com/greensheep999/higgsgo/internal/api/v1"
 	"github.com/greensheep999/higgsgo/internal/config"
 	"github.com/greensheep999/higgsgo/internal/core/jwt"
+	"github.com/greensheep999/higgsgo/internal/core/metering"
 	"github.com/greensheep999/higgsgo/internal/core/pollworker"
 	"github.com/greensheep999/higgsgo/internal/core/proxy"
+	"github.com/greensheep999/higgsgo/internal/core/refresher"
 	"github.com/greensheep999/higgsgo/internal/core/upstream"
+	"github.com/greensheep999/higgsgo/internal/core/webhook"
 	"github.com/greensheep999/higgsgo/internal/observability"
 	"github.com/greensheep999/higgsgo/internal/ports"
 )
@@ -68,6 +71,7 @@ func run() error {
 		accountStore ports.AccountStore
 		jobStore     ports.JobStore
 		apiKeyStore  ports.APIKeyStore
+		usageStore   ports.UsageEventStore
 	)
 	switch cfg.Storage.Driver {
 	case "sqlite":
@@ -80,6 +84,7 @@ func run() error {
 		accountStore = sqlite.NewAccountStore(db)
 		jobStore = sqlite.NewJobStore(db)
 		apiKeyStore = sqlite.NewAPIKeyStore(db)
+		usageStore = sqlite.NewUsageEventStore(db)
 	case "postgres":
 		return errors.New("postgres storage adapter not implemented yet")
 	}
@@ -109,6 +114,32 @@ func run() error {
 	// Core services.
 	minter := jwt.New(httpClient, ports.RealClock{}, jwt.Config{})
 	upstreamClient := upstream.New(httpClient, minter, upstream.Config{})
+
+	// Metering recorder: shared by the sync proxy path and the async
+	// pollworker. Both invoke OnJobTerminal at the terminal transition so
+	// every completed / failed / refunded / timeout job produces exactly one
+	// usage_events row. Recorder tolerates a nil store defensively.
+	meter := &metering.Recorder{
+		Events:   usageStore,
+		APIKeys:  apiKeyStore,
+		Accounts: accountStore,
+		Logger:   logger,
+	}
+
+	// Webhook dispatcher: shared by the sync proxy path and the async
+	// pollworker. Fire is non-blocking; delivery + retries + drain-on-close
+	// are owned by the Dispatcher. The signing key is read from the env
+	// (HIGGSGO_WEBHOOK_SIGNING_KEY) because it is a secret and not yet
+	// modelled in the TOML config schema. Empty key disables signing.
+	webhooks := webhook.New(logger, webhook.Config{
+		SigningKey: os.Getenv("HIGGSGO_WEBHOOK_SIGNING_KEY"),
+	})
+	defer func() {
+		shutdownCtx, cancelShutdown := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancelShutdown()
+		webhooks.Close(shutdownCtx)
+	}()
+
 	svc := &proxy.Service{
 		Store:            accountStore,
 		Registry:         registry,
@@ -118,6 +149,8 @@ func run() error {
 		Clock:            ports.RealClock{},
 		AsyncByDefault:   true,
 		SyncPollDeadline: 3 * time.Minute,
+		Meter:            meter,
+		Webhooks:         webhooks,
 	}
 	v1h := v1.New(svc, registry, jobStore)
 
@@ -130,10 +163,27 @@ func run() error {
 	worker.Accounts = accountStore
 	worker.Upstream = upstreamClient
 	worker.Logger = logger
+	worker.Meter = meter
+	worker.Webhooks = webhooks
 	go worker.Run(ctx)
 
+	// Background balance + entitlement refresher: keeps every active
+	// account's subscription_balance and plan flags in sync with
+	// /workspaces/wallet and /user. Without this, the pool picker drifts
+	// (starves an out-of-credits account, misroutes to a downgraded plan).
+	refreshInterval, err := time.ParseDuration(cfg.Pool.BalanceRefreshInterval)
+	if err != nil || refreshInterval <= 0 {
+		logger.Warn("invalid pool.balance_refresh_interval, falling back to 10m",
+			slog.String("value", cfg.Pool.BalanceRefreshInterval))
+		refreshInterval = 10 * time.Minute
+	}
+	rf := refresher.New(accountStore, upstreamClient, logger)
+	rf.Interval = refreshInterval
+	logger.Info("refresher started", slog.Duration("interval", refreshInterval))
+	go rf.Run(ctx)
+
 	// Boot API server.
-	srv := api.New(cfg, logger, v1h, apiKeyStore)
+	srv := api.New(cfg, logger, v1h, apiKeyStore, accountStore, jobStore, usageStore)
 	if err := srv.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("serve: %w", err)
 	}

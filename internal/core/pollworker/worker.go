@@ -27,16 +27,40 @@ import (
 	"sync"
 	"time"
 
+	"github.com/greensheep999/higgsgo/internal/core/metering"
 	"github.com/greensheep999/higgsgo/internal/core/upstream"
 	"github.com/greensheep999/higgsgo/internal/domain"
 	"github.com/greensheep999/higgsgo/internal/ports"
 )
 
+// UpstreamPoller is the narrow surface the worker needs from an upstream
+// client. Exposed as an interface (rather than a concrete *upstream.Client)
+// so tests can inject a fake without spinning up a JWT minter + JA3 HTTP
+// stack. *upstream.Client satisfies it directly.
+type UpstreamPoller interface {
+	FetchStatus(ctx context.Context, account *domain.Account, jobID string) (*upstream.StatusResponse, error)
+	FetchJob(ctx context.Context, account *domain.Account, jobID string) (*upstream.FetchResponse, error)
+}
+
+// MeterSink is what the worker needs from a metering.Recorder. Defined as
+// an interface for the same reason as UpstreamPoller: hermetic tests.
+// *metering.Recorder satisfies it directly.
+type MeterSink interface {
+	OnJobTerminal(ctx context.Context, job *domain.Job, account *domain.Account, preBalance int64, markupPct float64) error
+}
+
+// WebhookSink is what the worker needs from a webhook.Dispatcher. See the
+// note on UpstreamPoller for the rationale. *webhook.Dispatcher satisfies
+// it directly.
+type WebhookSink interface {
+	Fire(url string, job *domain.Job)
+}
+
 // Worker is a long-running poller for live jobs.
 type Worker struct {
 	Jobs     ports.JobStore
 	Accounts ports.AccountStore
-	Upstream *upstream.Client
+	Upstream UpstreamPoller
 	Logger   *slog.Logger
 
 	// TickInterval is how often the worker wakes up. Default 8s.
@@ -57,9 +81,30 @@ type Worker struct {
 	// send webhooks or emit metrics.
 	OnTerminal func(job *domain.Job)
 
+	// Meter, when non-nil, receives a usage event after each terminal job.
+	// The worker path now passes j.PreBalanceH (persisted at create time on
+	// the jobs row) so the Recorder can compute exact credits consumed via
+	// the (pre - post) delta path. When PreBalanceH is zero the Recorder
+	// falls back to job.UpstreamCost. Metering failures are logged but
+	// never propagated — accounting must not block a terminal transition.
+	Meter MeterSink
+
+	// Webhooks, when non-nil, delivers a signed terminal-state notification
+	// to the caller-supplied CallbackURL after each terminal transition
+	// (completed / failed / refunded / timeout). Fire is non-blocking; the
+	// Dispatcher owns retry and drain-on-close.
+	Webhooks WebhookSink
+
 	// Internal.
 	lastPolled sync.Map // upstream_job_id -> time.Time
 }
+
+// Ensure the concrete types the production wiring uses still satisfy the
+// interfaces above. These compile-time assertions guard against drift.
+var (
+	_ UpstreamPoller = (*upstream.Client)(nil)
+	_ MeterSink      = (*metering.Recorder)(nil)
+)
 
 // Defaults returns a Worker populated with sensible defaults. The caller
 // must set Jobs, Accounts, Upstream, and Logger.
@@ -217,13 +262,41 @@ func (w *Worker) pollOne(ctx context.Context, j *domain.Job, now time.Time) {
 		slog.Int64("latency_ms", latency),
 		slog.String("result_url", fetched.ResultURL))
 
+	// Populate the outgoing struct so callbacks + metering see final state.
+	j.Status = finalStatus
+	j.ResultURL = fetched.ResultURL
+	j.Refunded = fetched.Refunded
+	j.FinishedAt = now
+	j.LatencyMS = latency
+
+	// Metering: forward the pre-create balance snapshot persisted on the
+	// jobs row so the Recorder can compute exact credits consumed via the
+	// (pre - post) delta path. A zero PreBalanceH means the job predates
+	// migration 003 (or was created without a snapshot) and the Recorder
+	// falls back to job.UpstreamCost — never block terminal transitions
+	// on accounting.
+	if w.Meter != nil {
+		freshAcc, getErr := w.Accounts.Get(ctx, j.AccountID)
+		if getErr != nil || freshAcc == nil {
+			freshAcc = acc
+		}
+		if err := w.Meter.OnJobTerminal(ctx, j, freshAcc, j.PreBalanceH, 0); err != nil {
+			w.Logger.Warn("metering failed",
+				slog.String("job_id", j.ID),
+				slog.String("err", err.Error()))
+		}
+	}
+
+	// Webhook: fire-and-forget delivery to the caller-supplied URL. Only
+	// fires when both the job carries a CallbackURL and a Dispatcher is
+	// wired in. Sync-path webhooks are handled in core/proxy so the two
+	// paths do not double-fire (only one of them observes the terminal
+	// transition for any given job).
+	if w.Webhooks != nil && j.CallbackURL != "" {
+		w.Webhooks.Fire(j.CallbackURL, j)
+	}
+
 	if w.OnTerminal != nil {
-		// Populate the outgoing struct so callbacks see final state.
-		j.Status = finalStatus
-		j.ResultURL = fetched.ResultURL
-		j.Refunded = fetched.Refunded
-		j.FinishedAt = now
-		j.LatencyMS = latency
 		w.OnTerminal(j)
 	}
 }
@@ -245,8 +318,31 @@ func (w *Worker) markTimeout(ctx context.Context, j *domain.Job) {
 		slog.String("job_id", j.ID),
 		slog.String("model", j.ModelAlias),
 		slog.Duration("age", time.Since(j.RequestTS)))
+	j.Status = domain.JobTimeout
+	j.LatencyMS = time.Since(j.RequestTS).Milliseconds()
+
+	// Metering: emit even for timeouts so operators can attribute credits
+	// that upstream may still charge. Account lookup is best-effort;
+	// Recorder tolerates a nil-safe fallback path. Pass the persisted
+	// PreBalanceH so the delta path can still apply when upstream actually
+	// consumed credits before we gave up.
+	if w.Meter != nil {
+		if acc, aerr := w.Accounts.Get(ctx, j.AccountID); aerr == nil && acc != nil {
+			if err := w.Meter.OnJobTerminal(ctx, j, acc, j.PreBalanceH, 0); err != nil {
+				w.Logger.Warn("metering failed",
+					slog.String("job_id", j.ID),
+					slog.String("err", err.Error()))
+			}
+		}
+	}
+
+	// Webhook: notify the caller that the job timed out. Same fire-and-forget
+	// contract as the completion path.
+	if w.Webhooks != nil && j.CallbackURL != "" {
+		w.Webhooks.Fire(j.CallbackURL, j)
+	}
+
 	if w.OnTerminal != nil {
-		j.Status = domain.JobTimeout
 		w.OnTerminal(j)
 	}
 }

@@ -176,6 +176,40 @@ func (s *AccountStore) UpdateBalance(ctx context.Context, id string, sub, credit
 	return err
 }
 
+// UpdateEntitlements refreshes the API-side permission flags observed via
+// GET /user. Balances live in a separate UpdateBalance call so the two
+// endpoints (which come from the refresher goroutine) do not step on each
+// other's writes.
+func (s *AccountStore) UpdateEntitlements(ctx context.Context, id string, e ports.EntitlementUpdate) error {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE accounts
+		SET plan_type = ?,
+		    has_unlim = ?,
+		    has_flex_unlim = ?,
+		    is_pro_veo3_available = ?,
+		    cohort = ?,
+		    total_plan_credits = ?,
+		    plan_ends_at = ?
+		WHERE id = ?`,
+		string(e.PlanType),
+		boolToInt(e.HasUnlim),
+		boolToInt(e.HasFlexUnlim),
+		boolToInt(e.IsProVeo3Available),
+		e.Cohort,
+		e.TotalPlanCredits,
+		fmtTime(e.PlanEndsAt),
+		id,
+	)
+	if err != nil {
+		return fmt.Errorf("update entitlements %s: %w", id, err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return domain.ErrAccountNotFound
+	}
+	return nil
+}
+
 // UpdateInFlight adjusts the in_flight_jobs counter atomically.
 func (s *AccountStore) UpdateInFlight(ctx context.Context, id string, delta int) error {
 	res, err := s.db.ExecContext(ctx, `

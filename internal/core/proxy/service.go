@@ -18,7 +18,9 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/greensheep999/higgsgo/internal/core/metering"
 	"github.com/greensheep999/higgsgo/internal/core/upstream"
+	"github.com/greensheep999/higgsgo/internal/core/webhook"
 	"github.com/greensheep999/higgsgo/internal/domain"
 	"github.com/greensheep999/higgsgo/internal/ports"
 )
@@ -31,6 +33,18 @@ type Service struct {
 	Jobs     ports.JobStore // optional; when set every create is persisted
 	Logger   *slog.Logger
 	Clock    ports.Clock
+
+	// Meter, when non-nil, receives a usage event after each terminal job.
+	// The service only fires it on the sync path — the pollworker owns
+	// metering for async jobs.
+	Meter *metering.Recorder
+
+	// Webhooks, when non-nil, delivers a signed terminal-state notification
+	// to the caller-supplied callback URL after the sync poll finishes.
+	// Fire is non-blocking; delivery + retries happen on background
+	// goroutines owned by the Dispatcher. The async path is handled by the
+	// pollworker (which owns the same Dispatcher instance).
+	Webhooks *webhook.Dispatcher
 
 	// AsyncByDefault, when true, makes async=true the default for video/
 	// audio outputs even when the caller does not set the async field.
@@ -75,6 +89,12 @@ type GenerationRequest struct {
 	// APIKeyID / CPAPartnerID are set by the auth middleware for accounting.
 	APIKeyID     string
 	CPAPartnerID string
+
+	// CallbackURL, when non-empty, is a caller-supplied HTTP endpoint that
+	// receives a signed webhook once the job reaches a terminal state.
+	// Persisted on the jobs row so the async pollworker path can fire it
+	// even for requests that returned queued to the caller.
+	CallbackURL string
 }
 
 // MediaInput represents a single reference media object provided by the caller.
@@ -142,6 +162,11 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 	if err != nil {
 		return nil, err
 	}
+	// Snapshot the pre-job balance so metering can attribute exact credits
+	// consumed via (preBalance - post.SubscriptionBalance). Zero means
+	// "unknown" downstream; the account was just picked so a real balance
+	// should be present, but we guard against the row missing the field.
+	preBalance := acc.SubscriptionBalance
 	// Unlock happens once the job leaves in_flight. In async mode that's
 	// immediately after create (the pollworker owns the lifecycle from
 	// there). In sync mode we unlock after the sync poll finishes.
@@ -195,6 +220,14 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 			UpstreamJobID:   created.JobID,
 			UpstreamCost:    created.Cost,
 			Status:          domain.JobQueued,
+			// Snapshotted before create so the async pollworker can compute
+			// exact credits consumed at terminal transition without having
+			// to re-fetch the account row twice.
+			PreBalanceH: preBalance,
+			// Persisted so both the sync path (below, on the terminal
+			// transition) and the async pollworker can fire a webhook to
+			// the caller when the job finishes.
+			CallbackURL: req.CallbackURL,
 		}
 		if err := s.Jobs.Create(ctx, job); err != nil && s.Logger != nil {
 			s.Logger.Warn("persist job failed",
@@ -263,6 +296,63 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 			LatencyMS: s.now().Sub(requestTS).Milliseconds(),
 			Refunded:  final.Refunded,
 		})
+	}
+
+	// Build the terminal Job snapshot once; it feeds both metering and the
+	// webhook fire below. Kept outside the Meter branch so a deployment
+	// running Webhooks-only (no Recorder wired) still notifies callers.
+	terminalStatus := domain.JobStatus(final.Status)
+	if terminalStatus == "failed" && final.Refunded {
+		terminalStatus = domain.JobRefunded
+	} else if terminalStatus == "completed" {
+		terminalStatus = domain.JobCompleted
+	} else if terminalStatus == "failed" {
+		terminalStatus = domain.JobFailed
+	}
+	latency := s.now().Sub(requestTS).Milliseconds()
+	mJob := &domain.Job{
+		ID:            created.JobID,
+		APIKeyID:      req.APIKeyID,
+		CPAPartnerID:  req.CPAPartnerID,
+		GroupID:       req.GroupID,
+		AccountID:     acc.ID,
+		ModelAlias:    spec.Alias,
+		JST:           spec.JST,
+		Endpoint:      spec.Endpoint,
+		RequestTS:     requestTS,
+		UpstreamJobID: created.JobID,
+		UpstreamCost:  created.Cost,
+		ResultURL:     final.ResultURL,
+		Status:        terminalStatus,
+		LatencyMS:     latency,
+		Refunded:      final.Refunded,
+		FinishedAt:    s.now(),
+	}
+
+	// Metering: emit a usage event now that we know the terminal outcome.
+	// Fetch the account again to observe the post-job balance so we can
+	// compute actual credits consumed. Best-effort — a missing account or
+	// a metering failure must not block the API response.
+	if s.Meter != nil {
+		freshAcc, getErr := s.Store.Get(ctx, acc.ID)
+		if getErr != nil || freshAcc == nil {
+			// Fall back to the stale copy; Recorder will use upstream_cost
+			// when it detects a zero or negative balance delta.
+			freshAcc = acc
+		}
+		if err := s.Meter.OnJobTerminal(ctx, mJob, freshAcc, preBalance, 0); err != nil && s.Logger != nil {
+			s.Logger.Warn("metering failed",
+				slog.String("job_id", created.JobID),
+				slog.String("err", err.Error()))
+		}
+	}
+
+	// Webhook: fire-and-forget so the HTTP caller isn't blocked by delivery
+	// latency or retries. Only fires when the caller supplied a callback URL
+	// AND a Dispatcher is wired in — otherwise this branch is a no-op. The
+	// pollworker owns the analogous fire on the async path.
+	if s.Webhooks != nil && req.CallbackURL != "" {
+		s.Webhooks.Fire(req.CallbackURL, mJob)
 	}
 
 	resp := &GenerationResponse{
