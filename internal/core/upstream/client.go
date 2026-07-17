@@ -38,6 +38,17 @@ type Client struct {
 	jwt     *jwt.Minter
 	baseURL string
 
+	// timeouts maps a low-cardinality endpoint label (e.g. "create_job",
+	// "fetch_status") to a per-request deadline enforced via context. When
+	// the map is empty, no context wrapping happens — the underlying HTTP
+	// client's transport-level Timeout (if any) still applies. Callers
+	// that supply a specific endpoint key get that deadline; callers that
+	// only supply the special "default" key get that fallback for every
+	// otherwise-unmatched endpoint. Nothing is enforced when neither is
+	// present, which keeps existing tests (that pass an empty map) fast
+	// and unchanged.
+	timeouts map[string]time.Duration
+
 	// Metrics, when non-nil, receives one ObserveUpstreamDuration call
 	// per terminal doWithRetry outcome. Wiring is optional: callers that
 	// do not care about metrics leave this nil.
@@ -48,6 +59,15 @@ type Client struct {
 type Config struct {
 	// BaseURL defaults to "https://fnf.higgsfield.ai" when empty.
 	BaseURL string
+
+	// Timeouts, when non-empty, sets a per-endpoint request deadline
+	// enforced via context.WithTimeout inside doWithRetry. Keys are the
+	// endpoint labels used for metrics ("create_job", "fetch_status",
+	// "fetch_job", "fetch_wallet", "fetch_user"). The special key
+	// "default" is used as a fallback for endpoints not otherwise listed.
+	// A nil / empty map disables per-endpoint timeouts entirely (the
+	// underlying HTTP client's transport-level Timeout still applies).
+	Timeouts map[string]time.Duration
 }
 
 // New builds a Client with the given HTTP client and JWT minter.
@@ -56,7 +76,40 @@ func New(httpClient ports.UpstreamClient, minter *jwt.Minter, cfg Config) *Clien
 	if baseURL == "" {
 		baseURL = "https://fnf.higgsfield.ai"
 	}
-	return &Client{http: httpClient, jwt: minter, baseURL: strings.TrimRight(baseURL, "/")}
+	var timeouts map[string]time.Duration
+	if len(cfg.Timeouts) > 0 {
+		timeouts = make(map[string]time.Duration, len(cfg.Timeouts))
+		for k, v := range cfg.Timeouts {
+			if v > 0 {
+				timeouts[k] = v
+			}
+		}
+	}
+	return &Client{
+		http:     httpClient,
+		jwt:      minter,
+		baseURL:  strings.TrimRight(baseURL, "/"),
+		timeouts: timeouts,
+	}
+}
+
+// timeoutFor returns the configured per-request timeout for the given
+// endpoint label, or the "default" fallback, or (0, false) if neither is
+// set. Callers use the second return value to decide whether to wrap the
+// context with a deadline — an unset timeout preserves the caller's
+// existing context unchanged, which is how tests avoid picking up an
+// unwanted deadline.
+func (c *Client) timeoutFor(endpoint string) (time.Duration, bool) {
+	if len(c.timeouts) == 0 {
+		return 0, false
+	}
+	if d, ok := c.timeouts[endpoint]; ok && d > 0 {
+		return d, true
+	}
+	if d, ok := c.timeouts["default"]; ok && d > 0 {
+		return d, true
+	}
+	return 0, false
 }
 
 // CreateRequest is a single job creation call.
@@ -369,6 +422,18 @@ func (c *Client) doWithRetry(ctx context.Context, endpoint string, account *doma
 			c.Metrics.ObserveUpstreamDuration(endpoint, finalStatus, time.Since(start).Seconds())
 		}
 	}()
+
+	// Wrap the caller's context with a per-endpoint deadline when one is
+	// configured. The deadline covers the full logical call — JWT mint,
+	// the first send, an optional 401 remint, and the retry — which
+	// matches how the histogram observation is scoped. Nothing is wrapped
+	// when the client was built without a timeouts map, so tests that
+	// omit Config.Timeouts keep their unbounded context.
+	if d, ok := c.timeoutFor(endpoint); ok {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, d)
+		defer cancel()
+	}
 
 	tok, err := c.jwt.Get(ctx, account)
 	if err != nil {

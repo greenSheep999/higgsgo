@@ -119,7 +119,15 @@ func run() error {
 
 	// Core services.
 	minter := jwt.New(httpClient, ports.RealClock{}, jwt.Config{})
-	upstreamClient := upstream.New(httpClient, minter, upstream.Config{})
+	upstreamTimeouts := buildUpstreamTimeouts(cfg, logger)
+	upstreamClient := upstream.New(httpClient, minter, upstream.Config{
+		Timeouts: upstreamTimeouts,
+	})
+	for endpoint, d := range upstreamTimeouts {
+		logger.Info("upstream timeout configured",
+			slog.String("endpoint", endpoint),
+			slog.Duration("timeout", d))
+	}
 
 	// Prometheus metrics: one Registry, shared with the HTTP middleware,
 	// the pool collector goroutine, and the metering recorder. Built
@@ -265,4 +273,49 @@ func boolStr(b bool) string {
 		return "true"
 	}
 	return "false"
+}
+
+// buildUpstreamTimeouts translates [upstream.timeouts] duration strings into
+// a keyed map for the upstream client. Empty / invalid values fall back to
+// per-endpoint defaults tuned for the fnf.higgsfield.ai + clerk.higgsfield.ai
+// traffic patterns: 90s for job creation (POSTs may carry base64 image /
+// video payloads), 15s for the small GETs (status, wallet, user), and 30s
+// for the marginally larger job detail fetch. The transport-level Timeout on
+// the underlying utls client acts as an absolute ceiling above these values.
+func buildUpstreamTimeouts(cfg *config.Config, logger *slog.Logger) map[string]time.Duration {
+	defaults := map[string]time.Duration{
+		"create_job":   90 * time.Second,
+		"fetch_status": 15 * time.Second,
+		"fetch_job":    30 * time.Second,
+		"fetch_wallet": 15 * time.Second,
+		"fetch_user":   15 * time.Second,
+		"default":      30 * time.Second,
+	}
+	raw := map[string]string{
+		"create_job":   cfg.Upstream.Timeouts.CreateJob,
+		"fetch_status": cfg.Upstream.Timeouts.FetchStatus,
+		"fetch_job":    cfg.Upstream.Timeouts.FetchJob,
+		"fetch_wallet": cfg.Upstream.Timeouts.FetchWallet,
+		"fetch_user":   cfg.Upstream.Timeouts.FetchUser,
+		"default":      cfg.Upstream.Timeouts.Default,
+	}
+	out := make(map[string]time.Duration, len(defaults))
+	for endpoint, defaultD := range defaults {
+		s := raw[endpoint]
+		if s == "" {
+			out[endpoint] = defaultD
+			continue
+		}
+		d, err := time.ParseDuration(s)
+		if err != nil || d <= 0 {
+			logger.Warn("invalid upstream timeout, falling back to default",
+				slog.String("endpoint", endpoint),
+				slog.String("value", s),
+				slog.Duration("default", defaultD))
+			out[endpoint] = defaultD
+			continue
+		}
+		out[endpoint] = d
+	}
+	return out
 }

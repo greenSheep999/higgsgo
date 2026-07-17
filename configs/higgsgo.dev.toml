@@ -24,6 +24,17 @@ type = "utls"
 [http_client.utls]
 profile = "chrome_133"
 
+# Dev tends to sit behind slower proxies; loosen the GET budgets slightly
+# while keeping the create_job value in line with production so we still
+# catch upstream regressions in that critical path.
+[upstream.timeouts]
+create_job   = "90s"
+fetch_status = "20s"
+fetch_job    = "30s"
+fetch_wallet = "20s"
+fetch_user   = "20s"
+default      = "30s"
+
 [proxy]
 provider = "noop"
 

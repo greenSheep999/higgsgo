@@ -18,6 +18,7 @@ type Config struct {
 	Server        ServerConfig        `toml:"server"`
 	Storage       StorageConfig       `toml:"storage"`
 	HTTPClient    HTTPClientConfig    `toml:"http_client"`
+	Upstream      UpstreamConfig      `toml:"upstream"`
 	Proxy         ProxyConfig         `toml:"proxy"`
 	Mailbox       []MailboxConfig     `toml:"mailbox"`
 	Captcha       CaptchaConfig       `toml:"captcha"`
@@ -71,6 +72,31 @@ type HTTPClientConfig struct {
 
 type UTLSClientConfig struct {
 	Profile string `toml:"profile"` // e.g. "chrome_133"
+}
+
+// UpstreamConfig groups tunables for the fnf.higgsfield.ai / clerk.higgsfield.ai
+// client. Currently only per-endpoint request timeouts live here; the base URL
+// and TLS profile stay under [http_client] because they belong to the transport
+// layer.
+type UpstreamConfig struct {
+	Timeouts UpstreamTimeoutsConfig `toml:"timeouts"`
+}
+
+// UpstreamTimeoutsConfig sets per-endpoint request timeouts for the upstream
+// client. Each value is a Go duration string (e.g. "15s", "90s"). Empty
+// values fall back to the built-in defaults set in cmd/higgsgo/main.go
+// (create_job=90s, fetch_status/fetch_wallet/fetch_user=15s, fetch_job=30s,
+// default=30s).
+//
+// Endpoint labels match the low-cardinality strings the upstream client
+// uses for its Prometheus histogram (see internal/core/upstream/client.go).
+type UpstreamTimeoutsConfig struct {
+	CreateJob   string `toml:"create_job"`
+	FetchStatus string `toml:"fetch_status"`
+	FetchJob    string `toml:"fetch_job"`
+	FetchWallet string `toml:"fetch_wallet"`
+	FetchUser   string `toml:"fetch_user"`
+	Default     string `toml:"default"`
 }
 
 type ProxyConfig struct {

@@ -30,6 +30,18 @@ type = "stdhttp"                 # "stdhttp" | "utls" | "impit_bridge"
 [http_client.utls]
 profile = "chrome_133"
 
+# Per-endpoint request timeouts for the fnf.higgsfield.ai + clerk.higgsfield.ai
+# client. Each value is a Go duration string. Empty / omitted values fall
+# back to the built-in defaults documented next to each key. The transport
+# Timeout on the utls client acts as an absolute ceiling above these values.
+# [upstream.timeouts]
+# create_job   = "90s"           # POST — may carry base64 image / video body
+# fetch_status = "15s"           # GET /jobs/{id}/status — tiny payload
+# fetch_job    = "30s"           # GET /jobs/{id} — full row
+# fetch_wallet = "15s"           # GET /workspaces/wallet
+# fetch_user   = "15s"           # GET /user
+# default      = "30s"           # fallback for any endpoint not listed above
+
 [proxy]
 provider = "static"              # "static" | "711proxy" | "brightdata" | "noop"
 [proxy.static]
