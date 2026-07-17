@@ -138,6 +138,7 @@ func (s *Server) publicRouter() http.Handler {
 				}
 				r.Post("/videos/generations", s.V1.HandleVideoGeneration)
 				r.Post("/images/generations", s.V1.HandleImageGeneration)
+				r.Get("/jobs", s.V1.HandleJobsList)
 				r.Get("/jobs/{id}", s.V1.HandleJobFetch)
 			})
 		})

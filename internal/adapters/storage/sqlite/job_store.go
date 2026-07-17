@@ -5,11 +5,19 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/greensheep999/higgsgo/internal/domain"
 	"github.com/greensheep999/higgsgo/internal/ports"
 )
+
+// defaultJobListLimit is applied when JobFilter.Limit == 0.
+const defaultJobListLimit = 100
+
+// maxJobListLimit caps JobFilter.Limit so a single request cannot page the
+// full jobs table.
+const maxJobListLimit = 500
 
 // JobStore implements ports.JobStore backed by SQLite.
 type JobStore struct {
@@ -117,6 +125,73 @@ func (s *JobStore) Get(ctx context.Context, id string) (*domain.Job, error) {
 		       callback_url, pre_balance_h
 		FROM jobs WHERE id = ?`, id)
 	return scanJob(row)
+}
+
+// ListByAPIKey returns jobs authored by apiKeyID, newest first.
+//
+// filter narrows the result by status and request_ts range; Limit defaults
+// to defaultJobListLimit (100) and is capped at maxJobListLimit (500). An
+// empty apiKeyID short-circuits to zero rows so a caller with a missing
+// context value cannot accidentally page the whole table.
+func (s *JobStore) ListByAPIKey(ctx context.Context, apiKeyID string, filter ports.JobFilter) ([]domain.Job, error) {
+	if apiKeyID == "" {
+		return nil, nil
+	}
+	clauses := []string{"api_key_id = ?"}
+	args := []any{apiKeyID}
+	if filter.Status != "" {
+		clauses = append(clauses, "status = ?")
+		args = append(args, string(filter.Status))
+	}
+	// request_ts is persisted as an RFC3339 string (see fmtTime); RFC3339
+	// is lexicographically sortable so string comparison matches temporal
+	// order. Same trick used by UsageEventStore.Query for its ts column.
+	if !filter.Since.IsZero() {
+		clauses = append(clauses, "request_ts >= ?")
+		args = append(args, fmtTime(filter.Since))
+	}
+	if !filter.Until.IsZero() {
+		clauses = append(clauses, "request_ts < ?")
+		args = append(args, fmtTime(filter.Until))
+	}
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = defaultJobListLimit
+	}
+	if limit > maxJobListLimit {
+		limit = maxJobListLimit
+	}
+	offset := filter.Offset
+	if offset < 0 {
+		offset = 0
+	}
+	sqlStr := `
+		SELECT id, api_key_id, cpa_partner_id, group_id, account_id,
+		       model_alias, jst, endpoint, request_body_json, request_ts,
+		       upstream_job_id, upstream_cost, result_url,
+		       status, error_type, error_detail, finished_at,
+		       latency_ms, poll_count,
+		       actual_credits_h, charged_credits_h, refunded,
+		       callback_url, pre_balance_h
+		FROM jobs
+		WHERE ` + strings.Join(clauses, " AND ") + `
+		ORDER BY request_ts DESC
+		LIMIT ? OFFSET ?`
+	args = append(args, limit, offset)
+	rows, err := s.db.QueryContext(ctx, sqlStr, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list jobs by api key %s: %w", apiKeyID, err)
+	}
+	defer rows.Close()
+	var out []domain.Job
+	for rows.Next() {
+		j, err := scanJob(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *j)
+	}
+	return out, rows.Err()
 }
 
 // ListPending returns all jobs whose status is queued or in_progress.

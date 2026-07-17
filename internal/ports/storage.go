@@ -77,6 +77,24 @@ type JobStore interface {
 	UpdateStatus(ctx context.Context, id string, status domain.JobStatus, meta JobMeta) error
 	Get(ctx context.Context, id string) (*domain.Job, error)
 	ListPending(ctx context.Context) ([]domain.Job, error)
+	// ListByAPIKey returns jobs authored by apiKeyID, newest first
+	// (ORDER BY request_ts DESC). Empty apiKeyID is treated as "match
+	// no rows" so a misconfigured caller cannot accidentally dump the
+	// full jobs table.
+	ListByAPIKey(ctx context.Context, apiKeyID string, filter JobFilter) ([]domain.Job, error)
+}
+
+// JobFilter narrows a JobStore.ListByAPIKey call.
+//
+// All fields are optional; zero values mean "no filter". Limit defaults to
+// 100 and is capped at 500 by the store implementation to keep a single
+// call from paging the whole table.
+type JobFilter struct {
+	Status domain.JobStatus // empty means any status
+	Since  time.Time        // inclusive lower bound on request_ts
+	Until  time.Time        // exclusive upper bound on request_ts
+	Limit  int
+	Offset int
 }
 
 // JobMeta carries the outcome fields written on status transitions.

@@ -59,6 +59,12 @@ func (s *fakeJobStore) ListPending(context.Context) ([]domain.Job, error) {
 	return out, nil
 }
 
+// ListByAPIKey is a no-op here; the pollworker only exercises Create /
+// UpdateStatus / ListPending. The method exists to satisfy the interface.
+func (s *fakeJobStore) ListByAPIKey(context.Context, string, ports.JobFilter) ([]domain.Job, error) {
+	return nil, nil
+}
+
 type fakeAccountStore struct {
 	acc *domain.Account
 }

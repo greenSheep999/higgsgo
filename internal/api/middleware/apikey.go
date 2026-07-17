@@ -23,6 +23,13 @@ func APIKeyFromContext(ctx context.Context) (*domain.APIKey, bool) {
 	return k, ok
 }
 
+// ContextWithAPIKey returns a new context carrying k under the private
+// api-key context key. Tests use this to skip the real Authorization
+// header lookup and drive downstream handlers directly.
+func ContextWithAPIKey(ctx context.Context, k *domain.APIKey) context.Context {
+	return context.WithValue(ctx, apiKeyCtxKey{}, k)
+}
+
 // APIKeyAuth is the /v1 auth middleware. It expects:
 //
 //	Authorization: Bearer sk-hg-<40 hex chars>
