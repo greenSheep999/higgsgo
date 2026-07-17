@@ -16,11 +16,21 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/greensheep999/higgsgo/internal/core/proxy"
 	"github.com/greensheep999/higgsgo/internal/domain"
 	"github.com/greensheep999/higgsgo/internal/ports"
+)
+
+// defaultModelsListLimit / maxModelsListLimit mirror the pagination caps
+// used by /v1/jobs so client-side paging behaviour is consistent across
+// the surface.
+const (
+	defaultModelsListLimit = 100
+	maxModelsListLimit     = 500
 )
 
 // Handler wires v1 endpoints to the reverse-proxy service.
@@ -43,31 +53,160 @@ func New(svc *proxy.Service, reg ports.ModelRegistry, jobs ports.JobStore, group
 }
 
 // HandleModelsList serves GET /v1/models.
+//
+// Supported query parameters:
+//
+//	output=image|video|audio       filter by ModelSpec.Output
+//	requires_paid=true|false       filter by RequiresPaid flag
+//	requires_unlim=true|false      filter by RequiresUnlim flag
+//	q=<substring>                  case-insensitive alias substring match
+//	include_unstable=1             include Unstable specs (excluded by default)
+//	include_deprecated=1           include Deprecated specs (excluded by default)
+//	limit=<int>                    page size (default 100, cap 500)
+//	offset=<int>                   page start
+//
+// Tier gating (PlanGate) is not modelled on ModelSpec, so a ?tier= filter
+// is intentionally not exposed. Callers wanting a paid-only view should
+// use requires_paid=true.
 func (h *Handler) HandleModelsList(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
-	filter := ports.ModelFilter{
+
+	// Registry-level filters: Output and the Unstable/Deprecated gates.
+	regFilter := ports.ModelFilter{
 		Output:            q.Get("output"),
 		IncludeUnstable:   q.Get("include_unstable") == "1",
 		IncludeDeprecated: q.Get("include_deprecated") == "1",
 	}
-	models := h.Registry.List(filter)
 
-	data := make([]map[string]any, 0, len(models))
+	// Parse handler-level flag filters. Empty string means "no filter".
+	requiresPaid, ok := parseOptionalBool(w, q.Get("requires_paid"), "requires_paid")
+	if !ok {
+		return
+	}
+	requiresUnlim, ok := parseOptionalBool(w, q.Get("requires_unlim"), "requires_unlim")
+	if !ok {
+		return
+	}
+
+	limit, offset, ok := parseModelsPaging(w, q)
+	if !ok {
+		return
+	}
+
+	qSubstr := strings.ToLower(strings.TrimSpace(q.Get("q")))
+
+	models := h.Registry.List(regFilter)
+
+	// Apply handler-level filters that the registry does not know about.
+	filtered := make([]*domain.ModelSpec, 0, len(models))
 	for _, m := range models {
-		data = append(data, map[string]any{
-			"id":              m.Alias,
-			"object":          "model",
-			"output":          m.Output,
-			"jst":             m.JST,
-			"est_cost":        float64(m.EstCostHundredths) / 100.0,
-			"required_params": m.RequiredParams,
-			"unstable":        m.Unstable,
-		})
+		if requiresPaid != nil && m.RequiresPaid != *requiresPaid {
+			continue
+		}
+		if requiresUnlim != nil && m.RequiresUnlim != *requiresUnlim {
+			continue
+		}
+		if qSubstr != "" && !strings.Contains(strings.ToLower(m.Alias), qSubstr) {
+			continue
+		}
+		filtered = append(filtered, m)
+	}
+
+	totalBefore := len(filtered)
+
+	// Apply pagination. Offsets past the end yield an empty page rather
+	// than a 400 so clients can iterate blindly until data is empty.
+	start := offset
+	if start > totalBefore {
+		start = totalBefore
+	}
+	end := start + limit
+	if end > totalBefore {
+		end = totalBefore
+	}
+	page := filtered[start:end]
+
+	data := make([]map[string]any, 0, len(page))
+	for _, m := range page {
+		data = append(data, modelView(m))
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"object": "list",
-		"data":   data,
+		"object":                  "list",
+		"data":                    data,
+		"limit":                   limit,
+		"offset":                  offset,
+		"total_before_pagination": totalBefore,
 	})
+}
+
+// modelView renders a ModelSpec as the map shape emitted by
+// GET /v1/models. Kept close to the handler so the wire contract stays
+// visible next to the endpoint that promises it.
+func modelView(m *domain.ModelSpec) map[string]any {
+	return map[string]any{
+		"id":              m.Alias,
+		"object":          "model",
+		"output":          m.Output,
+		"jst":             m.JST,
+		"est_cost":        float64(m.EstCostHundredths) / 100.0,
+		"required_params": m.RequiredParams,
+		"unstable":        m.Unstable,
+		"requires_paid":   m.RequiresPaid,
+		"requires_unlim":  m.RequiresUnlim,
+		"requires_ultra":  m.RequiresUltra,
+		"starter_locked":  m.StarterLocked,
+	}
+}
+
+// parseOptionalBool reads a tri-state query flag: absent (returns nil,
+// true), "true"/"1" (returns *true, true), "false"/"0" (returns *false,
+// true), anything else writes a 400 and returns (nil, false).
+func parseOptionalBool(w http.ResponseWriter, raw, name string) (*bool, bool) {
+	if raw == "" {
+		return nil, true
+	}
+	switch strings.ToLower(raw) {
+	case "true", "1":
+		t := true
+		return &t, true
+	case "false", "0":
+		f := false
+		return &f, true
+	default:
+		writeError(w, http.StatusBadRequest, "invalid_query", name+" must be true or false")
+		return nil, false
+	}
+}
+
+// parseModelsPaging normalises limit/offset the same way the /v1/jobs
+// endpoint does: default limit 100, cap 500, non-negative offset,
+// invalid values render a 400.
+func parseModelsPaging(w http.ResponseWriter, q map[string][]string) (int, int, bool) {
+	limit := defaultModelsListLimit
+	offset := 0
+	if raws, ok := q["limit"]; ok && len(raws) > 0 && raws[0] != "" {
+		v, err := strconv.Atoi(raws[0])
+		if err != nil || v < 0 {
+			writeError(w, http.StatusBadRequest, "invalid_query", "limit must be a non-negative integer")
+			return 0, 0, false
+		}
+		if v == 0 {
+			v = defaultModelsListLimit
+		}
+		if v > maxModelsListLimit {
+			v = maxModelsListLimit
+		}
+		limit = v
+	}
+	if raws, ok := q["offset"]; ok && len(raws) > 0 && raws[0] != "" {
+		v, err := strconv.Atoi(raws[0])
+		if err != nil || v < 0 {
+			writeError(w, http.StatusBadRequest, "invalid_query", "offset must be a non-negative integer")
+			return 0, 0, false
+		}
+		offset = v
+	}
+	return limit, offset, true
 }
 
 // HandleModelDetail serves GET /v1/models/{alias}.
