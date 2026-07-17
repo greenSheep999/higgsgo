@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/greensheep999/higgsgo/internal/domain"
+	"github.com/greensheep999/higgsgo/internal/observability"
 	"github.com/greensheep999/higgsgo/internal/ports"
 	"github.com/greensheep999/higgsgo/internal/util/idgen"
 )
@@ -39,6 +40,12 @@ type Recorder struct {
 	APIKeys  ports.APIKeyStore
 	Accounts ports.AccountStore
 	Logger   *slog.Logger
+	// Metrics is optional; when non-nil, OnJobTerminal increments the
+	// UsageCredits counter (labels: media_type, status) by the charged
+	// credits (hundredths) after a successful Insert. A nil Metrics
+	// makes the metering path metrics-free (used by tests and by
+	// startup paths that have not built the collector yet).
+	Metrics *observability.Metrics
 }
 
 // OnJobTerminal writes a usage_events row and applies the associated
@@ -134,6 +141,16 @@ func (r *Recorder) OnJobTerminal(ctx context.Context, job *domain.Job, account *
 				slog.String("err", err.Error()))
 		}
 		return err
+	}
+
+	// 3a. Increment the Prometheus usage-credits counter. Guarded by
+	//     chargedCreditsH > 0 so we do not materialize noise label
+	//     combinations for zero-cost terminals (e.g. refunded jobs with
+	//     no upstream cost).
+	if r.Metrics != nil && r.Metrics.UsageCredits != nil && chargedCreditsH > 0 {
+		r.Metrics.UsageCredits.
+			WithLabelValues(event.MediaType, string(event.Status)).
+			Add(float64(chargedCreditsH))
 	}
 
 	// 4. Increment API key usage. Best-effort: a missing key or a stale row

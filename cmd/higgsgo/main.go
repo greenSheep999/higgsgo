@@ -120,6 +120,12 @@ func run() error {
 	minter := jwt.New(httpClient, ports.RealClock{}, jwt.Config{})
 	upstreamClient := upstream.New(httpClient, minter, upstream.Config{})
 
+	// Prometheus metrics: one Registry, shared with the HTTP middleware,
+	// the pool collector goroutine, and the metering recorder. Built
+	// early so the recorder can be handed a non-nil *Metrics at
+	// construction time.
+	metrics := observability.NewMetrics()
+
 	// Metering recorder: shared by the sync proxy path and the async
 	// pollworker. Both invoke OnJobTerminal at the terminal transition so
 	// every completed / failed / refunded / timeout job produces exactly one
@@ -129,6 +135,7 @@ func run() error {
 		APIKeys:  apiKeyStore,
 		Accounts: accountStore,
 		Logger:   logger,
+		Metrics:  metrics,
 	}
 
 	// Webhook dispatcher: shared by the sync proxy path and the async
@@ -219,10 +226,10 @@ func run() error {
 		go tk.Run(ctx)
 	}
 
-	// Prometheus metrics: one Registry, shared with the HTTP middleware
-	// and the pool collector goroutine below. Constructed after storage
-	// so we can start the collector immediately.
-	metrics := observability.NewMetrics()
+	// Pool collector goroutine: samples AccountsActive / JobsInFlight
+	// from the stores on a fixed interval and updates the shared
+	// Metrics gauges. Metrics itself was built earlier alongside the
+	// metering recorder.
 	poolCollector := &observability.PoolCollector{
 		Accounts: accountStore,
 		Jobs:     jobStore,
