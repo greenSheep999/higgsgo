@@ -25,6 +25,7 @@ import (
 	"github.com/greensheep999/higgsgo/internal/adapters/modelregistry/jsonstatic"
 	"github.com/greensheep999/higgsgo/internal/adapters/storage/sqlite"
 	"github.com/greensheep999/higgsgo/internal/api"
+	"github.com/greensheep999/higgsgo/internal/api/cpaplugin"
 	"github.com/greensheep999/higgsgo/internal/api/v1"
 	"github.com/greensheep999/higgsgo/internal/config"
 	"github.com/greensheep999/higgsgo/internal/core/jwt"
@@ -240,8 +241,17 @@ func run() error {
 	go poolCollector.Run(ctx)
 	logger.Info("pool collector started", slog.Duration("interval", poolCollector.Interval))
 
+	// Mode B (/internal/*): only wired when the CPA plugin mode is
+	// enabled. The internal listener itself is gated the same way in
+	// api.New, so leaving cpaHandler nil is fine in Mode A.
+	var cpaHandler *cpaplugin.Handler
+	if cfg.Modes.CPAPlugin {
+		cpaHandler = cpaplugin.New(apiKeyStore, accountStore, jobStore, svc, minter, logger)
+		logger.Info("cpa plugin handler wired")
+	}
+
 	// Boot API server.
-	srv := api.New(cfg, logger, v1h, apiKeyStore, accountStore, jobStore, usageStore, groupStore, metrics)
+	srv := api.New(cfg, logger, v1h, apiKeyStore, accountStore, jobStore, usageStore, groupStore, metrics, cpaHandler)
 	if err := srv.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("serve: %w", err)
 	}

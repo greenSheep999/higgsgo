@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/greensheep999/higgsgo/internal/api/admin"
+	"github.com/greensheep999/higgsgo/internal/api/cpaplugin"
 	"github.com/greensheep999/higgsgo/internal/api/middleware"
 	"github.com/greensheep999/higgsgo/internal/api/v1"
 	"github.com/greensheep999/higgsgo/internal/config"
@@ -22,15 +23,16 @@ import (
 // admin, internal). The three routers share middleware but expose different
 // endpoints.
 type Server struct {
-	Config   *config.Config
-	Logger   *slog.Logger
-	V1       *v1.Handler
-	APIKeys  ports.APIKeyStore      // required for /v1 auth and /admin/keys
-	Accounts ports.AccountStore     // required for /admin/accounts and /admin/stats
-	Jobs     ports.JobStore         // optional; used by /admin/stats
-	Usage    ports.UsageEventStore  // optional; used by /admin/usage
-	Groups   ports.GroupStore       // optional; used by /admin/groups
-	Metrics  *observability.Metrics // optional; enables /metrics + per-request instrumentation
+	Config    *config.Config
+	Logger    *slog.Logger
+	V1        *v1.Handler
+	APIKeys   ports.APIKeyStore      // required for /v1 auth and /admin/keys
+	Accounts  ports.AccountStore     // required for /admin/accounts and /admin/stats
+	Jobs      ports.JobStore         // optional; used by /admin/stats
+	Usage     ports.UsageEventStore  // optional; used by /admin/usage
+	Groups    ports.GroupStore       // optional; used by /admin/groups
+	Metrics   *observability.Metrics // optional; enables /metrics + per-request instrumentation
+	CPAPlugin *cpaplugin.Handler     // optional; enables /internal/* (Mode B)
 
 	public   *http.Server
 	admin    *http.Server
@@ -40,17 +42,18 @@ type Server struct {
 // New builds a Server. Handlers are wired up here; concrete route
 // registrations (v1 / admin / internal) live in sibling files as they are
 // implemented.
-func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore, metrics *observability.Metrics) *Server {
+func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore, metrics *observability.Metrics, cpa *cpaplugin.Handler) *Server {
 	s := &Server{
-		Config:   cfg,
-		Logger:   logger,
-		V1:       v1Handler,
-		APIKeys:  apiKeys,
-		Accounts: accounts,
-		Jobs:     jobs,
-		Usage:    usage,
-		Groups:   groups,
-		Metrics:  metrics,
+		Config:    cfg,
+		Logger:    logger,
+		V1:        v1Handler,
+		APIKeys:   apiKeys,
+		Accounts:  accounts,
+		Jobs:      jobs,
+		Usage:     usage,
+		Groups:    groups,
+		Metrics:   metrics,
+		CPAPlugin: cpa,
 	}
 
 	s.public = &http.Server{
@@ -209,7 +212,9 @@ func (s *Server) internalRouter() http.Handler {
 
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.BearerAuth(s.Config.Server.InternalBearer))
-		// internal/* routes for CPA plugin registered here in future patches.
+		if s.CPAPlugin != nil {
+			s.CPAPlugin.Register(r)
+		}
 	})
 	return r
 }
