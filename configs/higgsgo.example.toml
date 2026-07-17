@@ -18,6 +18,13 @@ internal_bearer = "change-me-internal"
 rps   = 5
 burst = 10
 
+# CORS allowlist for the /admin/* surface, consumed by the WebUI
+# (deployed separately). Leave empty / commented out for same-origin
+# deploys. Use ["*"] only in dev — it echoes the request Origin back so
+# credentials still work, but any site could then talk to /admin.
+[server.webui]
+# origins = ["https://ops.example.com"]
+
 [storage]
 driver = "sqlite"                # "sqlite" | "postgres"
 [storage.sqlite]

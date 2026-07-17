@@ -41,6 +41,19 @@ type ServerConfig struct {
 	InternalBearer string `toml:"internal_bearer"` // shared secret for /internal/* (CPA plugin)
 
 	RateLimit RateLimitConfig `toml:"rate_limit"`
+	WebUI     WebUIConfig     `toml:"webui"`
+}
+
+// WebUIConfig controls the CORS allowlist applied on /admin/* so a
+// separately-deployed WebUI can reach the admin surface cross-origin.
+// Empty Origins keeps the middleware disabled and turns it into a
+// pass-through — the same behaviour a server without CORS mounted at
+// all would exhibit.
+type WebUIConfig struct {
+	// Origins is the CORS allowlist. Empty disables CORS.
+	// Use ["http://localhost:5173"] for local dev, ["*"] for
+	// "any origin" (dangerous, dev only).
+	Origins []string `toml:"origins"`
 }
 
 // RateLimitConfig controls the per-API-key token bucket applied on /v1/*

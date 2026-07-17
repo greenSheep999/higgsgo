@@ -193,6 +193,14 @@ func (s *Server) adminRouter() http.Handler {
 	if s.Metrics != nil {
 		r.Use(middleware.HTTPMetrics(s.Metrics, middleware.DefaultRoutePattern))
 	}
+	// CORS sits at the outermost auth boundary so preflight OPTIONS
+	// requests short-circuit before BearerAuth would 401 them. Only
+	// attached when the operator supplied an allowlist; otherwise the
+	// admin surface stays same-origin.
+	if len(s.Config.Server.WebUI.Origins) > 0 {
+		corsMW := &middleware.CORS{AllowedOrigins: s.Config.Server.WebUI.Origins}
+		r.Use(corsMW.Middleware)
+	}
 
 	r.Get("/health", s.healthHandler)
 

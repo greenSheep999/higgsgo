@@ -14,6 +14,11 @@ internal_bearer = "dev-internal"
 rps   = 10
 burst = 20
 
+# CORS allowlist for /admin/*. Matches the WebUI's Vite dev server (5173)
+# and its `vite preview` port (4173).
+[server.webui]
+origins = ["http://localhost:5173", "http://localhost:4173"]
+
 [storage]
 driver = "sqlite"
 [storage.sqlite]
