@@ -15,6 +15,7 @@ import (
 	"github.com/greensheep999/higgsgo/internal/api/middleware"
 	"github.com/greensheep999/higgsgo/internal/api/v1"
 	"github.com/greensheep999/higgsgo/internal/config"
+	"github.com/greensheep999/higgsgo/internal/core/webhook"
 	"github.com/greensheep999/higgsgo/internal/observability"
 	"github.com/greensheep999/higgsgo/internal/ports"
 )
@@ -34,6 +35,7 @@ type Server struct {
 	Health    ports.ModelHealthStore // optional; used by /admin/model-health
 	Metrics   *observability.Metrics // optional; enables /metrics + per-request instrumentation
 	CPAPlugin *cpaplugin.Handler     // optional; enables /internal/* (Mode B)
+	Webhooks  *webhook.Dispatcher    // optional; enables /admin/webhooks/stats
 
 	public   *http.Server
 	admin    *http.Server
@@ -43,7 +45,7 @@ type Server struct {
 // New builds a Server. Handlers are wired up here; concrete route
 // registrations (v1 / admin / internal) live in sibling files as they are
 // implemented.
-func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore, metrics *observability.Metrics, cpa *cpaplugin.Handler, health ports.ModelHealthStore) *Server {
+func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore, metrics *observability.Metrics, cpa *cpaplugin.Handler, health ports.ModelHealthStore, webhooks *webhook.Dispatcher) *Server {
 	s := &Server{
 		Config:    cfg,
 		Logger:    logger,
@@ -56,6 +58,7 @@ func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys
 		Health:    health,
 		Metrics:   metrics,
 		CPAPlugin: cpa,
+		Webhooks:  webhooks,
 	}
 
 	s.public = &http.Server{
@@ -203,6 +206,9 @@ func (s *Server) adminRouter() http.Handler {
 		}
 		if s.Health != nil {
 			admin.NewModelHealthHandler(s.Health).Register(r)
+		}
+		if s.Webhooks != nil {
+			admin.NewWebhooksHandler(s.Webhooks).Register(r)
 		}
 	})
 	return r

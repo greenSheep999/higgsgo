@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/greensheep999/higgsgo/internal/domain"
@@ -46,6 +47,40 @@ type Dispatcher struct {
 	// expires while deliveries are still running; it aborts backoff
 	// waits so Close returns promptly.
 	closed chan struct{}
+
+	// Stats counters. Kept as atomics so Fire (the hot path) and Stats
+	// (read from /admin/webhooks/stats) never contend on a mutex.
+	statEnqueued  atomic.Int64
+	statDelivered atomic.Int64
+	statFailed    atomic.Int64
+	statDropped   atomic.Int64
+	statInFlight  atomic.Int64
+}
+
+// DispatcherStats is a point-in-time snapshot of Dispatcher counters.
+// Values are cumulative since Dispatcher construction, except InFlight
+// which is a current gauge.
+type DispatcherStats struct {
+	Enqueued  int64 // total Fire() calls accepted
+	Delivered int64 // successful HTTP 2xx deliveries
+	Failed    int64 // final failures after all retries exhausted
+	Dropped   int64 // rejected because Dispatcher is closing/closed
+	InFlight  int64 // currently queued or mid-delivery
+}
+
+// Stats returns a consistent snapshot of the dispatcher counters. The
+// individual atomic loads are not atomic as a group; a caller observing
+// a delivery mid-flight may see Enqueued momentarily ahead of the sum
+// of Delivered+Failed+InFlight+Dropped. This is acceptable for operator
+// dashboards.
+func (d *Dispatcher) Stats() DispatcherStats {
+	return DispatcherStats{
+		Enqueued:  d.statEnqueued.Load(),
+		Delivered: d.statDelivered.Load(),
+		Failed:    d.statFailed.Load(),
+		Dropped:   d.statDropped.Load(),
+		InFlight:  d.statInFlight.Load(),
+	}
 }
 
 // Config controls Dispatcher construction.
@@ -122,20 +157,29 @@ func (d *Dispatcher) Fire(url string, job *domain.Job) {
 	}
 	select {
 	case <-d.accepting:
+		// Dispatcher is closing; reject and record.
+		d.statDropped.Add(1)
 		return
 	default:
 	}
 	payload := payloadFromJob(job)
+	d.statEnqueued.Add(1)
+	d.statInFlight.Add(1)
 	d.wg.Add(1)
 	go func() {
 		defer d.wg.Done()
+		defer d.statInFlight.Add(-1)
 		// Acquire an in-flight slot. We intentionally do NOT race this
 		// against d.closed — once a caller has handed us a job, they
 		// expect at least one delivery attempt. Backoff between retries
 		// still short-circuits when closed to keep shutdown snappy.
 		d.sem <- struct{}{}
 		defer func() { <-d.sem }()
-		d.deliver(url, payload)
+		if d.deliver(url, payload) {
+			d.statDelivered.Add(1)
+		} else {
+			d.statFailed.Add(1)
+		}
 	}()
 }
 
@@ -154,11 +198,14 @@ func (d *Dispatcher) Close(shutdown context.Context) {
 	}
 }
 
-func (d *Dispatcher) deliver(url string, p Payload) {
+// deliver returns true iff the payload was accepted by the target
+// (2xx). false covers marshal failure, exhausted retries, and shutdown
+// abort — all of which the caller counts as a final failure.
+func (d *Dispatcher) deliver(url string, p Payload) bool {
 	body, err := json.Marshal(p)
 	if err != nil {
 		d.logger.Warn("webhook marshal", slog.String("err", err.Error()))
-		return
+		return false
 	}
 	backoff := d.backoff
 	for attempt := 1; attempt <= d.maxRetry; attempt++ {
@@ -167,7 +214,7 @@ func (d *Dispatcher) deliver(url string, p Payload) {
 				slog.String("url", url),
 				slog.String("job_id", p.JobID),
 				slog.Int("attempt", attempt))
-			return
+			return true
 		} else {
 			d.logger.Warn("webhook attempt failed",
 				slog.String("url", url),
@@ -182,9 +229,10 @@ func (d *Dispatcher) deliver(url string, p Payload) {
 		case <-time.After(backoff):
 			backoff *= 5
 		case <-d.closed:
-			return
+			return false
 		}
 	}
+	return false
 }
 
 func (d *Dispatcher) postOnce(url string, body []byte) error {
