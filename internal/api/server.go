@@ -26,20 +26,21 @@ import (
 // admin, internal). The three routers share middleware but expose different
 // endpoints.
 type Server struct {
-	Config    *config.Config
-	Logger    *slog.Logger
-	V1        *v1.Handler
-	APIKeys   ports.APIKeyStore      // required for /v1 auth and /admin/keys
-	Accounts  ports.AccountStore     // required for /admin/accounts and /admin/stats
-	Jobs      ports.JobStore         // optional; used by /admin/stats
-	Usage     ports.UsageEventStore  // optional; used by /admin/usage
-	Groups    ports.GroupStore       // optional; used by /admin/groups
-	Health    ports.ModelHealthStore // optional; used by /admin/model-health
-	Metrics   *observability.Metrics // optional; enables /metrics + per-request instrumentation
-	CPAPlugin  *cpaplugin.Handler   // optional; enables /internal/* (Mode B)
-	Webhooks   *webhook.Dispatcher  // optional; enables /admin/webhooks/stats
-	Refresher  *refresher.Refresher // optional; enables /admin/tickers/refresher
-	Regression *regression.Ticker   // optional; enables /admin/tickers/regression
+	Config     *config.Config
+	Logger     *slog.Logger
+	V1         *v1.Handler
+	APIKeys    ports.APIKeyStore      // required for /v1 auth and /admin/keys
+	Accounts   ports.AccountStore     // required for /admin/accounts and /admin/stats
+	Jobs       ports.JobStore         // optional; used by /admin/stats
+	Usage      ports.UsageEventStore  // optional; used by /admin/usage
+	Groups     ports.GroupStore       // optional; used by /admin/groups
+	Health     ports.ModelHealthStore // optional; used by /admin/model-health
+	Metrics    *observability.Metrics // optional; enables /metrics + per-request instrumentation
+	CPAPlugin  *cpaplugin.Handler     // optional; enables /internal/* (Mode B)
+	Webhooks   *webhook.Dispatcher    // optional; enables /admin/webhooks/stats
+	Refresher  *refresher.Refresher   // optional; enables /admin/tickers/refresher
+	Regression *regression.Ticker     // optional; enables /admin/tickers/regression
+	Audit      ports.AuditStore       // optional; enables admin write auditing + /admin/audit
 
 	public   *http.Server
 	admin    *http.Server
@@ -49,22 +50,23 @@ type Server struct {
 // New builds a Server. Handlers are wired up here; concrete route
 // registrations (v1 / admin / internal) live in sibling files as they are
 // implemented.
-func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore, metrics *observability.Metrics, cpa *cpaplugin.Handler, health ports.ModelHealthStore, webhooks *webhook.Dispatcher, rf *refresher.Refresher, rg *regression.Ticker) *Server {
+func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore, metrics *observability.Metrics, cpa *cpaplugin.Handler, health ports.ModelHealthStore, webhooks *webhook.Dispatcher, rf *refresher.Refresher, rg *regression.Ticker, audit ports.AuditStore) *Server {
 	s := &Server{
-		Config:    cfg,
-		Logger:    logger,
-		V1:        v1Handler,
-		APIKeys:   apiKeys,
-		Accounts:  accounts,
-		Jobs:      jobs,
-		Usage:     usage,
-		Groups:    groups,
-		Health:    health,
-		Metrics:   metrics,
+		Config:     cfg,
+		Logger:     logger,
+		V1:         v1Handler,
+		APIKeys:    apiKeys,
+		Accounts:   accounts,
+		Jobs:       jobs,
+		Usage:      usage,
+		Groups:     groups,
+		Health:     health,
+		Metrics:    metrics,
 		CPAPlugin:  cpa,
 		Webhooks:   webhooks,
 		Refresher:  rf,
 		Regression: rg,
+		Audit:      audit,
 	}
 
 	s.public = &http.Server{
@@ -194,6 +196,9 @@ func (s *Server) adminRouter() http.Handler {
 
 	r.Group(func(r chi.Router) {
 		r.Use(middleware.BearerAuth(s.Config.Server.AdminBearer))
+		if s.Audit != nil {
+			r.Use(middleware.Audit(s.Audit, s.Logger))
+		}
 		if s.APIKeys != nil {
 			admin.NewKeysHandler(s.APIKeys).Register(r)
 		}
@@ -217,6 +222,9 @@ func (s *Server) adminRouter() http.Handler {
 			admin.NewWebhooksHandler(s.Webhooks).Register(r)
 		}
 		admin.NewTickersHandler(s.Refresher, s.Regression, s.Logger).Register(r)
+		if s.Audit != nil {
+			admin.NewAuditHandler(s.Audit).Register(r)
+		}
 	})
 	return r
 }

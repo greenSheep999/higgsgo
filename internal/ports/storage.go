@@ -277,6 +277,34 @@ type ProxyFilter struct {
 	Unbound bool // when true, only rows with BoundTo == ""
 }
 
+// AuditStore persists admin write-op audit rows. Populated by the audit
+// middleware (see internal/api/middleware/audit.go) on every mutating
+// /admin/* request; read back by the /admin/audit list endpoint.
+//
+// Implementations are append-only: there is no Update or Delete surface —
+// rows are inserted with an idgen id and only ever read via List. The
+// middleware calls Insert in a background goroutine so a slow database
+// cannot block the API response.
+type AuditStore interface {
+	Insert(ctx context.Context, e *domain.AuditEvent) error
+	List(ctx context.Context, filter AuditFilter) ([]domain.AuditEvent, error)
+}
+
+// AuditFilter narrows an AuditStore.List call. All fields are optional;
+// zero values mean "no filter". Limit defaults to 100 and is capped at
+// 500 by the store implementation so a single call cannot dump the whole
+// table.
+type AuditFilter struct {
+	Since        time.Time
+	Until        time.Time
+	Actor        string
+	ResourceType string
+	ResourceID   string
+	Method       string
+	Limit        int
+	Offset       int
+}
+
 // ModelHealthStore records the outcome of periodic recheck runs.
 type ModelHealthStore interface {
 	Insert(ctx context.Context, jst string, checkedAt time.Time, verdict domain.JobStatus, httpStatus int, cost int64, pollSec int) error
