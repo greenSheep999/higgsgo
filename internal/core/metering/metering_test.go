@@ -74,6 +74,10 @@ func (s *fakeAPIKeyStore) List(context.Context) ([]domain.APIKey, error) {
 	panic("not implemented")
 }
 
+func (s *fakeAPIKeyStore) ListByCPAPartner(context.Context, string) ([]domain.APIKey, error) {
+	panic("not implemented")
+}
+
 // baseJob builds a completed video job with an api key attached so callers
 // can drop it into a Recorder without extra setup.
 func baseJob() *domain.Job {

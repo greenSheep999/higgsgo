@@ -30,8 +30,10 @@ type registerRequest struct {
 //	  "monthly_limit": 100000
 //	}
 //
-// The partner_id is embedded in the api_keys.created_by column with the
-// "cpa:" prefix so subsequent /internal/* routes can locate the row set.
+// The partner_id is written to the dedicated api_keys.cpa_partner_id
+// column (migration 004); the api_keys.created_by column is stamped
+// with a fixed "cpa-plugin" tag so operators can tell at a glance which
+// path minted the row.
 func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	raw, err := io.ReadAll(io.LimitReader(r.Body, 4096))
 	if err != nil {
@@ -66,7 +68,8 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		ID:           idgen.NewID("key"),
 		KeyHash:      hash,
 		Name:         name,
-		CreatedBy:    cpaPartnerPrefix + req.PartnerID,
+		CreatedBy:    cpaRegisterCreatedBy,
+		CPAPartnerID: req.PartnerID,
 		Status:       "active",
 		MonthlyQuota: req.MonthlyLimit,
 		MarkupPct:    req.MarkupPct,

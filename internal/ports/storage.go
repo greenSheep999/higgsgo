@@ -127,7 +127,7 @@ type JobMeta struct {
 	Refunded                 bool
 }
 
-// APIKeyStore manages standalone-mode API keys.
+// APIKeyStore manages standalone-mode and CPA-mode API keys.
 type APIKeyStore interface {
 	Get(ctx context.Context, id string) (*domain.APIKey, error)
 	GetByHash(ctx context.Context, keyHash string) (*domain.APIKey, error)
@@ -135,6 +135,11 @@ type APIKeyStore interface {
 	Revoke(ctx context.Context, id string) error
 	IncrementUsage(ctx context.Context, id string, chargedHundredths int64) error
 	List(ctx context.Context) ([]domain.APIKey, error)
+	// ListByCPAPartner returns every api_keys row whose CPAPartnerID
+	// equals partnerID, newest first. An empty partnerID must return
+	// an empty slice so a misconfigured caller cannot enumerate every
+	// standalone key. Callers apply their own status filtering.
+	ListByCPAPartner(ctx context.Context, partnerID string) ([]domain.APIKey, error)
 }
 
 // GroupStore manages account pool groups.

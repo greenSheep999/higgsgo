@@ -3,13 +3,12 @@
 // gated by the deploy-wide bearer token (server.internal_bearer) mounted by
 // the parent api package; this package only implements the handlers.
 //
-// The CPA partner concept is represented on top of the existing api_keys
-// table without a schema change: keys created via /internal/register carry
-// the CPA partner id in the created_by column with the prefix "cpa:".
-// ListByCPAPartner-style operations therefore walk APIKeyStore.List and
-// filter by that prefix on the Go side. When the pool grows large enough
-// to make the scan expensive a dedicated column + index can be added
-// without touching this package.
+// The CPA partner concept lives on the api_keys table as its own
+// cpa_partner_id column (see migration 004). Keys minted via
+// /internal/register set this column to the partner id; every subsequent
+// /internal/* lookup goes through APIKeyStore.ListByCPAPartner which is
+// indexed on that column. Standalone keys (minted via /admin/keys) leave
+// cpa_partner_id empty and are therefore invisible to these routes.
 package cpaplugin
 
 import (
@@ -17,7 +16,6 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/greensheep999/higgsgo/internal/core/proxy"
@@ -25,9 +23,11 @@ import (
 	"github.com/greensheep999/higgsgo/internal/ports"
 )
 
-// cpaPartnerPrefix is stored in api_keys.created_by so keys minted via
-// /internal/register can be located later without a schema change.
-const cpaPartnerPrefix = "cpa:"
+// cpaRegisterCreatedBy is the fixed created_by value stamped on every
+// api_keys row minted by /internal/register. The partner id lives on
+// cpa_partner_id now; created_by is left as a plain audit tag so
+// operators can still tell at a glance where the key came from.
+const cpaRegisterCreatedBy = "cpa-plugin"
 
 // ProxyInvoker is the subset of *proxy.Service the cpaplugin package needs
 // to satisfy the /internal/execute route. Defined locally so tests can pass
@@ -83,38 +83,15 @@ func (h *Handler) Register(r chi.Router) {
 	// dependency. See package doc.
 }
 
-// listKeysForPartner walks APIKeyStore.List and returns rows whose
-// created_by encodes the given partner id. Empty partnerID returns an
-// empty slice so a misconfigured caller cannot dump every row.
+// listKeysForPartner delegates to APIKeyStore.ListByCPAPartner which is
+// indexed on api_keys.cpa_partner_id. Empty partnerID returns an empty
+// slice so a misconfigured caller cannot dump every row (the store
+// contract mirrors this, but we keep the guard here as documentation).
 func (h *Handler) listKeysForPartner(ctx context.Context, partnerID string) ([]domain.APIKey, error) {
 	if partnerID == "" {
 		return nil, nil
 	}
-	rows, err := h.APIKeys.List(ctx)
-	if err != nil {
-		return nil, err
-	}
-	tag := cpaPartnerPrefix + partnerID
-	out := make([]domain.APIKey, 0, len(rows))
-	for i := range rows {
-		if rows[i].CreatedBy == tag {
-			out = append(out, rows[i])
-		}
-	}
-	return out, nil
-}
-
-// partnerIDFromKey pulls the partner id back out of an api_keys row that
-// was minted via /internal/register. Returns "" when the row is not a CPA
-// key so callers can skip non-CPA rows cleanly.
-func partnerIDFromKey(k *domain.APIKey) string {
-	if k == nil {
-		return ""
-	}
-	if !strings.HasPrefix(k.CreatedBy, cpaPartnerPrefix) {
-		return ""
-	}
-	return strings.TrimPrefix(k.CreatedBy, cpaPartnerPrefix)
+	return h.APIKeys.ListByCPAPartner(ctx, partnerID)
 }
 
 // --- shared JSON helpers -------------------------------------------------

@@ -46,6 +46,9 @@ func (s *fakeAPIKeyStore) IncrementUsage(context.Context, string, int64) error {
 func (s *fakeAPIKeyStore) List(context.Context) ([]domain.APIKey, error) {
 	panic("not implemented")
 }
+func (s *fakeAPIKeyStore) ListByCPAPartner(context.Context, string) ([]domain.APIKey, error) {
+	panic("not implemented")
+}
 
 // pendingJob is a small helper — every test starts from the same base job,
 // only the api_key_id and PreBalanceH vary. Keeping this here avoids

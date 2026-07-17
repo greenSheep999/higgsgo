@@ -87,6 +87,25 @@ func (f *fakeAPIKeyStore) List(_ context.Context) ([]domain.APIKey, error) {
 	return out, nil
 }
 
+// ListByCPAPartner mirrors the sqlite store's behaviour: empty partnerID
+// returns an empty slice, otherwise filter rows by CPAPartnerID. Order
+// intentionally matches insertion order for deterministic assertions.
+func (f *fakeAPIKeyStore) ListByCPAPartner(_ context.Context, partnerID string) ([]domain.APIKey, error) {
+	if f.listErr != nil {
+		return nil, f.listErr
+	}
+	if partnerID == "" {
+		return nil, nil
+	}
+	out := make([]domain.APIKey, 0, len(f.rows))
+	for i := range f.rows {
+		if f.rows[i].CPAPartnerID == partnerID {
+			out = append(out, f.rows[i])
+		}
+	}
+	return out, nil
+}
+
 // fakeAccountStore only implements List (used by refresh_jwt + status).
 type fakeAccountStore struct {
 	rows    []domain.Account
@@ -223,8 +242,11 @@ func TestRegister_Success(t *testing.T) {
 		t.Fatalf("expected 1 create, got %d", len(apiKeys.created))
 	}
 	k := apiKeys.created[0]
-	if k.CreatedBy != "cpa:cpa_xyz" {
-		t.Errorf("CreatedBy = %q, want cpa:cpa_xyz", k.CreatedBy)
+	if k.CPAPartnerID != "cpa_xyz" {
+		t.Errorf("CPAPartnerID = %q, want cpa_xyz", k.CPAPartnerID)
+	}
+	if k.CreatedBy != cpaRegisterCreatedBy {
+		t.Errorf("CreatedBy = %q, want %q", k.CreatedBy, cpaRegisterCreatedBy)
 	}
 	if k.MarkupPct != 1.2 {
 		t.Errorf("MarkupPct = %v, want 1.2", k.MarkupPct)
@@ -257,7 +279,7 @@ func TestRegister_BadRequest(t *testing.T) {
 func TestExecute_Success(t *testing.T) {
 	apiKeys := &fakeAPIKeyStore{
 		rows: []domain.APIKey{{
-			ID: "key-1", CreatedBy: "cpa:partner_a", Status: "active",
+			ID: "key-1", CPAPartnerID: "partner_a", CreatedBy: cpaRegisterCreatedBy, Status: "active",
 		}},
 	}
 	fp := &fakeProxy{resp: &proxy.GenerationResponse{
@@ -294,7 +316,7 @@ func TestExecute_Success(t *testing.T) {
 
 func TestExecute_ProxyError(t *testing.T) {
 	apiKeys := &fakeAPIKeyStore{
-		rows: []domain.APIKey{{ID: "key-1", CreatedBy: "cpa:partner_a", Status: "active"}},
+		rows: []domain.APIKey{{ID: "key-1", CPAPartnerID: "partner_a", CreatedBy: cpaRegisterCreatedBy, Status: "active"}},
 	}
 	fp := &fakeProxy{err: errors.New("upstream boom")}
 	_, r := newTestHandler(t, apiKeys, &fakeAccountStore{}, fp, &fakeJWT{})
@@ -313,11 +335,11 @@ func TestExecute_ProxyError(t *testing.T) {
 func TestBalance_AggregatesKeys(t *testing.T) {
 	apiKeys := &fakeAPIKeyStore{
 		rows: []domain.APIKey{
-			{ID: "k1", CreatedBy: "cpa:partner_x", Status: "active", MonthlyUsed: 100, MonthlyQuota: 1000},
-			{ID: "k2", CreatedBy: "cpa:partner_x", Status: "active", MonthlyUsed: 200, MonthlyQuota: 2000},
-			{ID: "k3", CreatedBy: "cpa:partner_x", Status: "active", MonthlyUsed: 300, MonthlyQuota: 3000},
+			{ID: "k1", CPAPartnerID: "partner_x", CreatedBy: cpaRegisterCreatedBy, Status: "active", MonthlyUsed: 100, MonthlyQuota: 1000},
+			{ID: "k2", CPAPartnerID: "partner_x", CreatedBy: cpaRegisterCreatedBy, Status: "active", MonthlyUsed: 200, MonthlyQuota: 2000},
+			{ID: "k3", CPAPartnerID: "partner_x", CreatedBy: cpaRegisterCreatedBy, Status: "active", MonthlyUsed: 300, MonthlyQuota: 3000},
 			// Non-matching row to ensure filtering works.
-			{ID: "k4", CreatedBy: "cpa:other", Status: "active", MonthlyUsed: 999, MonthlyQuota: 1000},
+			{ID: "k4", CPAPartnerID: "other", CreatedBy: cpaRegisterCreatedBy, Status: "active", MonthlyUsed: 999, MonthlyQuota: 1000},
 		},
 	}
 	_, r := newTestHandler(t, apiKeys, &fakeAccountStore{}, &fakeProxy{}, &fakeJWT{})
@@ -344,7 +366,7 @@ func TestBalance_AggregatesKeys(t *testing.T) {
 
 func TestRefreshJWT_InvalidatesAll(t *testing.T) {
 	apiKeys := &fakeAPIKeyStore{
-		rows: []domain.APIKey{{ID: "k1", CreatedBy: "cpa:partner_a", Status: "active"}},
+		rows: []domain.APIKey{{ID: "k1", CPAPartnerID: "partner_a", CreatedBy: cpaRegisterCreatedBy, Status: "active"}},
 	}
 	accs := &fakeAccountStore{
 		rows: []domain.Account{
@@ -370,9 +392,9 @@ func TestRefreshJWT_InvalidatesAll(t *testing.T) {
 func TestDelete_DisablesAllKeys(t *testing.T) {
 	apiKeys := &fakeAPIKeyStore{
 		rows: []domain.APIKey{
-			{ID: "k1", CreatedBy: "cpa:partner_a", Status: "active"},
-			{ID: "k2", CreatedBy: "cpa:partner_a", Status: "active"},
-			{ID: "k3", CreatedBy: "cpa:other", Status: "active"},
+			{ID: "k1", CPAPartnerID: "partner_a", CreatedBy: cpaRegisterCreatedBy, Status: "active"},
+			{ID: "k2", CPAPartnerID: "partner_a", CreatedBy: cpaRegisterCreatedBy, Status: "active"},
+			{ID: "k3", CPAPartnerID: "other", CreatedBy: cpaRegisterCreatedBy, Status: "active"},
 		},
 	}
 	_, r := newTestHandler(t, apiKeys, &fakeAccountStore{}, &fakeProxy{}, &fakeJWT{})

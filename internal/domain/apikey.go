@@ -2,15 +2,18 @@ package domain
 
 import "time"
 
-// APIKey is an authentication credential issued by higgsgo (standalone mode).
-// In CPA mode the CPA platform issues its own keys and passes them through
-// as CPAPartnerID; higgsgo does not manage those.
+// APIKey is an authentication credential issued by higgsgo. Standalone
+// keys are minted via /admin/keys; CPA-mode keys are minted via
+// /internal/register and carry a non-empty CPAPartnerID so all
+// /internal/* routes can locate the row set for a partner without
+// walking every row in api_keys.
 type APIKey struct {
-	ID        string
-	KeyHash   string // bcrypt hash; the plaintext is shown once at creation
-	Name      string
-	CreatedBy string
-	Status    string // "active" | "revoked"
+	ID           string
+	KeyHash      string // bcrypt hash; the plaintext is shown once at creation
+	Name         string
+	CreatedBy    string
+	CPAPartnerID string // when non-empty, this key is scoped to a CPA partner
+	Status       string // "active" | "revoked"
 
 	// Quota tracking (credits * 100).
 	MonthlyQuota int64 // 0 means unlimited

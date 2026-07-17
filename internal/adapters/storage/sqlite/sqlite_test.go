@@ -31,8 +31,8 @@ func TestOpenAppliesMigrations(t *testing.T) {
 	if err != nil {
 		t.Fatalf("query schema_versions: %v", err)
 	}
-	if v < 3 {
-		t.Fatalf("expected schema_versions.version >= 3, got %d (migration 003 not applied?)", v)
+	if v < 4 {
+		t.Fatalf("expected schema_versions.version >= 4, got %d (migration 004 not applied?)", v)
 	}
 
 	// accounts table should exist and be empty.
@@ -62,6 +62,17 @@ func TestOpenAppliesMigrations(t *testing.T) {
 	}
 	if pbCount != 1 {
 		t.Fatalf("jobs.pre_balance_h column missing (migration 003 not applied)")
+	}
+
+	// The column added by migration 004 must be present on api_keys.
+	var cpaCount int
+	if err := db.QueryRow(`
+		SELECT COUNT(*) FROM pragma_table_info('api_keys') WHERE name = 'cpa_partner_id'
+	`).Scan(&cpaCount); err != nil {
+		t.Fatalf("query pragma_table_info (cpa_partner_id): %v", err)
+	}
+	if cpaCount != 1 {
+		t.Fatalf("api_keys.cpa_partner_id column missing (migration 004 not applied)")
 	}
 }
 
