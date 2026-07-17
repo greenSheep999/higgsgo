@@ -32,6 +32,12 @@ type fakeAccountStore struct {
 	markErr    error
 	markCalls  []markStatusCall
 	lastMarkID string
+
+	// Upsert behavior (exercised by Import). upsertErr short-circuits the
+	// call; otherwise the row is appended to upsertCalls so tests can
+	// assert against what the handler wrote.
+	upsertErr   error
+	upsertCalls []domain.Account
 }
 
 type markStatusCall struct {
@@ -63,11 +69,18 @@ func (f *fakeAccountStore) MarkStatus(_ context.Context, id string, status domai
 	return f.markErr
 }
 
-// Methods below are not used by AccountsHandler; they panic to guarantee
-// the test breaks loudly if a handler starts calling them without updates.
-func (f *fakeAccountStore) Upsert(context.Context, *domain.Account) error {
-	panic("not implemented")
+func (f *fakeAccountStore) Upsert(_ context.Context, a *domain.Account) error {
+	if f.upsertErr != nil {
+		return f.upsertErr
+	}
+	// Store a copy so downstream mutation cannot poison the recorded call.
+	f.upsertCalls = append(f.upsertCalls, *a)
+	return nil
 }
+
+// Methods below are not used by any AccountsHandler flow; they panic to
+// guarantee the test breaks loudly if a handler starts calling them without
+// updates.
 
 func (f *fakeAccountStore) UpdateBalance(context.Context, string, int64, int64, int64) error {
 	panic("not implemented")
