@@ -79,6 +79,10 @@ sample_size   = 5
 enabled       = false               # off in dev; flip to true for local probe testing
 skip_upstream = true                # never burn credits from a dev boot
 
+[tickers.month_reset]
+enabled  = false                    # off in dev to avoid racing SQLite on hot reload
+interval = ""
+
 [[notifiers]]
 type      = "stdout"
 min_level = "info"

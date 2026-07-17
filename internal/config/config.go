@@ -184,9 +184,21 @@ type ModesConfig struct {
 }
 
 type TickersConfig struct {
-	ARegression TickerJobConfig `toml:"a_regression"`
-	X1Recheck   TickerJobConfig `toml:"x1_recheck"`
-	BodyDrift   TickerJobConfig `toml:"body_drift"`
+	ARegression TickerJobConfig  `toml:"a_regression"`
+	X1Recheck   TickerJobConfig  `toml:"x1_recheck"`
+	BodyDrift   TickerJobConfig  `toml:"body_drift"`
+	MonthReset  MonthResetConfig `toml:"month_reset"`
+}
+
+// MonthResetConfig controls the background ticker that zeros every api
+// key's monthly_used counter at each calendar month boundary. Interval
+// is a Go duration string that forces a polling-loop cadence for tests
+// (e.g. "1s"); leaving it empty selects the production, calendar-driven
+// path where the ticker sleeps until the next month starts (see
+// internal/core/monthreset).
+type MonthResetConfig struct {
+	Enabled  bool   `toml:"enabled"`
+	Interval string `toml:"interval"`
 }
 
 type TickerJobConfig struct {
@@ -268,6 +280,12 @@ func defaults() *Config {
 			LogLevel:    "info",
 			LogFormat:   "json",
 			MetricsPath: "/metrics",
+		},
+		Tickers: TickersConfig{
+			// Monthly usage reset is on by default because monthly_used
+			// is a hard cap on outbound spend and a stale value would
+			// silently freeze traffic on the first of the month.
+			MonthReset: MonthResetConfig{Enabled: true},
 		},
 	}
 }

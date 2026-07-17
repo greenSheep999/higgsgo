@@ -122,6 +122,13 @@ enabled = false
 cron    = "0 0 3 * * 1"          # every Monday at 03:00
 enabled = false
 
+[tickers.month_reset]
+# Zero api_keys.monthly_used at each UTC calendar-month boundary. Leave
+# 'interval' empty (or unset) for the production calendar-driven path;
+# set to a short Go duration like "1s" only for local testing.
+enabled  = true
+interval = ""
+
 [[notifiers]]
 type      = "stdout"
 min_level = "info"

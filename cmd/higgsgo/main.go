@@ -30,6 +30,7 @@ import (
 	"github.com/greensheep999/higgsgo/internal/config"
 	"github.com/greensheep999/higgsgo/internal/core/jwt"
 	"github.com/greensheep999/higgsgo/internal/core/metering"
+	"github.com/greensheep999/higgsgo/internal/core/monthreset"
 	"github.com/greensheep999/higgsgo/internal/core/pollworker"
 	"github.com/greensheep999/higgsgo/internal/core/proxy"
 	"github.com/greensheep999/higgsgo/internal/core/refresher"
@@ -239,6 +240,31 @@ func run() error {
 			slog.Bool("skip_upstream", cfg.Tickers.ARegression.SkipUpstream),
 		)
 		go tk.Run(ctx)
+	}
+
+	// Background monthly usage reset ticker: zeros api_keys.monthly_used
+	// at each UTC calendar-month boundary. On by default because
+	// monthly_used is a hard quota ceiling and a stale value would
+	// silently freeze traffic on the first of the month. An empty or
+	// zero interval selects the production calendar path; a positive
+	// duration switches to polling mode for local testing.
+	if cfg.Tickers.MonthReset.Enabled {
+		mr := &monthreset.Ticker{
+			APIKeys: apiKeyStore,
+			Logger:  logger,
+		}
+		mode := "calendar"
+		if s := cfg.Tickers.MonthReset.Interval; s != "" {
+			if d, err := time.ParseDuration(s); err == nil && d > 0 {
+				mr.Interval = d
+				mode = "polling"
+			} else {
+				logger.Warn("invalid tickers.month_reset.interval, using calendar mode",
+					slog.String("value", s))
+			}
+		}
+		logger.Info("month reset ticker started", slog.String("mode", mode))
+		go mr.Run(ctx)
 	}
 
 	// Pool collector goroutine: samples AccountsActive / JobsInFlight
