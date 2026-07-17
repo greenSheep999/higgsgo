@@ -106,6 +106,45 @@ Commits referenced inline as `[hash]` are reachable from `main`; run
   the small GETs). Config knob is `[upstream.timeouts]`; the transport
   ceiling from utls is unchanged. Commit [66e5690].
 
+#### Performance
+- **Composite indexes on `jobs` + `usage_events`** (migration 006)
+  matching every hot query path: `(api_key_id, request_ts DESC)`,
+  `(account_id, request_ts DESC)`, `(status, finished_at)` on
+  jobs; `(api_key_id, ts DESC)`, `(billing_day)`, `(model_alias)`
+  on usage_events. EXPLAIN QUERY PLAN confirms the planner picks
+  them for /v1/jobs, /admin/jobs, /admin/usage. No store code
+  changed — indexes are transparent. Commit [366f2c0].
+
+#### V1 filtering
+- **`/v1/models` filters + pagination**: `output`, `requires_paid`,
+  `requires_unlim`, `q` (case-insensitive alias substring),
+  `include_unstable`, `include_deprecated`, plus `limit` /
+  `offset`. Response echoes `total_before_pagination` so the
+  caller can decide whether to fetch the next page without
+  guessing. `?tier=` intentionally not exposed — gating lives on
+  individual booleans; combine `requires_paid` + `requires_unlim`
+  instead. Commit [002eea9].
+
+#### Manual ticker triggers
+- **`POST /admin/tickers/refresher`** and **`/admin/tickers/regression`**
+  force one pass immediately, wrapped in a 30 s context timeout.
+  Nil runner returns 503 unavailable. Refresher and regression
+  ticker both grow `TriggerOnce(ctx)` exported wrappers around
+  the existing private `tick`. Commit [477252a].
+
+#### Audit trail
+- **`audit_events` table** (migration 007) + middleware that wraps
+  the admin router group after `BearerAuth`. Every POST / PUT /
+  PATCH / DELETE lands one row with actor (first 8 chars of
+  Bearer), method, path, chi route pattern, status, resource
+  type, resource id, and SHA-256 hash of the request body. Raw
+  body is never persisted. Insert runs in a fresh goroutine with
+  a detached 5 s ctx so accounting can never block the response.
+- **`GET /admin/audit`** exposes the trail with `since` / `until`
+  / `actor` / `resource_type` / `resource_id` / `method` filters
+  matching the AuditFilter port. Same response shape as
+  `/admin/usage`. Commit [c773bc5].
+
 #### Documentation
 - **Operations runbook + API reference** covering deploy, backup,
   rate-limit tuning, and every public endpoint's request/response
