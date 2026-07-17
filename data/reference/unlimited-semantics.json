@@ -1,0 +1,113 @@
+{
+  "generatedAt": "2026-07-17T09:15:00Z",
+  "session": "v3.1 Unlimited 语义澄清 —— Go 服务化前最终封板",
+  "hero_finding": "'has_unlim: true' 不等于能跑 /jobs/v2/*_unlimited。这是两个正交权限。Pro + Plus 都实测 403，需要 Ultra 或更高档。",
+
+  "three_types_of_unlim": {
+    "type_1_use_unlim_param": {
+      "endpoint_pattern": "/jobs/v2/<base_model>",
+      "flag": "use_unlim: true (in body)",
+      "required_account_perm": "has_unlim: true",
+      "who_has_it": ["pro", "plus", "ultra+"],
+      "starter_has_it": false,
+      "consumes_from": "model-specific credits pools (wan2_5_video_credits, soul_credits, face_swap_credits, etc.)",
+      "default_pool_balance": 0,
+      "requires_addon_purchase": true,
+      "notes": "在普通 endpoint body 加 use_unlim:true，不扣主 subscription_credits，但走独立池。这些独立池默认 0，需买 add-on 才有额度。"
+    },
+    "type_2_unlimited_endpoint": {
+      "endpoint_pattern": "/jobs/v2/<model>_unlimited",
+      "required_account_perm": "Ultra tier or higher (Enterprise, Creator, Team, Scale)",
+      "who_has_it": ["ultra+"],
+      "pro_has_it": false,
+      "plus_has_it": false,
+      "empirical_evidence": "2026-07-17 tested. Both Pro (has_unlim=true) and Plus (has_unlim=true + has_flex_unlim=true) return 403 unlimited_generation_not_allowed on POST /jobs/v2/gpt_image_2_unlimited, /jobs/v2/seedance_2_unlimited, /jobs/v2/kling_3_unlimited, /jobs/v2/nano_banana_pro_unlimited, /jobs/v2/seedance_unlimited, /jobs/v2/seedance_mini_unlimited.",
+      "consumes_from": "Ultra tier's 3000c/month pool",
+      "notes": "跟基础版是同一模型，只是队列优先级更高 + 独立配额池。反代场景无差别 —— 输出格式、质量、endpoint 参数都一致。"
+    },
+    "type_3_has_flex_unlim": {
+      "flag_only": "has_flex_unlim: true",
+      "who_has_it": ["plus", "ultra+"],
+      "pro_has_it": false,
+      "sufficient_for_unlimited_endpoint": false,
+      "semantic": "对应 pricing 页 'Priority access to new models'，但不足以解锁 *_unlimited endpoint。可能是预览版新模型的 flex 配额。"
+    }
+  },
+
+  "authoritative_permission_matrix": {
+    "source": "/user endpoint (higgsfield API)",
+    "tested_at": "2026-07-17T08:50Z",
+    "accounts_tested": {
+      "starter": "von7qxenjs@pixelpho.space",
+      "pro": "owmr1rhwz1@vietnamcashewnuts.space",
+      "plus": "e7snnrta97@vietnamcashewnuts.store"
+    },
+    "flags": {
+      "starter": {
+        "plan_type": "starter",
+        "total_plan_credits": 200,
+        "has_unlim": false,
+        "has_flex_unlim": false,
+        "face_swap_credits": 2,
+        "qwen_camera_control_credits": 0.4,
+        "cohort": "tier_1"
+      },
+      "pro": {
+        "plan_type": "pro",
+        "total_plan_credits": 600,
+        "has_unlim": true,
+        "has_flex_unlim": false,
+        "face_swap_credits": 2,
+        "qwen_camera_control_credits": 0,
+        "cohort": "tier_1"
+      },
+      "plus": {
+        "plan_type": "plus",
+        "total_plan_credits": 1000,
+        "has_unlim": true,
+        "has_flex_unlim": true,
+        "face_swap_credits": 2,
+        "qwen_camera_control_credits": 0,
+        "cohort": "tier_1"
+      }
+    }
+  },
+
+  "d_class_final_6": {
+    "gpt_image_2_unlimited": { "base_model": "gpt_image_2", "base_status": "A_completed" },
+    "kling_3_unlimited": { "base_model": "kling3_0", "base_status": "A_completed" },
+    "nano_banana_pro_unlimited": { "base_model": "nano_banana_2", "base_status": "A_completed" },
+    "seedance_2_unlimited": { "base_model": "seedance_2_0", "base_status": "A_completed" },
+    "seedance_unlimited": { "base_model": "seedance1_5", "base_status": "A_completed" },
+    "seedance_mini_unlimited": { "base_model": "seedance_2_0_mini", "base_status": "A_completed" }
+  },
+
+  "go_service_strategy": {
+    "recommendation": "不买 Ultra，把 *_unlimited 别名反代到基础版",
+    "aliases": {
+      "seedance-2-unlimited": "/jobs/v2/seedance_2_0",
+      "seedance-unlimited": "/jobs/v2/seedance1_5",
+      "seedance-mini-unlimited": "/jobs/v2/seedance_2_0_mini",
+      "kling-3-unlimited": "/jobs/v2/kling3_0",
+      "gpt-image-2-unlimited": "/jobs/v2/gpt_image_2",
+      "nano-banana-pro-unlimited": "/jobs/v2/nano_banana_2"
+    },
+    "reasoning": [
+      "Unlimited endpoint 与基础 endpoint 是同一模型，输出格式一致",
+      "Ultra 独占的只是队列优先级 + 独立配额池，反代场景对用户无差别",
+      "灰产 Ultra 账号 10 天保修，生产不能靠",
+      "现有 Plus+Pro+Starter 已覆盖所有 6 个基础模型 (A_completed)"
+    ]
+  },
+
+  "key_learnings_for_go": [
+    "官网 pricing 页 vs API 权限矩阵不一致：pricing 只展示表面数量差，API 内部有 has_unlim / has_flex_unlim / cohort 等质量分层 flag。以 API /user 端点为权威。",
+    "*_unlimited endpoint 需要 Ultra+ 档，Pro/Plus 直接 403 unlimited_generation_not_allowed。",
+    "concurrent_jobs_limit = 6 每账号（Plus 实测），Go 服务化必须主动管理 in_flight 数量避免 429。",
+    "credit_balance 在 job create 后短暂显示 0（credit freeze），别用来做预算判断 —— 用 subscription_balance。",
+    "JWT 60s 过期，长循环里每 40-50s re-mint。",
+    "IP check per-user：Pro/Plus 上传的媒体 ip_check_finished=null 阻塞 image2video_extend 系列。用 starter 账号上传的公共 CDN URL 是 workaround。",
+    "APP_SLUGS (src/upstream/catalog.mjs) 是 nano_banana_2 家族的顶级 slug 必读常量：outfit-swap, ai-stylist, relight, shots, angles, skin-enhancer。",
+    "定期 recheck：每周 X1 26 个（今天已发现 7 个后端启用），每天 A 类抽样 20 个（今天已发现 bd_studio_soul_location, reve 退化）。"
+  ]
+}

@@ -1,0 +1,387 @@
+// Package proxy is the reverse-proxy orchestration layer.
+//
+// It sits between the /v1 HTTP handlers and the upstream client, doing:
+//
+//   - alias resolution via ModelRegistry
+//   - account pick via AccountStore.PickAndLock (respecting model gates)
+//   - request-body construction (with SPA-default fills)
+//   - job creation + terminal polling via core/upstream
+//   - refund / balance bookkeeping on failure
+//   - account unlock on completion
+package proxy
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log/slog"
+	"time"
+
+	"github.com/greensheep999/higgsgo/internal/core/upstream"
+	"github.com/greensheep999/higgsgo/internal/domain"
+	"github.com/greensheep999/higgsgo/internal/ports"
+)
+
+// Service is the reverse-proxy business object.
+type Service struct {
+	Store    ports.AccountStore
+	Registry ports.ModelRegistry
+	Upstream *upstream.Client
+	Jobs     ports.JobStore // optional; when set every create is persisted
+	Logger   *slog.Logger
+	Clock    ports.Clock
+
+	// AsyncByDefault, when true, makes async=true the default for video/
+	// audio outputs even when the caller does not set the async field.
+	// Images stay sync by default because they usually complete in <30s.
+	AsyncByDefault bool
+
+	// SyncPollDeadline caps how long sync requests block the HTTP caller.
+	// Default 3m. Beyond this we return the job as queued and the client
+	// polls GET /v1/jobs/{id} (backed by the pollworker).
+	SyncPollDeadline time.Duration
+}
+
+// GenerationRequest is the normalized shape produced by the /v1 handler
+// after parsing OpenAI-compatible input.
+type GenerationRequest struct {
+	// User-facing model alias, e.g. "seedance-2-0-mini".
+	Model string
+
+	// User-supplied params. Merged into the model's default body.
+	// Values here take precedence over SPA defaults.
+	UserParams map[string]any
+
+	// Media inputs. When non-empty, the service injects them into params.medias[]
+	// or params.input_image/input_video/input_audio according to the model spec.
+	Media *MediaInput
+
+	// Async, when true, returns as soon as the upstream create succeeds.
+	// The caller polls /v1/jobs/{id} to fetch the result.
+	Async bool
+
+	// SyncRequested distinguishes "caller explicitly asked for sync" from
+	// "caller did not specify". When false and AsyncByDefault is on, video
+	// / audio outputs are treated as async even if Async is false.
+	SyncRequested bool
+
+	// PollDeadline caps synchronous poll time. Default 3m.
+	PollDeadline time.Duration
+
+	// GroupID for group-scoped pool pick. Empty selects the "default" group.
+	GroupID string
+
+	// APIKeyID / CPAPartnerID are set by the auth middleware for accounting.
+	APIKeyID     string
+	CPAPartnerID string
+}
+
+// MediaInput represents a single reference media object provided by the caller.
+type MediaInput struct {
+	// PreUploadedID is the higgsfield media UUID; if set we use it directly.
+	PreUploadedID string
+	Type          string // "image" | "video" | "audio"
+	URL           string
+}
+
+// GenerationResponse is what the /v1 handler returns to the API caller.
+// When async or when a sync poll times out, PollURL is set so the caller
+// knows where to look for the terminal state.
+type GenerationResponse struct {
+	ID         string              `json:"id"`
+	Object     string              `json:"object"` // "video" | "image" | "audio"
+	Model      string              `json:"model"`
+	Status     string              `json:"status"` // "completed" | "queued" | "in_progress" | "failed"
+	CreatedAt  int64               `json:"created_at"`
+	ResultURL  string              `json:"result_url,omitempty"`
+	UpstreamID string              `json:"upstream_job_id,omitempty"`
+	Cost       int64               `json:"cost,omitempty"`
+	Data       []map[string]string `json:"data,omitempty"` // OpenAI-shaped
+	PollURL    string              `json:"poll_url,omitempty"`
+	Error      *APIError           `json:"error,omitempty"`
+}
+
+// APIError is the error object returned to callers.
+type APIError struct {
+	Type    string `json:"type"`
+	Message string `json:"message"`
+	Detail  any    `json:"detail,omitempty"`
+}
+
+// Generate is the main entry point invoked by all three /v1 handlers.
+//
+// Flow:
+//  1. resolve model
+//  2. pick + lock an account (respecting gates)
+//  3. call upstream.CreateJob (fast, ~1-3s)
+//  4. persist a Job row (status=queued) so the pollworker takes over
+//  5. either return immediately (async) or poll the DB row until terminal
+func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*GenerationResponse, error) {
+	spec, err := s.Registry.Resolve(req.Model)
+	if err != nil {
+		return nil, fmt.Errorf("resolve model: %w", err)
+	}
+
+	// Decide async/sync. Async is the default for video/audio because those
+	// models can take 30+ minutes upstream (wan_animate family).
+	async := req.Async
+	if !req.SyncRequested && s.AsyncByDefault && (spec.Output == "video" || spec.Output == "audio") {
+		async = true
+	}
+
+	// Pick an account from the pool.
+	pickParams := ports.PickParams{
+		JST:               spec.JST,
+		EstCostHundredths: spec.EstCostHundredths,
+		RequiresPaid:      s.Registry.StarterLocked(spec.JST) || spec.RequiresPaid,
+		RequiresUltra:     spec.RequiresUltra,
+		GroupID:           req.GroupID,
+	}
+	acc, lockToken, err := s.Store.PickAndLock(ctx, pickParams)
+	if err != nil {
+		return nil, err
+	}
+	// Unlock happens once the job leaves in_flight. In async mode that's
+	// immediately after create (the pollworker owns the lifecycle from
+	// there). In sync mode we unlock after the sync poll finishes.
+	unlock := func() {
+		if unlockErr := s.Store.Unlock(context.Background(), acc.ID, lockToken); unlockErr != nil && s.Logger != nil {
+			s.Logger.Warn("pool unlock failed",
+				slog.String("account_id", acc.ID),
+				slog.String("err", unlockErr.Error()))
+		}
+	}
+
+	if s.Logger != nil {
+		s.Logger.Info("picked account",
+			slog.String("account_id", acc.ID),
+			slog.String("plan", string(acc.PlanType)),
+			slog.String("model", spec.Alias),
+			slog.String("jst", spec.JST),
+			slog.Bool("async", async),
+			slog.Int64("est_cost_h", spec.EstCostHundredths))
+	}
+
+	// Build request body.
+	body := buildBody(spec, req)
+
+	created, err := s.Upstream.CreateJob(ctx, upstream.CreateRequest{
+		Account:  acc,
+		Endpoint: spec.Endpoint,
+		Body:     body,
+	})
+	if err != nil {
+		unlock()
+		return nil, mapUpstreamError(err, spec)
+	}
+
+	// Persist to jobs table so the pollworker (and future /v1/jobs/{id})
+	// can pick it up. Best-effort: if the store call fails we still return
+	// the created job to the caller and log the error.
+	requestTS := s.now()
+	if s.Jobs != nil {
+		job := &domain.Job{
+			ID:              created.JobID,
+			APIKeyID:        req.APIKeyID,
+			CPAPartnerID:    req.CPAPartnerID,
+			GroupID:         req.GroupID,
+			AccountID:       acc.ID,
+			ModelAlias:      spec.Alias,
+			JST:             spec.JST,
+			Endpoint:        spec.Endpoint,
+			RequestBodyJSON: EnsureBodyJSON(body),
+			RequestTS:       requestTS,
+			UpstreamJobID:   created.JobID,
+			UpstreamCost:    created.Cost,
+			Status:          domain.JobQueued,
+		}
+		if err := s.Jobs.Create(ctx, job); err != nil && s.Logger != nil {
+			s.Logger.Warn("persist job failed",
+				slog.String("job_id", created.JobID),
+				slog.String("err", err.Error()))
+		}
+	}
+
+	if async {
+		unlock()
+		return &GenerationResponse{
+			ID:         created.JobID,
+			Object:     objectForOutput(spec.Output),
+			Model:      spec.Alias,
+			Status:     "queued",
+			CreatedAt:  requestTS.Unix(),
+			UpstreamID: created.JobID,
+			Cost:       created.Cost,
+			PollURL:    fmt.Sprintf("/v1/jobs/%s", created.JobID),
+		}, nil
+	}
+
+	// Sync path: poll upstream directly until terminal or deadline.
+	// The pollworker will double-poll harmlessly if it wakes up during
+	// this window — statuses are idempotent.
+	deadline := req.PollDeadline
+	if deadline == 0 {
+		deadline = s.SyncPollDeadline
+	}
+	if deadline == 0 {
+		deadline = 3 * time.Minute
+	}
+	final, err := s.Upstream.PollUntilTerminal(ctx, acc, created.JobID, upstream.PollOptions{
+		Deadline: deadline,
+		Interval: 4 * time.Second,
+	})
+	unlock()
+	if err != nil {
+		if errors.Is(err, domain.ErrUpstreamTimeout) {
+			// The job may still complete via pollworker; return queued.
+			return &GenerationResponse{
+				ID:         created.JobID,
+				Object:     objectForOutput(spec.Output),
+				Model:      spec.Alias,
+				Status:     "queued",
+				CreatedAt:  requestTS.Unix(),
+				UpstreamID: created.JobID,
+				Cost:       created.Cost,
+				PollURL:    fmt.Sprintf("/v1/jobs/%s", created.JobID),
+			}, nil
+		}
+		return nil, mapUpstreamError(err, spec)
+	}
+	// Also update the DB row so the pollworker skips this job on its next tick.
+	if s.Jobs != nil {
+		terminalStatus := domain.JobStatus(final.Status)
+		if terminalStatus == "failed" && final.Refunded {
+			terminalStatus = domain.JobRefunded
+		} else if terminalStatus == "completed" {
+			terminalStatus = domain.JobCompleted
+		} else if terminalStatus == "failed" {
+			terminalStatus = domain.JobFailed
+		}
+		_ = s.Jobs.UpdateStatus(ctx, created.JobID, terminalStatus, ports.JobMeta{
+			ResultURL: final.ResultURL,
+			LatencyMS: s.now().Sub(requestTS).Milliseconds(),
+			Refunded:  final.Refunded,
+		})
+	}
+
+	resp := &GenerationResponse{
+		ID:         created.JobID,
+		Object:     objectForOutput(spec.Output),
+		Model:      spec.Alias,
+		Status:     final.Status,
+		CreatedAt:  requestTS.Unix(),
+		UpstreamID: created.JobID,
+		ResultURL:  final.ResultURL,
+		Cost:       created.Cost,
+	}
+	if final.ResultURL != "" {
+		resp.Data = []map[string]string{{"url": final.ResultURL}}
+	}
+	if final.Status == "failed" {
+		resp.Error = &APIError{
+			Type:    "upstream_fail",
+			Message: "upstream generation failed",
+		}
+	}
+	return resp, nil
+}
+
+// buildBody assembles the payload dispatched to higgsfield. We start from
+// the example params encoded in the ModelSpec (future work — for now empty)
+// and merge UserParams on top.
+func buildBody(spec *domain.ModelSpec, req GenerationRequest) map[string]any {
+	params := make(map[string]any)
+	// Merge user-supplied params first.
+	for k, v := range req.UserParams {
+		params[k] = v
+	}
+	// Inject media if provided and the model wants it.
+	if req.Media != nil && req.Media.PreUploadedID != "" {
+		mediaObj := map[string]any{
+			"id":   req.Media.PreUploadedID,
+			"type": mediaTypeFor(req.Media.Type),
+			"url":  req.Media.URL,
+		}
+		switch spec.MediaRole {
+		case "medias":
+			params["medias"] = []any{
+				map[string]any{"role": "start_image", "data": mediaObj},
+			}
+		case "input_image", "":
+			// Default: flat input_image when spec doesn't say otherwise.
+			if _, ok := params["input_image"]; !ok {
+				params["input_image"] = mediaObj
+			}
+		}
+	}
+	// Top-level fields (application_slug for nano_banana_2 family).
+	top := map[string]any{
+		"params":             params,
+		"use_unlim":          false,
+		"use_seedream_bonus": false,
+	}
+	if spec.ApplicationSlug != "" {
+		top["application_slug"] = spec.ApplicationSlug
+	}
+	return top
+}
+
+func mediaTypeFor(kind string) string {
+	switch kind {
+	case "video":
+		return "video_input"
+	case "audio":
+		return "audio_input"
+	default:
+		return "media_input"
+	}
+}
+
+func objectForOutput(output string) string {
+	switch output {
+	case "video":
+		return "video"
+	case "audio":
+		return "audio"
+	default:
+		return "image"
+	}
+}
+
+// mapUpstreamError converts sentinel errors from core/upstream into the
+// API-facing GenerationResponse.Error shape while preserving the raw error
+// for logging.
+func mapUpstreamError(err error, spec *domain.ModelSpec) error {
+	// Currently we surface the error transparently. The /v1 handler
+	// translates it into an HTTP status. This function stays as a hook
+	// for future account-switching retries.
+	_ = spec
+	return err
+}
+
+func (s *Service) now() time.Time {
+	if s.Clock != nil {
+		return s.Clock.Now()
+	}
+	return time.Now()
+}
+
+// EnsureJSON returns the body as a json.RawMessage for logging.
+func EnsureJSON(v any) json.RawMessage {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return json.RawMessage(`{}`)
+	}
+	return b
+}
+
+// EnsureBodyJSON returns v as a compact JSON string, or "{}" on error.
+// Used to persist request bodies in the jobs table.
+func EnsureBodyJSON(v any) string {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return "{}"
+	}
+	return string(b)
+}

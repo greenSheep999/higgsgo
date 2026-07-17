@@ -1,0 +1,46 @@
+# Binaries
+/bin/
+/higgsgo
+/higgsgo-cli
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Test binaries and coverage
+*.test
+*.out
+coverage.txt
+coverage.html
+
+# Go workspace files
+go.work
+go.work.sum
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# Runtime data
+/data/higgsgo.db
+/data/higgsgo.db-shm
+/data/higgsgo.db-wal
+/data/output/
+
+# Local config (secrets)
+/configs/higgsgo.local.toml
+/configs/higgsgo.prod.toml
+/configs/proxies.txt
+.env
+.env.local
+
+# Node subprocess artifacts (if we keep CloakBrowser bridge)
+/node_modules/
+package-lock.json
+
+# Logs
+*.log
+/logs/

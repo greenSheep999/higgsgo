@@ -1,0 +1,26 @@
+services:
+  higgsgo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VERSION: dev
+    image: higgsgo:dev
+    ports:
+      - "18080:18080"
+      - "18081:18081"
+    environment:
+      HIGGSGO_ADMIN_BEARER: "dev-admin"
+      HIGGSGO_INTERNAL_BEARER: "dev-internal"
+      # Route upstream traffic through a socks5 proxy. Leave empty for direct.
+      HIGGSGO_UPSTREAM_PROXY_URL: ""
+    volumes:
+      - higgsgo-data:/app/data
+      - ./configs:/app/configs:ro
+    restart: unless-stopped
+    command:
+      - "-config"
+      - "/app/configs/higgsgo.dev.toml"
+
+volumes:
+  higgsgo-data:

@@ -1,0 +1,30 @@
+{
+  "generatedAt": "2026-07-04T16:38:24.684Z",
+  "ownerAccount": "8zucr7kiy8@hubcrypto.site",
+  "ownerUserId": "user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD",
+  "reference_media": {
+    "image": {
+      "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+      "type": "media_input",
+      "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+      "note": "Small red apple, 512x512. Safe default for image inputs."
+    },
+    "video": {
+      "id": "bfbb9d8b-e9f8-4036-8576-79bbd431148b",
+      "type": "video_input",
+      "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/bfbb9d8b-e9f8-4036-8576-79bbd431148b.mp4",
+      "note": "Short real-scene mp4, 1MB, IP-check-cleared."
+    },
+    "audio": {
+      "id": "3f1f2e27-8d0c-44bd-83f1-72e0de3ef9f0",
+      "type": "audio_input",
+      "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/3f1f2e27-8d0c-44bd-83f1-72e0de3ef9f0.mp3",
+      "note": "Silence + tone .mp3."
+    }
+  },
+  "usage_notes": [
+    "These media objects live under owner user_id but are queryable by others via API",
+    "(the {id,type,url} triple is enough for downstream jobs — the URL is public CDN).",
+    "For per-user IP checks, re-upload via /media/, /video/, /audio/ endpoints (see src/upstream/media.mjs)."
+  ]
+}

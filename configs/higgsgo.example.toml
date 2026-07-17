@@ -1,0 +1,105 @@
+# higgsgo example configuration.
+# Copy to higgsgo.dev.toml or higgsgo.prod.toml and adjust.
+# All keys use snake_case. Env-var overrides use HIGGSGO_UPPER_SNAKE prefix.
+
+[server]
+listen          = "0.0.0.0:8080"
+admin_listen    = "127.0.0.1:8081"
+internal_listen = "127.0.0.1:8082"
+public_url      = "http://localhost:8080"
+# Shared secrets for the /admin/* and /internal/* surfaces.
+# In production, prefer HIGGSGO_ADMIN_BEARER / HIGGSGO_INTERNAL_BEARER env vars.
+admin_bearer    = "change-me-admin"
+internal_bearer = "change-me-internal"
+
+[storage]
+driver = "sqlite"                # "sqlite" | "postgres"
+[storage.sqlite]
+path = "./data/higgsgo.db"
+[storage.postgres]
+dsn = ""
+
+[http_client]
+type = "stdhttp"                 # "stdhttp" | "utls" | "impit_bridge"
+[http_client.utls]
+profile = "chrome_133"
+
+[proxy]
+provider = "static"              # "static" | "711proxy" | "brightdata" | "noop"
+[proxy.static]
+file = "./configs/proxies.txt"
+
+[[mailbox]]
+type = "graph"
+[mailbox.graph]
+list_file = ""
+
+[[mailbox]]
+type = "destiny"
+[mailbox.destiny]
+web_url = "https://www.mail.destiny-mmo.com/domain"
+supported_domains = [
+  "headcc.io.vn", "sorashift.store", "hubcrypto.site",
+  "daivietartex.bond", "vietnamcashewnuts.space",
+  "vietnamcashewnuts.store", "pixelpho.space",
+  "whisperwindwalruswhimsy.site",
+]
+
+[[mailbox]]
+type = "prompt"
+
+[captcha]
+provider = "manual"              # "capsolver" | "twocaptcha" | "manual"
+[captcha.capsolver]
+api_key = ""
+enable_datadome = true
+
+[browser]
+type = "cloak_nodejs"            # "cloak_nodejs" | "chromedp"
+[browser.cloak_nodejs]
+node_bin      = "/usr/local/bin/node"
+worker_script = "./adapters/browser/cloak-worker.mjs"
+pool_size     = 3
+
+[models]
+path             = "./configs/models"
+data_path        = "./data/reference"
+reload_on_signal = "SIGHUP"
+
+[pool]
+max_in_flight_per_account  = 5
+fail_streak_threshold      = 3
+balance_refresh_interval   = "10m"
+jwt_refresh_interval       = "40s"
+
+[register]
+auto_topup                     = false
+min_starter_accounts           = 5
+mail_list_file                 = ""
+max_concurrent_registrations   = 2
+
+[modes]
+standalone = true                # Mode A: users hit /v1/* directly with our API key
+cpa_plugin = false               # Mode B: expose /internal/* for CPA plugin
+
+[tickers.a_regression]
+cron        = "0 0 6 * * *"      # every day at 06:00 local
+sample_size = 20
+enabled     = false
+
+[tickers.x1_recheck]
+cron    = "0 0 6 * * 0"          # every Sunday at 06:00
+enabled = false
+
+[tickers.body_drift]
+cron    = "0 0 3 * * 1"          # every Monday at 03:00
+enabled = false
+
+[[notifiers]]
+type      = "stdout"
+min_level = "info"
+
+[observability]
+log_level    = "info"
+log_format   = "json"
+metrics_path = "/metrics"

@@ -1,0 +1,75 @@
+name: ci
+
+# CI: build + vet + unit tests on every push and PR.
+# Live upstream tests (network-touching) are opt-in via the
+# HIGGSGO_TEST_UPSTREAM secret — they run on schedule + workflow_dispatch,
+# never on PRs, because they require valid higgsfield account fixtures.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Build & unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache: true
+
+      - name: Verify go.mod tidy
+        run: |
+          go mod tidy
+          git diff --exit-code go.mod go.sum
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go build
+        run: go build ./...
+
+      - name: go test
+        env:
+          # Live tests require this flag; keep it off in CI.
+          HIGGSGO_TEST_UPSTREAM: ""
+        run: go test -count=1 -race -timeout=5m ./...
+
+  lint:
+    name: gofmt & staticcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+          cache: true
+
+      - name: gofmt check
+        run: |
+          out=$(gofmt -l .)
+          if [ -n "$out" ]; then
+            echo "The following files are not gofmt'd:"
+            echo "$out"
+            exit 1
+          fi
+
+      - name: staticcheck
+        uses: dominikh/staticcheck-action@v1
+        with:
+          version: "2024.1.1"
+          install-go: false

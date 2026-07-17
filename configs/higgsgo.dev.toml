@@ -1,0 +1,62 @@
+# higgsgo development configuration.
+# Uses non-standard ports to avoid conflicts with common local services.
+
+[server]
+listen          = "127.0.0.1:18080"
+admin_listen    = "127.0.0.1:18081"
+internal_listen = "127.0.0.1:18082"
+public_url      = "http://localhost:18080"
+admin_bearer    = "dev-admin"
+internal_bearer = "dev-internal"
+
+[storage]
+driver = "sqlite"
+[storage.sqlite]
+path = "./data/higgsgo.db"
+
+[http_client]
+type = "utls"
+[http_client.utls]
+profile = "chrome_133"
+
+[proxy]
+provider = "noop"
+
+[[mailbox]]
+type = "prompt"
+
+[captcha]
+provider = "manual"
+
+[browser]
+type = "cloak_nodejs"
+[browser.cloak_nodejs]
+node_bin      = "/usr/local/bin/node"
+worker_script = "./adapters/browser/cloak-worker.mjs"
+pool_size     = 1
+
+[models]
+path      = "./configs/models"
+data_path = "./data/reference"
+
+[pool]
+max_in_flight_per_account  = 5
+fail_streak_threshold      = 3
+balance_refresh_interval   = "10m"
+jwt_refresh_interval       = "40s"
+
+[register]
+auto_topup = false
+
+[modes]
+standalone = true
+cpa_plugin = false
+
+[[notifiers]]
+type      = "stdout"
+min_level = "info"
+
+[observability]
+log_level    = "info"
+log_format   = "json"
+metrics_path = "/metrics"

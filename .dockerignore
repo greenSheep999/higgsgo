@@ -1,0 +1,12 @@
+.git
+.github
+**/.DS_Store
+**/*_test.go
+**/testdata
+data/higgsgo.db*
+data/output
+logs
+scripts/*.log
+/dist
+/tmp
+node_modules
