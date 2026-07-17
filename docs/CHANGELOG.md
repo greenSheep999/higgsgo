@@ -82,11 +82,37 @@ Commits referenced inline as `[hash]` are reachable from `main`; run
   (inspect keys, flip flags, force a health check) so on-call work
   doesn't require writing ad-hoc SQL. Commit [574b2fa].
 
+#### Housekeeping
+- **`JobStore.Purge`** + `POST /admin/jobs/purge` for reclaiming
+  terminal-state rows once accounting has flowed into `usage_events`.
+  Empty `statuses` is a no-op guard so a mis-configured caller cannot
+  wipe every finished job by omitting the filter. Commit [fe3446c].
+
+#### Direct group binding
+- **`api_keys.group_id`** column (migration 005) lets a CPA-scoped key
+  route 1:1 to a pool group without a JOIN through
+  `apikey_group_bindings`. The M:N binding table stays as the general
+  case; the direct column wins when both are set. Commit [c324d20].
+
+#### Webhook observability
+- **`webhook.Dispatcher` counters** (`enqueued` / `delivered` /
+  `failed` / `dropped` / `in_flight`) plus `GET /admin/webhooks/stats`
+  so operators can answer "are callbacks flowing?" without tailing
+  logs. Counters are `sync/atomic` on the hot path. Commit [7f2328f].
+
+#### Upstream reliability
+- **Per-endpoint request timeouts** on the upstream client, tuned to
+  the real fnf.higgsfield.ai traffic (90 s for `create_job`, 15 s for
+  the small GETs). Config knob is `[upstream.timeouts]`; the transport
+  ceiling from utls is unchanged. Commit [66e5690].
+
 #### Documentation
 - **Operations runbook + API reference** covering deploy, backup,
   rate-limit tuning, and every public endpoint's request/response
   shape — the first docs written for someone who is not the author.
   Commit [7b681eb].
+- **This CHANGELOG** landed in commit [9e99d9a] and is kept up to
+  date as commits merge.
 
 ### Changed
 - **Upstream call path self-heals on 401** by invalidating the cached
