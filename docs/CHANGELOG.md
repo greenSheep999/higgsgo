@@ -172,6 +172,59 @@ Commits referenced inline as `[hash]` are reachable from `main`; run
   errors surface as `500 reload_failed`. Nil registry -> 503.
   Commit [df7e130].
 
+#### Account lifecycle
+- **`POST /admin/accounts`** three-format import: `session_paste`
+  (direct harvested fields), `higgsfield_register_json` (paste the
+  output/*.json from higgsfield-register verbatim), `raw_cookies`
+  (Chrome DevTools Cookie header — reverses session_id out of
+  clerk_active_context / __client / sess_ prefix). Conflict path
+  returns 409 with a `?upsert=true` escape hatch.
+- **`GET /admin/accounts/export`** streaming in JSON array, JSONL,
+  or CSV. `include_secrets` defaults to false so casual snapshots
+  cannot leak session_id / cookies to a local disk. Batching is
+  500-row chunked + `http.Flusher` so a large window stays
+  memory-bounded. Commit [f9cac22].
+
+#### Audit trail (part 2)
+- **`GET /admin/audit/export`** streaming JSONL (default) / CSV
+  with the same `?since` / `?until` / `?actor` / `?resource_type`
+  / `?resource_id` / `?method` / `?limit` filter set as the list
+  endpoint. `Content-Disposition` attaches
+  `audit-<since>-<until>.<ext>` so browsers download rather than
+  render. Commit [df97d8c].
+
+#### Reliability (part 2)
+- **`monthreset` ticker** zeros `api_keys.monthly_used` at each
+  UTC calendar month boundary. Calendar mode sleeps to the next
+  boundary + 5min slack; polling mode (Interval > 0) drives the
+  same reset from a short cadence, gated by month-of-clock so it
+  neither misses nor spams. On by default because a stale
+  `monthly_used` silently freezes traffic on the first of the
+  month. Commit [d9d62c2].
+
+#### CLI (part 2)
+- **`higgsgo-cli pause-key / resume-key / reset-usage`** round out
+  the CLI's mirror of the `/admin/keys/{id}/*` write surface.
+  Rotate + disable were already there. Each subcommand goes
+  through `ports.APIKeyStore` and emits JSON on stdout for shell
+  pipelines. Commit [29d84db].
+
+#### WebUI unblock
+- **CORS middleware** on `/admin/*` with the WebUI's dev origins
+  wired in `higgsgo.dev.toml`. Echoes the request Origin (never
+  `*`) so credentials still work; preflight OPTIONS short-circuits
+  before `BearerAuth` would 401 it. Empty allowlist keeps the
+  middleware a pass-through, so same-origin deploys are
+  unaffected. Commit [6702d3f].
+
+### End-to-end
+- First hermetic e2e test: admin create key -> v1 image
+  generation -> job list (scoped and admin) -> /admin/usage row
+  -> `/admin/jobs/purge` -> post-purge assertions. httptest.Server
+  mocks `fnf.higgsfield.ai`; `svc.AsyncByDefault=false` keeps the
+  sync path deterministic. Runs in ~0.5 s under
+  `go test ./internal/e2e/`. Commit [28dca21].
+
 #### Documentation
 - **Operations runbook + API reference** covering deploy, backup,
   rate-limit tuning, and every public endpoint's request/response
