@@ -41,6 +41,7 @@ type Server struct {
 	Refresher  *refresher.Refresher   // optional; enables /admin/tickers/refresher
 	Regression *regression.Ticker     // optional; enables /admin/tickers/regression
 	Audit      ports.AuditStore       // optional; enables admin write auditing + /admin/audit
+	Registry   ports.ModelRegistry    // optional; enables /admin/models/reload
 
 	public   *http.Server
 	admin    *http.Server
@@ -50,7 +51,7 @@ type Server struct {
 // New builds a Server. Handlers are wired up here; concrete route
 // registrations (v1 / admin / internal) live in sibling files as they are
 // implemented.
-func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore, metrics *observability.Metrics, cpa *cpaplugin.Handler, health ports.ModelHealthStore, webhooks *webhook.Dispatcher, rf *refresher.Refresher, rg *regression.Ticker, audit ports.AuditStore) *Server {
+func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore, metrics *observability.Metrics, cpa *cpaplugin.Handler, health ports.ModelHealthStore, webhooks *webhook.Dispatcher, rf *refresher.Refresher, rg *regression.Ticker, audit ports.AuditStore, registry ports.ModelRegistry) *Server {
 	s := &Server{
 		Config:     cfg,
 		Logger:     logger,
@@ -67,6 +68,7 @@ func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys
 		Refresher:  rf,
 		Regression: rg,
 		Audit:      audit,
+		Registry:   registry,
 	}
 
 	s.public = &http.Server{
@@ -224,6 +226,9 @@ func (s *Server) adminRouter() http.Handler {
 		admin.NewTickersHandler(s.Refresher, s.Regression, s.Logger).Register(r)
 		if s.Audit != nil {
 			admin.NewAuditHandler(s.Audit).Register(r)
+		}
+		if s.Registry != nil {
+			admin.NewModelsHandler(s.Registry, s.Logger).Register(r)
 		}
 	})
 	return r
