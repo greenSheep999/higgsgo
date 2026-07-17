@@ -4,8 +4,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/greensheep999/higgsgo/internal/domain"
 	"github.com/go-chi/chi/v5"
+	"github.com/greensheep999/higgsgo/internal/domain"
 )
 
 // HandleJobFetch serves GET /v1/jobs/{id}.

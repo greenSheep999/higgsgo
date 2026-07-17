@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/greensheep999/higgsgo/internal/api/middleware"
 	"github.com/greensheep999/higgsgo/internal/api/v1"
 	"github.com/greensheep999/higgsgo/internal/config"
-	"github.com/go-chi/chi/v5"
-	chimw "github.com/go-chi/chi/v5/middleware"
 )
 
 // Server is the higgsgo HTTP server. It listens on three ports (public,

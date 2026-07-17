@@ -15,9 +15,9 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/greensheep999/higgsgo/internal/core/proxy"
 	"github.com/greensheep999/higgsgo/internal/ports"
-	"github.com/go-chi/chi/v5"
 )
 
 // Handler wires v1 endpoints to the reverse-proxy service.
