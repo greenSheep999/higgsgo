@@ -19,6 +19,11 @@ type imageRequest struct {
 	ImageID     string `json:"media_id,omitempty"` // pre-uploaded higgsfield media
 	Async       bool   `json:"async,omitempty"`
 	CallbackURL string `json:"callback_url,omitempty"`
+	// GroupID, when set, restricts the pool pick to a specific account group.
+	// TODO(groups): auto-resolve GroupID from the api key's binding via
+	// GroupStore.ListGroupsForAPIKey when the caller does not set it. That
+	// change lands with the multi-group routing policy work.
+	GroupID string `json:"group_id,omitempty"`
 }
 
 // HandleImageGeneration serves POST /v1/images/generations.
@@ -40,7 +45,7 @@ func (h *Handler) HandleImageGeneration(w http.ResponseWriter, r *http.Request) 
 	// Forward unknown keys.
 	var extraMap map[string]any
 	_ = json.Unmarshal(raw, &extraMap)
-	known := map[string]bool{"model": true, "prompt": true, "n": true, "size": true, "quality": true, "media_id": true, "async": true, "callback_url": true}
+	known := map[string]bool{"model": true, "prompt": true, "n": true, "size": true, "quality": true, "media_id": true, "async": true, "callback_url": true, "group_id": true}
 	userParams := make(map[string]any)
 	if ir.Prompt != "" {
 		userParams["prompt"] = ir.Prompt
@@ -69,6 +74,7 @@ func (h *Handler) HandleImageGeneration(w http.ResponseWriter, r *http.Request) 
 		Async:         ir.Async,
 		SyncRequested: syncRequested,
 		CallbackURL:   ir.CallbackURL,
+		GroupID:       ir.GroupID,
 	}
 	if key, ok := middleware.APIKeyFromContext(r.Context()); ok {
 		greq.APIKeyID = key.ID

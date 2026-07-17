@@ -13,13 +13,18 @@ import (
 // videoRequest is the OpenAI-shaped request body we accept.
 // Any extra keys are forwarded to higgsfield's params.
 type videoRequest struct {
-	Model       string         `json:"model"`
-	Prompt      string         `json:"prompt"`
-	ImageURL    string         `json:"image_url,omitempty"`
-	MediaID     string         `json:"media_id,omitempty"`
-	Async       bool           `json:"async,omitempty"`
-	CallbackURL string         `json:"callback_url,omitempty"`
-	Extra       map[string]any `json:"-"` // populated by unmarshal below
+	Model       string `json:"model"`
+	Prompt      string `json:"prompt"`
+	ImageURL    string `json:"image_url,omitempty"`
+	MediaID     string `json:"media_id,omitempty"`
+	Async       bool   `json:"async,omitempty"`
+	CallbackURL string `json:"callback_url,omitempty"`
+	// GroupID, when set, restricts the pool pick to a specific account group.
+	// TODO(groups): auto-resolve GroupID from the api key's binding via
+	// GroupStore.ListGroupsForAPIKey when the caller does not set it. That
+	// change lands with the multi-group routing policy work.
+	GroupID string         `json:"group_id,omitempty"`
+	Extra   map[string]any `json:"-"` // populated by unmarshal below
 }
 
 // HandleVideoGeneration serves POST /v1/videos/generations.
@@ -44,7 +49,7 @@ func (h *Handler) HandleVideoGeneration(w http.ResponseWriter, r *http.Request) 
 	// Also pull unknown keys into vr.Extra for forwarding into params.
 	var extraMap map[string]any
 	_ = json.Unmarshal(raw, &extraMap)
-	knownKeys := map[string]bool{"model": true, "prompt": true, "image_url": true, "media_id": true, "async": true, "callback_url": true}
+	knownKeys := map[string]bool{"model": true, "prompt": true, "image_url": true, "media_id": true, "async": true, "callback_url": true, "group_id": true}
 	extra := make(map[string]any)
 	for k, v := range extraMap {
 		if !knownKeys[k] {
@@ -74,6 +79,7 @@ func (h *Handler) HandleVideoGeneration(w http.ResponseWriter, r *http.Request) 
 		Async:         vr.Async,
 		SyncRequested: syncRequested,
 		CallbackURL:   vr.CallbackURL,
+		GroupID:       vr.GroupID,
 	}
 	if key, ok := middleware.APIKeyFromContext(r.Context()); ok {
 		greq.APIKeyID = key.ID

@@ -73,6 +73,7 @@ func run() error {
 		jobStore         ports.JobStore
 		apiKeyStore      ports.APIKeyStore
 		usageStore       ports.UsageEventStore
+		groupStore       ports.GroupStore
 		modelHealthStore ports.ModelHealthStore
 	)
 	switch cfg.Storage.Driver {
@@ -87,6 +88,7 @@ func run() error {
 		jobStore = sqlite.NewJobStore(db)
 		apiKeyStore = sqlite.NewAPIKeyStore(db)
 		usageStore = sqlite.NewUsageEventStore(db)
+		groupStore = sqlite.NewGroupStore(db)
 		modelHealthStore = sqlite.NewModelHealthStore(db)
 	case "postgres":
 		return errors.New("postgres storage adapter not implemented yet")
@@ -215,7 +217,7 @@ func run() error {
 	}
 
 	// Boot API server.
-	srv := api.New(cfg, logger, v1h, apiKeyStore, accountStore, jobStore, usageStore)
+	srv := api.New(cfg, logger, v1h, apiKeyStore, accountStore, jobStore, usageStore, groupStore)
 	if err := srv.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("serve: %w", err)
 	}

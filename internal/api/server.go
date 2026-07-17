@@ -28,6 +28,7 @@ type Server struct {
 	Accounts ports.AccountStore    // required for /admin/accounts and /admin/stats
 	Jobs     ports.JobStore        // optional; used by /admin/stats
 	Usage    ports.UsageEventStore // optional; used by /admin/usage
+	Groups   ports.GroupStore      // optional; used by /admin/groups
 
 	public   *http.Server
 	admin    *http.Server
@@ -37,7 +38,7 @@ type Server struct {
 // New builds a Server. Handlers are wired up here; concrete route
 // registrations (v1 / admin / internal) live in sibling files as they are
 // implemented.
-func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore) *Server {
+func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore) *Server {
 	s := &Server{
 		Config:   cfg,
 		Logger:   logger,
@@ -46,6 +47,7 @@ func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys
 		Accounts: accounts,
 		Jobs:     jobs,
 		Usage:    usage,
+		Groups:   groups,
 	}
 
 	s.public = &http.Server{
@@ -161,6 +163,9 @@ func (s *Server) adminRouter() http.Handler {
 		}
 		if s.Usage != nil {
 			admin.NewUsageHandler(s.Usage).Register(r)
+		}
+		if s.Groups != nil {
+			admin.NewGroupsHandler(s.Groups).Register(r)
 		}
 	})
 	return r
