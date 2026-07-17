@@ -62,24 +62,27 @@ type CreateResponse struct {
 
 // CreateJob POSTs the request body and returns the immediate response.
 // Returns typed errors mapped from status codes.
+//
+// A single 401 triggers a JWT invalidate + one automatic retry (see
+// doWithRetry). Job creation is safe to retry: upstream only accepts the
+// payload once auth passes, so the first 401 attempt never mutates
+// server state.
 func (c *Client) CreateJob(ctx context.Context, r CreateRequest) (*CreateResponse, error) {
-	tok, err := c.jwt.Get(ctx, r.Account)
-	if err != nil {
-		return nil, fmt.Errorf("mint jwt: %w", err)
-	}
-
 	body, err := json.Marshal(r.Body)
 	if err != nil {
 		return nil, fmt.Errorf("marshal body: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, c.baseURL+r.Endpoint, bytes.NewReader(body))
-	if err != nil {
-		return nil, err
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodPost, c.baseURL+r.Endpoint, bytes.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, r.Account, token, true)
+		return req, nil
 	}
-	c.setStdHeaders(req, r.Account, tok.JWT, true)
 
-	resp, err := c.http.Do(ctx, req)
+	resp, err := c.doWithRetry(ctx, r.Account, build)
 	if err != nil {
 		return nil, fmt.Errorf("upstream: %w", err)
 	}
@@ -127,21 +130,23 @@ type FetchResponse struct {
 
 // FetchStatus calls GET /jobs/{id}/status.
 func (c *Client) FetchStatus(ctx context.Context, account *domain.Account, jobID string) (*StatusResponse, error) {
-	tok, err := c.jwt.Get(ctx, account)
-	if err != nil {
-		return nil, err
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodGet, c.baseURL+"/jobs/"+jobID+"/status", nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
 	}
-	req, err := http.NewRequest(http.MethodGet, c.baseURL+"/jobs/"+jobID+"/status", nil)
-	if err != nil {
-		return nil, err
-	}
-	c.setStdHeaders(req, account, tok.JWT, false)
-	resp, err := c.http.Do(ctx, req)
+	resp, err := c.doWithRetry(ctx, account, build)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	}
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("status %d: %s", resp.StatusCode, snip(raw))
 	}
@@ -154,21 +159,23 @@ func (c *Client) FetchStatus(ctx context.Context, account *domain.Account, jobID
 
 // FetchJob calls GET /jobs/{id} and derives ResultURL / Refunded.
 func (c *Client) FetchJob(ctx context.Context, account *domain.Account, jobID string) (*FetchResponse, error) {
-	tok, err := c.jwt.Get(ctx, account)
-	if err != nil {
-		return nil, err
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodGet, c.baseURL+"/jobs/"+jobID, nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
 	}
-	req, err := http.NewRequest(http.MethodGet, c.baseURL+"/jobs/"+jobID, nil)
-	if err != nil {
-		return nil, err
-	}
-	c.setStdHeaders(req, account, tok.JWT, false)
-	resp, err := c.http.Do(ctx, req)
+	resp, err := c.doWithRetry(ctx, account, build)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	}
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("fetch job %s: HTTP %d: %s", jobID, resp.StatusCode, snip(raw))
 	}
@@ -263,21 +270,23 @@ type UserSnapshot struct {
 // is_pro_plan_veo3_available and cohort — /workspaces/wallet only exposes
 // balances, not entitlement flags.
 func (c *Client) FetchUser(ctx context.Context, account *domain.Account) (*UserSnapshot, error) {
-	tok, err := c.jwt.Get(ctx, account)
-	if err != nil {
-		return nil, err
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodGet, c.baseURL+"/user", nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
 	}
-	req, err := http.NewRequest(http.MethodGet, c.baseURL+"/user", nil)
-	if err != nil {
-		return nil, err
-	}
-	c.setStdHeaders(req, account, tok.JWT, false)
-	resp, err := c.http.Do(ctx, req)
+	resp, err := c.doWithRetry(ctx, account, build)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	}
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("user: HTTP %d: %s", resp.StatusCode, snip(raw))
 	}
@@ -290,21 +299,23 @@ func (c *Client) FetchUser(ctx context.Context, account *domain.Account) (*UserS
 
 // FetchWallet calls GET /workspaces/wallet.
 func (c *Client) FetchWallet(ctx context.Context, account *domain.Account) (*Wallet, error) {
-	tok, err := c.jwt.Get(ctx, account)
-	if err != nil {
-		return nil, err
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodGet, c.baseURL+"/workspaces/wallet", nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
 	}
-	req, err := http.NewRequest(http.MethodGet, c.baseURL+"/workspaces/wallet", nil)
-	if err != nil {
-		return nil, err
-	}
-	c.setStdHeaders(req, account, tok.JWT, false)
-	resp, err := c.http.Do(ctx, req)
+	resp, err := c.doWithRetry(ctx, account, build)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	}
 	if resp.StatusCode != 200 {
 		return nil, fmt.Errorf("wallet: HTTP %d: %s", resp.StatusCode, snip(raw))
 	}
@@ -313,6 +324,56 @@ func (c *Client) FetchWallet(ctx context.Context, account *domain.Account) (*Wal
 		return nil, err
 	}
 	return &w, nil
+}
+
+// doWithRetry mints a JWT, builds and sends the request via buildReq, and
+// retries once when the response is HTTP 401. The retry invalidates the
+// cached JWT for the account so the second attempt mints a fresh token from
+// clerk.higgsfield.ai. Only a single retry is attempted; a second 401 is
+// returned to the caller (which maps it to domain.ErrUpstreamUnauthorized).
+//
+// buildReq receives the JWT to attach and MUST return a fresh *http.Request
+// on each call — the body may have been consumed by the first send.
+//
+// Non-401 responses (200, 4xx other than 401, 5xx) are returned as-is with
+// no retry. Transport errors are also returned as-is.
+//
+// This makes the client self-healing when clerk revokes a cached JWT before
+// its exp claim (account bans, key rotation, clock drift): the first call
+// sees 401, we invalidate and re-mint, and the second call succeeds.
+func (c *Client) doWithRetry(ctx context.Context, account *domain.Account, buildReq func(token string) (*http.Request, error)) (*http.Response, error) {
+	tok, err := c.jwt.Get(ctx, account)
+	if err != nil {
+		return nil, fmt.Errorf("mint jwt: %w", err)
+	}
+	req, err := buildReq(tok.JWT)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.http.Do(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode != http.StatusUnauthorized {
+		return resp, nil
+	}
+
+	// Drain + close the first response body before retrying so the
+	// underlying connection can be reused by the JA3 client.
+	_, _ = io.Copy(io.Discard, resp.Body)
+	_ = resp.Body.Close()
+
+	// Invalidate the cached JWT and mint a fresh one.
+	c.jwt.Invalidate(account.ID)
+	tok2, err := c.jwt.Get(ctx, account)
+	if err != nil {
+		return nil, fmt.Errorf("remint jwt after 401: %w", err)
+	}
+	req2, err := buildReq(tok2.JWT)
+	if err != nil {
+		return nil, err
+	}
+	return c.http.Do(ctx, req2)
 }
 
 // setStdHeaders applies the exact header set a real Chrome browser sends
