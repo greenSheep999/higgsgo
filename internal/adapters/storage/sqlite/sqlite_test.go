@@ -22,14 +22,17 @@ func openMem(t *testing.T) *DB {
 func TestOpenAppliesMigrations(t *testing.T) {
 	db := openMem(t)
 
-	// schema_versions should carry the initial migration.
+	// schema_versions should carry every applied migration. The runner
+	// walks migrations/*.sql in lexicographic order and inserts one row per
+	// file that succeeded; the highest version must therefore match the
+	// number of files on disk.
 	var v int
 	err := db.QueryRow(`SELECT version FROM schema_versions ORDER BY version DESC LIMIT 1`).Scan(&v)
 	if err != nil {
 		t.Fatalf("query schema_versions: %v", err)
 	}
-	if v < 1 {
-		t.Fatalf("expected schema_versions.version >= 1, got %d", v)
+	if v < 3 {
+		t.Fatalf("expected schema_versions.version >= 3, got %d (migration 003 not applied?)", v)
 	}
 
 	// accounts table should exist and be empty.
@@ -39,6 +42,26 @@ func TestOpenAppliesMigrations(t *testing.T) {
 	}
 	if count != 0 {
 		t.Fatalf("expected 0 accounts, got %d", count)
+	}
+
+	// The two columns added by migration 003 must be present on jobs.
+	// pragma_table_info(name) returns one row per column.
+	var cbCount, pbCount int
+	if err := db.QueryRow(`
+		SELECT COUNT(*) FROM pragma_table_info('jobs') WHERE name = 'callback_url'
+	`).Scan(&cbCount); err != nil {
+		t.Fatalf("query pragma_table_info (callback_url): %v", err)
+	}
+	if cbCount != 1 {
+		t.Fatalf("jobs.callback_url column missing (migration 003 not applied)")
+	}
+	if err := db.QueryRow(`
+		SELECT COUNT(*) FROM pragma_table_info('jobs') WHERE name = 'pre_balance_h'
+	`).Scan(&pbCount); err != nil {
+		t.Fatalf("query pragma_table_info (pre_balance_h): %v", err)
+	}
+	if pbCount != 1 {
+		t.Fatalf("jobs.pre_balance_h column missing (migration 003 not applied)")
 	}
 }
 
