@@ -52,6 +52,12 @@ auto_topup = false
 standalone = true
 cpa_plugin = false
 
+[tickers.a_regression]
+interval      = "24h"
+sample_size   = 5
+enabled       = false               # off in dev; flip to true for local probe testing
+skip_upstream = true                # never burn credits from a dev boot
+
 [[notifiers]]
 type      = "stdout"
 min_level = "info"

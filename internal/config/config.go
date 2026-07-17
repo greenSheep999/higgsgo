@@ -141,9 +141,11 @@ type TickersConfig struct {
 }
 
 type TickerJobConfig struct {
-	Cron       string `toml:"cron"`
-	SampleSize int    `toml:"sample_size"`
-	Enabled    bool   `toml:"enabled"`
+	Cron         string `toml:"cron"`
+	Interval     string `toml:"interval"` // Go duration form, e.g. "24h"
+	SampleSize   int    `toml:"sample_size"`
+	Enabled      bool   `toml:"enabled"`
+	SkipUpstream bool   `toml:"skip_upstream"` // dev/test: record probes without hitting proxy
 }
 
 type NotifierConfig struct {

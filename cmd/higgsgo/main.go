@@ -32,6 +32,7 @@ import (
 	"github.com/greensheep999/higgsgo/internal/core/pollworker"
 	"github.com/greensheep999/higgsgo/internal/core/proxy"
 	"github.com/greensheep999/higgsgo/internal/core/refresher"
+	"github.com/greensheep999/higgsgo/internal/core/regression"
 	"github.com/greensheep999/higgsgo/internal/core/upstream"
 	"github.com/greensheep999/higgsgo/internal/core/webhook"
 	"github.com/greensheep999/higgsgo/internal/observability"
@@ -68,10 +69,11 @@ func run() error {
 
 	// Storage.
 	var (
-		accountStore ports.AccountStore
-		jobStore     ports.JobStore
-		apiKeyStore  ports.APIKeyStore
-		usageStore   ports.UsageEventStore
+		accountStore     ports.AccountStore
+		jobStore         ports.JobStore
+		apiKeyStore      ports.APIKeyStore
+		usageStore       ports.UsageEventStore
+		modelHealthStore ports.ModelHealthStore
 	)
 	switch cfg.Storage.Driver {
 	case "sqlite":
@@ -85,6 +87,7 @@ func run() error {
 		jobStore = sqlite.NewJobStore(db)
 		apiKeyStore = sqlite.NewAPIKeyStore(db)
 		usageStore = sqlite.NewUsageEventStore(db)
+		modelHealthStore = sqlite.NewModelHealthStore(db)
 	case "postgres":
 		return errors.New("postgres storage adapter not implemented yet")
 	}
@@ -181,6 +184,35 @@ func run() error {
 	rf.Interval = refreshInterval
 	logger.Info("refresher started", slog.Duration("interval", refreshInterval))
 	go rf.Run(ctx)
+
+	// Background regression ticker: samples a handful of image models
+	// once per Interval and records the outcome to model_health. Only
+	// enabled when the operator flipped [tickers.a_regression].enabled
+	// in the config; otherwise silent so dev boots do not burn credits.
+	if cfg.Tickers.ARegression.Enabled {
+		interval, err := time.ParseDuration(cfg.Tickers.ARegression.Interval)
+		if err != nil || interval <= 0 {
+			logger.Warn("invalid tickers.a_regression.interval, falling back to 24h",
+				slog.String("value", cfg.Tickers.ARegression.Interval))
+			interval = 24 * time.Hour
+		}
+		tk := &regression.Ticker{
+			Health:       modelHealthStore,
+			Registry:     registry,
+			Proxy:        svc,
+			Logger:       logger,
+			Interval:     interval,
+			Concurrency:  2,
+			SampleSize:   cfg.Tickers.ARegression.SampleSize,
+			SkipUpstream: cfg.Tickers.ARegression.SkipUpstream,
+		}
+		logger.Info("regression ticker started",
+			slog.Duration("interval", interval),
+			slog.Int("sample_size", cfg.Tickers.ARegression.SampleSize),
+			slog.Bool("skip_upstream", cfg.Tickers.ARegression.SkipUpstream),
+		)
+		go tk.Run(ctx)
+	}
 
 	// Boot API server.
 	srv := api.New(cfg, logger, v1h, apiKeyStore, accountStore, jobStore, usageStore)

@@ -83,9 +83,11 @@ standalone = true                # Mode A: users hit /v1/* directly with our API
 cpa_plugin = false               # Mode B: expose /internal/* for CPA plugin
 
 [tickers.a_regression]
-cron        = "0 0 6 * * *"      # every day at 06:00 local
-sample_size = 20
-enabled     = false
+cron          = "0 0 6 * * *"      # every day at 06:00 local (reserved for future cron scheduler)
+interval      = "24h"              # Go-duration cadence honoured by the current ticker
+sample_size   = 20
+enabled       = false
+skip_upstream = false              # true = record probes but do not call proxy (dev/test)
 
 [tickers.x1_recheck]
 cron    = "0 0 6 * * 0"          # every Sunday at 06:00
