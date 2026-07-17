@@ -213,6 +213,7 @@ type GroupStore interface {
 	BindAPIKey(ctx context.Context, apiKeyID, groupID string) error
 	UnbindAPIKey(ctx context.Context, apiKeyID, groupID string) error
 	ListGroupsForAPIKey(ctx context.Context, apiKeyID string) ([]domain.Group, error)
+	ListAPIKeys(ctx context.Context, groupID string) ([]string, error)
 
 	// Quota accounting.
 	IncrementUsed(ctx context.Context, groupID string, deltaHundredths int64) error

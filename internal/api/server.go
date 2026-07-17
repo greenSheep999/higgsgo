@@ -204,7 +204,10 @@ func (s *Server) adminRouter() http.Handler {
 
 	r.Get("/health", s.healthHandler)
 
-	r.Group(func(r chi.Router) {
+	// All admin handlers live under /admin so the URL scheme matches the
+	// documented API surface (docs/API_REFERENCE.md, docs/OPERATIONS.md)
+	// and the WebUI client which prefixes every request with /admin.
+	r.Route("/admin", func(r chi.Router) {
 		r.Use(middleware.BearerAuth(s.Config.Server.AdminBearer))
 		if s.Audit != nil {
 			r.Use(middleware.Audit(s.Audit, s.Logger))

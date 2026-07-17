@@ -31,12 +31,14 @@ func (h *GroupsHandler) Register(r chi.Router) {
 	r.Get("/groups", h.List)
 	r.Post("/groups", h.Create)
 	r.Get("/groups/{id}", h.Get)
+	r.Put("/groups/{id}", h.Update)
 	r.Delete("/groups/{id}", h.Delete)
 
 	r.Get("/groups/{id}/members", h.ListMembers)
 	r.Post("/groups/{id}/members", h.AddMember)
 	r.Delete("/groups/{id}/members/{accountId}", h.RemoveMember)
 
+	r.Get("/groups/{id}/bindings", h.ListBindings)
 	r.Post("/groups/{id}/bindings", h.BindAPIKey)
 	r.Delete("/groups/{id}/bindings/{apiKeyId}", h.UnbindAPIKey)
 }
@@ -115,6 +117,101 @@ func (h *GroupsHandler) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusCreated, groupView(g))
+}
+
+// updateGroupRequest is the body shape for PUT /admin/groups/{id}. All
+// fields are optional pointers so callers can send a partial update; a
+// nil pointer leaves the existing value untouched.
+type updateGroupRequest struct {
+	Name                    *string `json:"name,omitempty"`
+	Description             *string `json:"description,omitempty"`
+	MaxConcurrentJobs       *int    `json:"max_concurrent_jobs,omitempty"`
+	MaxConcurrentPerAccount *int    `json:"max_concurrent_per_account,omitempty"`
+	MonthlyCreditBudget     *int64  `json:"monthly_credit_budget,omitempty"`
+	AllowedModelsRegex      *string `json:"allowed_models_regex,omitempty"`
+	BlockedModelsRegex      *string `json:"blocked_models_regex,omitempty"`
+	RouteStrategy           *string `json:"route_strategy,omitempty"`
+	OwnerType               *string `json:"owner_type,omitempty"`
+	OwnerID                 *string `json:"owner_id,omitempty"`
+	Status                  *string `json:"status,omitempty"`
+}
+
+// Update overwrites the mutable fields of an existing group. Load-then-
+// merge so callers can PATCH-style send a partial body without wiping
+// unrelated fields.
+func (h *GroupsHandler) Update(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	existing, err := h.Groups.Get(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, domain.ErrGroupNotFound) {
+			writeErr(w, http.StatusNotFound, "not_found", "group not found")
+			return
+		}
+		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+
+	raw, err := io.ReadAll(io.LimitReader(r.Body, 8192))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid_body", err.Error())
+		return
+	}
+	var req updateGroupRequest
+	if len(raw) > 0 {
+		if err := json.Unmarshal(raw, &req); err != nil {
+			writeErr(w, http.StatusBadRequest, "invalid_body", err.Error())
+			return
+		}
+	}
+
+	if req.Name != nil {
+		if *req.Name == "" {
+			writeErr(w, http.StatusBadRequest, "invalid_body", "name must not be empty")
+			return
+		}
+		existing.Name = *req.Name
+	}
+	if req.Description != nil {
+		existing.Description = *req.Description
+	}
+	if req.MaxConcurrentJobs != nil {
+		existing.MaxConcurrentJobs = *req.MaxConcurrentJobs
+	}
+	if req.MaxConcurrentPerAccount != nil {
+		existing.MaxConcurrentPerAccount = *req.MaxConcurrentPerAccount
+	}
+	if req.MonthlyCreditBudget != nil {
+		existing.MonthlyCreditBudget = *req.MonthlyCreditBudget
+	}
+	if req.AllowedModelsRegex != nil {
+		existing.AllowedModelsRegex = *req.AllowedModelsRegex
+	}
+	if req.BlockedModelsRegex != nil {
+		existing.BlockedModelsRegex = *req.BlockedModelsRegex
+	}
+	if req.RouteStrategy != nil {
+		existing.RouteStrategy = domain.RouteStrategy(*req.RouteStrategy)
+	}
+	if req.OwnerType != nil {
+		existing.OwnerType = domain.OwnerType(*req.OwnerType)
+	}
+	if req.OwnerID != nil {
+		existing.OwnerID = *req.OwnerID
+	}
+	if req.Status != nil && *req.Status != "" {
+		existing.Status = *req.Status
+	}
+
+	if err := h.Groups.Update(r.Context(), existing); err != nil {
+		if errors.Is(err, domain.ErrGroupNotFound) {
+			writeErr(w, http.StatusNotFound, "not_found", "group not found")
+			return
+		}
+		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, groupView(existing))
 }
 
 // Get returns one group by id.
@@ -209,6 +306,20 @@ func (h *GroupsHandler) RemoveMember(w http.ResponseWriter, r *http.Request) {
 		"account_id": accountID,
 		"status":     "removed",
 	})
+}
+
+// ListBindings returns the api key ids bound to a group.
+func (h *GroupsHandler) ListBindings(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	ids, err := h.Groups.ListAPIKeys(r.Context(), id)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	if ids == nil {
+		ids = []string{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"data": ids})
 }
 
 // bindKeyRequest is the body shape for POST /admin/groups/{id}/bindings.

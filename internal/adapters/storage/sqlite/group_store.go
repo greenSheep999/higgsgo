@@ -262,6 +262,29 @@ func (s *GroupStore) UnbindAPIKey(ctx context.Context, apiKeyID, groupID string)
 	return nil
 }
 
+// ListAPIKeys returns every api key id bound to the given group, ordered
+// by api_key_id for deterministic output.
+func (s *GroupStore) ListAPIKeys(ctx context.Context, groupID string) ([]string, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT api_key_id FROM apikey_group_bindings
+		WHERE group_id = ?
+		ORDER BY api_key_id ASC`, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("list apikeys group=%s: %w", groupID, err)
+	}
+	defer rows.Close()
+
+	var out []string
+	for rows.Next() {
+		var id string
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
 // ListGroupsForAPIKey returns every group the given api key is bound to,
 // ordered by group name for deterministic output.
 func (s *GroupStore) ListGroupsForAPIKey(ctx context.Context, apiKeyID string) ([]domain.Group, error) {

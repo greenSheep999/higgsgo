@@ -75,6 +75,9 @@ func (f *fakeGroupStore) BindAPIKey(context.Context, string, string) error {
 func (f *fakeGroupStore) UnbindAPIKey(context.Context, string, string) error {
 	panic("UnbindAPIKey not implemented")
 }
+func (f *fakeGroupStore) ListAPIKeys(context.Context, string) ([]string, error) {
+	panic("ListAPIKeys not implemented")
+}
 func (f *fakeGroupStore) IncrementUsed(context.Context, string, int64) error {
 	panic("IncrementUsed not implemented")
 }

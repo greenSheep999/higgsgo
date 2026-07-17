@@ -172,6 +172,10 @@ func (f *fakeGroupStore) ListGroupsForAPIKey(_ context.Context, apiKeyID string)
 	return out, nil
 }
 
+func (f *fakeGroupStore) ListAPIKeys(_ context.Context, groupID string) ([]string, error) {
+	return append([]string(nil), f.binds[groupID]...), nil
+}
+
 func (f *fakeGroupStore) IncrementUsed(_ context.Context, groupID string, delta int64) error {
 	g, ok := f.groups[groupID]
 	if !ok {
@@ -384,6 +388,89 @@ func TestGroupsHandler_Delete_NotFound(t *testing.T) {
 
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("status: got %d want 404", rec.Code)
+	}
+}
+
+func TestGroupsHandler_Update(t *testing.T) {
+	store := newFakeGroupStore()
+	store.groups["grp_a"] = &domain.Group{
+		ID: "grp_a", Name: "alpha", Description: "old desc",
+		RouteStrategy: domain.RouteRoundRobin,
+		OwnerType:     domain.OwnerInternal, Status: "active",
+		CreatedAt: time.Date(2026, 7, 17, 12, 0, 0, 0, time.UTC),
+	}
+	r := newGroupsRouter(store)
+
+	body := `{"name":"alpha-renamed","description":"new desc"}`
+	req := httptest.NewRequest(http.MethodPut, "/groups/grp_a",
+		bytes.NewBufferString(body))
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status: got %d want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var view map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &view); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if view["name"] != "alpha-renamed" {
+		t.Errorf("name: got %v want alpha-renamed", view["name"])
+	}
+	if view["description"] != "new desc" {
+		t.Errorf("description: got %v want new desc", view["description"])
+	}
+	if got := store.groups["grp_a"].Name; got != "alpha-renamed" {
+		t.Errorf("store name: got %q want alpha-renamed", got)
+	}
+}
+
+func TestGroupsHandler_Update_NotFound(t *testing.T) {
+	store := newFakeGroupStore()
+	r := newGroupsRouter(store)
+
+	req := httptest.NewRequest(http.MethodPut, "/groups/grp_missing",
+		bytes.NewBufferString(`{"name":"x"}`))
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status: got %d want 404", rec.Code)
+	}
+}
+
+func TestGroupsHandler_ListBindings(t *testing.T) {
+	store := newFakeGroupStore()
+	store.groups["grp_a"] = &domain.Group{ID: "grp_a", Name: "alpha"}
+	r := newGroupsRouter(store)
+
+	for _, k := range []string{"key_1", "key_2"} {
+		bindReq := httptest.NewRequest(http.MethodPost, "/groups/grp_a/bindings",
+			bytes.NewBufferString(`{"api_key_id":"`+k+`"}`))
+		bindRec := httptest.NewRecorder()
+		r.ServeHTTP(bindRec, bindReq)
+		if bindRec.Code != http.StatusOK {
+			t.Fatalf("bind %s status: got %d want 200; body=%s", k, bindRec.Code, bindRec.Body.String())
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/groups/grp_a/bindings", nil)
+	rec := httptest.NewRecorder()
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status: got %d want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	data, ok := body["data"].([]any)
+	if !ok {
+		t.Fatalf("body.data missing or wrong type: %T", body["data"])
+	}
+	if len(data) != 2 {
+		t.Fatalf("len: got %d want 2 (data=%v)", len(data), data)
 	}
 }
 
