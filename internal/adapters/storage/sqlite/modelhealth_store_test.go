@@ -155,9 +155,9 @@ func TestModelHealthStore_List_OrderByCheckedAtDesc(t *testing.T) {
 	// Insert 3 rows for different jsts with rising checked_at so
 	// DESC order is oldest last.
 	rows := []struct {
-		jst  string
-		at   time.Time
-		vdc  domain.JobStatus
+		jst string
+		at  time.Time
+		vdc domain.JobStatus
 	}{
 		{"seedance_2_0", base.Add(-2 * time.Hour), domain.JobCompleted},
 		{"veo3_1", base.Add(-1 * time.Hour), domain.JobFailed},
