@@ -54,6 +54,9 @@ func (s *authFakeStore) Resume(context.Context, string) error { panic("not imple
 func (s *authFakeStore) ResetMonthlyUsage(context.Context, string) error {
 	panic("not implemented")
 }
+func (s *authFakeStore) UpdatePlaygroundScope(context.Context, string, domain.PlaygroundScope) error {
+	panic("not implemented")
+}
 
 // bearerRequest builds a POST /v1/videos/generations with a valid
 // Authorization header. The store side is what decides which APIKey

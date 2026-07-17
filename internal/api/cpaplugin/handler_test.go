@@ -119,6 +119,9 @@ func (f *fakeAPIKeyStore) Resume(context.Context, string) error { panic("not imp
 func (f *fakeAPIKeyStore) ResetMonthlyUsage(context.Context, string) error {
 	panic("not implemented")
 }
+func (f *fakeAPIKeyStore) UpdatePlaygroundScope(context.Context, string, domain.PlaygroundScope) error {
+	panic("not implemented")
+}
 
 // fakeAccountStore only implements List (used by refresh_jwt + status).
 type fakeAccountStore struct {

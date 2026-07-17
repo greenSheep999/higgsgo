@@ -16,6 +16,45 @@ const (
 	APIKeyStatusRevoked = "revoked"
 )
 
+// PlaygroundScope gates a key's access to the /v1/playground/* interactive
+// surface used by the WebUI. Defaults to PlaygroundScopeNone which fully
+// disables the playground for the key, matching migration 009's default so
+// pre-existing keys stay locked out until an operator opts them in.
+type PlaygroundScope string
+
+const (
+	// PlaygroundScopeNone forbids /v1/playground/* entirely.
+	PlaygroundScopeNone PlaygroundScope = "none"
+	// PlaygroundScopeCheap allows models whose est_cost_hundredths is
+	// at or below the cheap cap (500, i.e. 5 credits per generation).
+	PlaygroundScopeCheap PlaygroundScope = "cheap"
+	// PlaygroundScopeFull allows any registered model.
+	PlaygroundScopeFull PlaygroundScope = "full"
+)
+
+// PlaygroundCheapCapHundredths is the est_cost cutoff (credits × 100) at
+// or below which a "cheap"-scope key may invoke a model. Kept as a domain
+// constant so both the middleware/handler code paths and any future
+// tooling agree on the threshold without re-quoting the literal.
+const PlaygroundCheapCapHundredths int64 = 500
+
+// AllowsModel reports whether this scope permits invoking a model whose
+// estimated cost is estCostHundredths (credits × 100). PlaygroundScopeNone
+// always returns false; PlaygroundScopeFull always returns true; the
+// PlaygroundScopeCheap gate compares against PlaygroundCheapCapHundredths.
+// Any unrecognised value is treated as PlaygroundScopeNone (deny by
+// default) so a mis-typed operator write cannot silently open access.
+func (s PlaygroundScope) AllowsModel(estCostHundredths int64) bool {
+	switch s {
+	case PlaygroundScopeFull:
+		return true
+	case PlaygroundScopeCheap:
+		return estCostHundredths <= PlaygroundCheapCapHundredths
+	default:
+		return false
+	}
+}
+
 // APIKey is an authentication credential issued by higgsgo. Standalone
 // keys are minted via /admin/keys; CPA-mode keys are minted via
 // /internal/register and carry a non-empty CPAPartnerID so all
@@ -40,6 +79,10 @@ type APIKey struct {
 
 	CreatedAt  time.Time
 	LastUsedAt time.Time
+
+	// PlaygroundScope gates access to the /v1/playground/* interactive
+	// surface used by the WebUI. Defaults to PlaygroundScopeNone.
+	PlaygroundScope PlaygroundScope
 }
 
 // HasBudget reports whether the API key has quota left for a job with the

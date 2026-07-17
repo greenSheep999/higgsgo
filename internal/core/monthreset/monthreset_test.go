@@ -86,6 +86,9 @@ func (s *fakeAPIKeyStore) Pause(context.Context, string) error {
 func (s *fakeAPIKeyStore) Resume(context.Context, string) error {
 	panic("not implemented")
 }
+func (s *fakeAPIKeyStore) UpdatePlaygroundScope(context.Context, string, domain.PlaygroundScope) error {
+	panic("not implemented")
+}
 
 func testLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))

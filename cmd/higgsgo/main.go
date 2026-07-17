@@ -180,6 +180,10 @@ func run() error {
 	}
 	v1h := v1.New(svc, registry, jobStore, groupStore, apiKeyStore)
 	v1h.Logger = logger
+	// Enable the pool-side unlim-override probe in /v1/playground/estimate
+	// so RequiresUnlim models correctly report will_charge=false when at
+	// least one unlim account is live in the pool.
+	v1h.Accounts = accountStore
 
 	// Background poll worker: catches slow B-class models that finish
 	// after the sync HTTP request has returned. Without this, users would

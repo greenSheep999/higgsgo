@@ -56,6 +56,9 @@ func (f *fakeKeysStore) ResetMonthlyUsage(_ context.Context, id string) error {
 	f.resetCalls = append(f.resetCalls, id)
 	return f.resetErr
 }
+func (f *fakeKeysStore) UpdatePlaygroundScope(context.Context, string, domain.PlaygroundScope) error {
+	panic("not implemented")
+}
 
 // Read/create surface is unused by these tests but must be present.
 func (f *fakeKeysStore) Get(context.Context, string) (*domain.APIKey, error) {

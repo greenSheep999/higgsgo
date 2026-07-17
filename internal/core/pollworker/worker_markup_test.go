@@ -57,6 +57,9 @@ func (s *fakeAPIKeyStore) Resume(context.Context, string) error { panic("not imp
 func (s *fakeAPIKeyStore) ResetMonthlyUsage(context.Context, string) error {
 	panic("not implemented")
 }
+func (s *fakeAPIKeyStore) UpdatePlaygroundScope(context.Context, string, domain.PlaygroundScope) error {
+	panic("not implemented")
+}
 
 // pendingJob is a small helper — every test starts from the same base job,
 // only the api_key_id and PreBalanceH vary. Keeping this here avoids

@@ -23,7 +23,7 @@ func NewAPIKeyStore(db *DB) *APIKeyStore { return &APIKeyStore{db: db} }
 // a constant so every SELECT stays in sync with the scanner.
 const apiKeyColumns = `id, key_hash, name, created_by, cpa_partner_id, group_id, status,
 	monthly_quota, monthly_used, markup_pct,
-	created_at, last_used_at`
+	created_at, last_used_at, playground_scope`
 
 // Get fetches a key by id.
 func (s *APIKeyStore) Get(ctx context.Context, id string) (*domain.APIKey, error) {
@@ -48,11 +48,12 @@ func (s *APIKeyStore) Create(ctx context.Context, k *domain.APIKey) error {
 		INSERT INTO api_keys (
 			id, key_hash, name, created_by, cpa_partner_id, group_id, status,
 			monthly_quota, monthly_used, markup_pct,
-			created_at, last_used_at
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			created_at, last_used_at, playground_scope
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		k.ID, k.KeyHash, k.Name, nullStr(k.CreatedBy), k.CPAPartnerID, k.GroupID, defaultStatus(k.Status),
 		k.MonthlyQuota, k.MonthlyUsed, defaultMarkup(k.MarkupPct),
 		fmtTime(defaultTime(k.CreatedAt)), fmtTime(k.LastUsedAt),
+		string(defaultPlaygroundScope(k.PlaygroundScope)),
 	)
 	if err != nil {
 		return fmt.Errorf("insert api key %s: %w", k.ID, err)
@@ -250,18 +251,19 @@ func (s *APIKeyStore) ListByCPAPartner(ctx context.Context, partnerID string) ([
 
 func scanAPIKey(sc scanner) (*domain.APIKey, error) {
 	var (
-		k            domain.APIKey
-		createdBy    sql.NullString
-		cpaPartnerID sql.NullString
-		groupID      sql.NullString
-		lastUsedAt   sql.NullString
-		createdAt    string
-		markupPct    float64
+		k               domain.APIKey
+		createdBy       sql.NullString
+		cpaPartnerID    sql.NullString
+		groupID         sql.NullString
+		lastUsedAt      sql.NullString
+		createdAt       string
+		markupPct       float64
+		playgroundScope sql.NullString
 	)
 	if err := sc.Scan(
 		&k.ID, &k.KeyHash, &k.Name, &createdBy, &cpaPartnerID, &groupID, &k.Status,
 		&k.MonthlyQuota, &k.MonthlyUsed, &markupPct,
-		&createdAt, &lastUsedAt,
+		&createdAt, &lastUsedAt, &playgroundScope,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrAPIKeyNotFound
@@ -274,6 +276,7 @@ func scanAPIKey(sc scanner) (*domain.APIKey, error) {
 	k.MarkupPct = markupPct
 	k.CreatedAt = parseTime(createdAt)
 	k.LastUsedAt = parseTime(lastUsedAt.String)
+	k.PlaygroundScope = defaultPlaygroundScope(domain.PlaygroundScope(playgroundScope.String))
 	return &k, nil
 }
 
@@ -299,4 +302,40 @@ func defaultTime(t time.Time) time.Time {
 		return time.Now().UTC()
 	}
 	return t
+}
+
+// defaultPlaygroundScope returns the given scope, or PlaygroundScopeNone
+// when it's empty or unknown. Kept mirror-symmetric with the migration
+// default so rows written by pre-009 code paths (empty column) resolve to
+// the same locked-out state as freshly-inserted rows without an explicit
+// scope.
+func defaultPlaygroundScope(s domain.PlaygroundScope) domain.PlaygroundScope {
+	switch s {
+	case domain.PlaygroundScopeCheap, domain.PlaygroundScopeFull:
+		return s
+	default:
+		return domain.PlaygroundScopeNone
+	}
+}
+
+// UpdatePlaygroundScope replaces the playground_scope column on the given
+// row. Callers are expected to have validated the scope value; unknown
+// strings are normalised to PlaygroundScopeNone via defaultPlaygroundScope
+// so a malformed operator write does not silently open access.
+//
+// Returns domain.ErrAPIKeyNotFound when id does not exist.
+func (s *APIKeyStore) UpdatePlaygroundScope(ctx context.Context, id string, scope domain.PlaygroundScope) error {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE api_keys
+		SET playground_scope = ?, updated_at = ?
+		WHERE id = ?`,
+		string(defaultPlaygroundScope(scope)), fmtTime(time.Now().UTC()), id)
+	if err != nil {
+		return fmt.Errorf("update playground scope %s: %w", id, err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return domain.ErrAPIKeyNotFound
+	}
+	return nil
 }

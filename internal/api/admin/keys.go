@@ -39,6 +39,7 @@ func (h *KeysHandler) Register(r chi.Router) {
 	r.Post("/keys/{id}/pause", h.Pause)
 	r.Post("/keys/{id}/resume", h.Resume)
 	r.Post("/keys/{id}/reset_usage", h.ResetUsage)
+	r.Post("/keys/{id}/playground_scope", h.UpdatePlaygroundScope)
 }
 
 // List returns every api_keys row (never the plaintext).
@@ -57,10 +58,11 @@ func (h *KeysHandler) List(w http.ResponseWriter, r *http.Request) {
 
 // createRequest is the body shape for POST /admin/keys.
 type createRequest struct {
-	Name         string  `json:"name"`
-	CreatedBy    string  `json:"created_by,omitempty"`
-	MonthlyQuota int64   `json:"monthly_quota,omitempty"` // credits × 100, 0 = unlimited
-	MarkupPct    float64 `json:"markup_pct,omitempty"`    // 1.0 = no markup
+	Name            string  `json:"name"`
+	CreatedBy       string  `json:"created_by,omitempty"`
+	MonthlyQuota    int64   `json:"monthly_quota,omitempty"` // credits × 100, 0 = unlimited
+	MarkupPct       float64 `json:"markup_pct,omitempty"`    // 1.0 = no markup
+	PlaygroundScope string  `json:"playground_scope,omitempty"`
 }
 
 // Create issues a fresh key and returns the plaintext exactly once.
@@ -85,15 +87,22 @@ func (h *KeysHandler) Create(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "gen_key", err.Error())
 		return
 	}
+	scope, ok := parsePlaygroundScope(req.PlaygroundScope)
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid_body",
+			"playground_scope must be one of none|cheap|full")
+		return
+	}
 	k := &domain.APIKey{
-		ID:           idgen.NewID("key"),
-		KeyHash:      hash,
-		Name:         req.Name,
-		CreatedBy:    req.CreatedBy,
-		Status:       domain.APIKeyStatusActive,
-		MonthlyQuota: req.MonthlyQuota,
-		MarkupPct:    req.MarkupPct,
-		CreatedAt:    time.Now().UTC(),
+		ID:              idgen.NewID("key"),
+		KeyHash:         hash,
+		Name:            req.Name,
+		CreatedBy:       req.CreatedBy,
+		Status:          domain.APIKeyStatusActive,
+		MonthlyQuota:    req.MonthlyQuota,
+		MarkupPct:       req.MarkupPct,
+		CreatedAt:       time.Now().UTC(),
+		PlaygroundScope: scope,
 	}
 	if err := h.Store.Create(r.Context(), k); err != nil {
 		writeErr(w, http.StatusInternalServerError, "insert", err.Error())
@@ -216,20 +225,85 @@ func (h *KeysHandler) ResetUsage(w http.ResponseWriter, r *http.Request) {
 
 // apiKeyView is the public-safe representation of an APIKey (no plaintext).
 func apiKeyView(k *domain.APIKey) map[string]any {
+	scope := k.PlaygroundScope
+	if scope == "" {
+		scope = domain.PlaygroundScopeNone
+	}
 	v := map[string]any{
-		"id":            k.ID,
-		"name":          k.Name,
-		"created_by":    k.CreatedBy,
-		"status":        k.Status,
-		"monthly_quota": k.MonthlyQuota,
-		"monthly_used":  k.MonthlyUsed,
-		"markup_pct":    k.MarkupPct,
-		"created_at":    k.CreatedAt.UTC().Format(time.RFC3339),
+		"id":               k.ID,
+		"name":             k.Name,
+		"created_by":       k.CreatedBy,
+		"status":           k.Status,
+		"monthly_quota":    k.MonthlyQuota,
+		"monthly_used":     k.MonthlyUsed,
+		"markup_pct":       k.MarkupPct,
+		"created_at":       k.CreatedAt.UTC().Format(time.RFC3339),
+		"playground_scope": string(scope),
 	}
 	if !k.LastUsedAt.IsZero() {
 		v["last_used_at"] = k.LastUsedAt.UTC().Format(time.RFC3339)
 	}
 	return v
+}
+
+// playgroundScopeRequest is the body shape for
+// POST /admin/keys/{id}/playground_scope.
+type playgroundScopeRequest struct {
+	Scope string `json:"scope"`
+}
+
+// UpdatePlaygroundScope handles POST /admin/keys/{id}/playground_scope.
+// The body must carry a scope in {none, cheap, full}; anything else is
+// rejected with a 400 so a typo cannot silently open access.
+func (h *KeysHandler) UpdatePlaygroundScope(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	raw, err := io.ReadAll(io.LimitReader(r.Body, 4096))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid_body", err.Error())
+		return
+	}
+	var req playgroundScopeRequest
+	if len(raw) > 0 {
+		if err := json.Unmarshal(raw, &req); err != nil {
+			writeErr(w, http.StatusBadRequest, "invalid_body", err.Error())
+			return
+		}
+	}
+	scope, ok := parsePlaygroundScope(req.Scope)
+	if !ok {
+		writeErr(w, http.StatusBadRequest, "invalid_body",
+			"scope must be one of none|cheap|full")
+		return
+	}
+	if err := h.Store.UpdatePlaygroundScope(r.Context(), id, scope); err != nil {
+		if errors.Is(err, domain.ErrAPIKeyNotFound) {
+			writeErr(w, http.StatusNotFound, "not_found", "api key not found")
+			return
+		}
+		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"id":               id,
+		"playground_scope": string(scope),
+	})
+}
+
+// parsePlaygroundScope normalises a raw scope string. An empty string
+// resolves to PlaygroundScopeNone so a caller that omits the field on
+// create keeps the migration-default locked-out behaviour. Unknown values
+// return (_, false) so the handler can render a 400.
+func parsePlaygroundScope(raw string) (domain.PlaygroundScope, bool) {
+	switch raw {
+	case "":
+		return domain.PlaygroundScopeNone, true
+	case string(domain.PlaygroundScopeNone),
+		string(domain.PlaygroundScopeCheap),
+		string(domain.PlaygroundScopeFull):
+		return domain.PlaygroundScope(raw), true
+	default:
+		return "", false
+	}
 }
 
 // --- shared helpers ------------------------------------------------------

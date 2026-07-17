@@ -94,6 +94,10 @@ func (s *fakeAPIKeyStore) ResetMonthlyUsage(context.Context, string) error {
 	panic("not implemented")
 }
 
+func (s *fakeAPIKeyStore) UpdatePlaygroundScope(context.Context, string, domain.PlaygroundScope) error {
+	panic("not implemented")
+}
+
 // baseJob builds a completed video job with an api key attached so callers
 // can drop it into a Recorder without extra setup.
 func baseJob() *domain.Job {

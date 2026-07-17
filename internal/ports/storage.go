@@ -193,6 +193,15 @@ type APIKeyStore interface {
 	// the caller keeps their configured cap.
 	// Returns domain.ErrAPIKeyNotFound when id does not exist.
 	ResetMonthlyUsage(ctx context.Context, id string) error
+
+	// UpdatePlaygroundScope replaces the playground_scope column on the
+	// given row. The scope controls whether the key can invoke the
+	// interactive /v1/playground/* surface used by the WebUI (see
+	// migration 009). Unknown values are normalised to
+	// domain.PlaygroundScopeNone by the implementation so a malformed
+	// operator write cannot silently open access.
+	// Returns domain.ErrAPIKeyNotFound when id does not exist.
+	UpdatePlaygroundScope(ctx context.Context, id string, scope domain.PlaygroundScope) error
 }
 
 // GroupStore manages account pool groups.

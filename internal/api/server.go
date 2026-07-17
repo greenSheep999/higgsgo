@@ -180,6 +180,15 @@ func (s *Server) publicRouter() http.Handler {
 				r.Post("/images/generations", s.V1.HandleImageGeneration)
 				r.Get("/jobs", s.V1.HandleJobsList)
 				r.Get("/jobs/{id}", s.V1.HandleJobFetch)
+				// Playground surface for the WebUI. Gate lives inside
+				// the group so scope=none keys are rejected before the
+				// route dispatchers even see the request.
+				r.Route("/playground", func(r chi.Router) {
+					r.Use(middleware.PlaygroundGate())
+					r.Get("/models", s.V1.HandlePlaygroundModels)
+					r.Post("/estimate", s.V1.HandlePlaygroundEstimate)
+					r.Post("/execute", s.V1.HandlePlaygroundExecute)
+				})
 			})
 		})
 	}

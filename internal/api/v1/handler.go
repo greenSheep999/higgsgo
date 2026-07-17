@@ -37,10 +37,11 @@ const (
 type Handler struct {
 	Service  *proxy.Service
 	Registry ports.ModelRegistry
-	Jobs     ports.JobStore    // optional; when nil, /v1/jobs/{id} returns 503
-	Groups   ports.GroupStore  // optional; when non-nil, missing group_id is auto-resolved from the api key's bindings
-	APIKeys  ports.APIKeyStore // optional; enables the api_keys.group_id direct 1:1 binding shortcut in resolveGroup
-	Logger   *slog.Logger      // optional; used for warnings during best-effort auto-resolution
+	Jobs     ports.JobStore     // optional; when nil, /v1/jobs/{id} returns 503
+	Groups   ports.GroupStore   // optional; when non-nil, missing group_id is auto-resolved from the api key's bindings
+	APIKeys  ports.APIKeyStore  // optional; enables the api_keys.group_id direct 1:1 binding shortcut in resolveGroup
+	Accounts ports.AccountStore // optional; enables the pool-side unlim override check for /v1/playground/estimate
+	Logger   *slog.Logger       // optional; used for warnings during best-effort auto-resolution
 }
 
 // New builds a Handler. The groups argument is optional and enables the
