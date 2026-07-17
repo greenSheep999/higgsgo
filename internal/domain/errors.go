@@ -21,6 +21,7 @@ var (
 
 	ErrAPIKeyNotFound    = errors.New("api key not found")
 	ErrAPIKeyRevoked     = errors.New("api key revoked")
+	ErrAPIKeyPaused      = errors.New("api key paused")
 	ErrAPIKeyQuotaExceed = errors.New("api key monthly quota exhausted")
 
 	ErrJobNotFound = errors.New("job not found")

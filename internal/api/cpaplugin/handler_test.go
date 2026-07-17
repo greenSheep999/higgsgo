@@ -107,6 +107,19 @@ func (f *fakeAPIKeyStore) ListByCPAPartner(_ context.Context, partnerID string) 
 	return out, nil
 }
 
+// The write-op surfaces below are not exercised by the CPA plugin
+// handler tests; they exist purely to satisfy the ports.APIKeyStore
+// interface. Any handler that starts calling them without updating this
+// stub will panic loudly.
+func (f *fakeAPIKeyStore) Rotate(context.Context, string) (string, error) {
+	panic("not implemented")
+}
+func (f *fakeAPIKeyStore) Pause(context.Context, string) error  { panic("not implemented") }
+func (f *fakeAPIKeyStore) Resume(context.Context, string) error { panic("not implemented") }
+func (f *fakeAPIKeyStore) ResetMonthlyUsage(context.Context, string) error {
+	panic("not implemented")
+}
+
 // fakeAccountStore only implements List (used by refresh_jwt + status).
 type fakeAccountStore struct {
 	rows    []domain.Account

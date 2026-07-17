@@ -156,6 +156,43 @@ type APIKeyStore interface {
 	// an empty slice so a misconfigured caller cannot enumerate every
 	// standalone key. Callers apply their own status filtering.
 	ListByCPAPartner(ctx context.Context, partnerID string) ([]domain.APIKey, error)
+
+	// Rotate replaces the key_hash for the given id with a freshly
+	// minted secret and returns the new plaintext. The caller is
+	// expected to expose the plaintext to the user exactly once (like
+	// the initial Create path). All other columns — name, quota,
+	// markup, group bindings, CPA partner id — are preserved so a
+	// rotation never breaks existing routing/accounting state.
+	//
+	// Returns domain.ErrAPIKeyNotFound when id does not exist.
+	Rotate(ctx context.Context, id string) (newPlaintext string, err error)
+
+	// Pause flips status to "paused". A paused key is rejected by the
+	// /v1/* auth middleware but is not soft-deleted: usage counters,
+	// audit trail, and group bindings all stay in place so an operator
+	// can flip the row back to "active" via Resume.
+	//
+	// Only the "active" -> "paused" transition is legal. Calling Pause
+	// on a revoked key returns domain.ErrAPIKeyRevoked; calling it on
+	// an already-paused key is a no-op that returns nil.
+	// Returns domain.ErrAPIKeyNotFound when id does not exist.
+	Pause(ctx context.Context, id string) error
+
+	// Resume flips status back to "active". Only the "paused" ->
+	// "active" transition is legal. Calling Resume on a revoked key
+	// returns domain.ErrAPIKeyRevoked without touching the row (revoked
+	// is terminal). Calling it on an already-active key is a no-op
+	// that returns nil.
+	// Returns domain.ErrAPIKeyNotFound when id does not exist.
+	Resume(ctx context.Context, id string) error
+
+	// ResetMonthlyUsage zeros the monthly_used counter on the given
+	// row. Intended to be called by the month-boundary ticker (not
+	// wired yet) or manually by an operator via the admin API on
+	// credit-refund / complaint flows. Does not touch monthly_quota so
+	// the caller keeps their configured cap.
+	// Returns domain.ErrAPIKeyNotFound when id does not exist.
+	ResetMonthlyUsage(ctx context.Context, id string) error
 }
 
 // GroupStore manages account pool groups.

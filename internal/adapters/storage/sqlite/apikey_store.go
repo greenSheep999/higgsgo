@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/greensheep999/higgsgo/internal/core/apikey"
 	"github.com/greensheep999/higgsgo/internal/domain"
 )
 
@@ -89,6 +90,115 @@ func (s *APIKeyStore) IncrementUsage(ctx context.Context, id string, chargedHund
 		return domain.ErrAPIKeyNotFound
 	}
 	return nil
+}
+
+// Rotate mints a fresh (plaintext, hash) pair via the apikey package and
+// swaps only the key_hash column of the row. Every other column — name,
+// quota, markup, CPA partner, group binding, usage — is preserved so a
+// rotation never invalidates existing routing / accounting state. The
+// plaintext is returned to the caller so the admin handler can expose it
+// to the operator exactly once.
+func (s *APIKeyStore) Rotate(ctx context.Context, id string) (string, error) {
+	plaintext, hash, err := apikey.Generate()
+	if err != nil {
+		return "", fmt.Errorf("rotate api key %s: mint: %w", id, err)
+	}
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE api_keys
+		SET key_hash = ?, updated_at = ?
+		WHERE id = ?`,
+		hash, fmtTime(time.Now().UTC()), id)
+	if err != nil {
+		return "", fmt.Errorf("rotate api key %s: %w", id, err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return "", domain.ErrAPIKeyNotFound
+	}
+	return plaintext, nil
+}
+
+// Pause flips status from "active" to "paused". Only the active -> paused
+// transition mutates the row. If the current status is "revoked" the call
+// returns ErrAPIKeyRevoked (revoked is terminal); if it is already paused
+// the call is a no-op that returns nil.
+func (s *APIKeyStore) Pause(ctx context.Context, id string) error {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE api_keys
+		SET status = ?, updated_at = ?
+		WHERE id = ? AND status = ?`,
+		domain.APIKeyStatusPaused, fmtTime(time.Now().UTC()), id, domain.APIKeyStatusActive)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n > 0 {
+		return nil
+	}
+	return s.explainInactiveTransition(ctx, id, domain.APIKeyStatusPaused)
+}
+
+// Resume flips status from "paused" back to "active". Only the paused ->
+// active transition mutates the row. If the current status is "revoked"
+// the call returns ErrAPIKeyRevoked (revoked is terminal and cannot be
+// resumed); if it is already active the call is a no-op that returns nil.
+func (s *APIKeyStore) Resume(ctx context.Context, id string) error {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE api_keys
+		SET status = ?, updated_at = ?
+		WHERE id = ? AND status = ?`,
+		domain.APIKeyStatusActive, fmtTime(time.Now().UTC()), id, domain.APIKeyStatusPaused)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n > 0 {
+		return nil
+	}
+	return s.explainInactiveTransition(ctx, id, domain.APIKeyStatusActive)
+}
+
+// ResetMonthlyUsage zeros the monthly_used counter without touching the
+// quota. Called by the month-boundary ticker (not wired yet) or by an
+// operator via the admin API on credit-refund / complaint flows.
+func (s *APIKeyStore) ResetMonthlyUsage(ctx context.Context, id string) error {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE api_keys
+		SET monthly_used = 0, updated_at = ?
+		WHERE id = ?`,
+		fmtTime(time.Now().UTC()), id)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return domain.ErrAPIKeyNotFound
+	}
+	return nil
+}
+
+// explainInactiveTransition disambiguates the "0 rows affected" outcome
+// from a Pause / Resume conditional UPDATE. It refetches the row and
+// returns:
+//   - ErrAPIKeyNotFound  when the id is unknown
+//   - ErrAPIKeyRevoked   when the row exists but is revoked (terminal)
+//   - nil                when the row is already in the desired target
+//     status (idempotent no-op)
+func (s *APIKeyStore) explainInactiveTransition(ctx context.Context, id, target string) error {
+	k, err := s.Get(ctx, id)
+	if err != nil {
+		return err
+	}
+	if k.Status == domain.APIKeyStatusRevoked {
+		return domain.ErrAPIKeyRevoked
+	}
+	if k.Status == target {
+		return nil
+	}
+	// Any other terminal / unexpected status is surfaced verbatim so an
+	// operator sees the actual value rather than a misleading generic
+	// error.
+	return fmt.Errorf("api key %s: cannot transition status %q -> %q", id, k.Status, target)
 }
 
 // List returns every api_keys row, newest first.

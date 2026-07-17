@@ -78,6 +78,22 @@ func (s *fakeAPIKeyStore) ListByCPAPartner(context.Context, string) ([]domain.AP
 	panic("not implemented")
 }
 
+func (s *fakeAPIKeyStore) Rotate(context.Context, string) (string, error) {
+	panic("not implemented")
+}
+
+func (s *fakeAPIKeyStore) Pause(context.Context, string) error {
+	panic("not implemented")
+}
+
+func (s *fakeAPIKeyStore) Resume(context.Context, string) error {
+	panic("not implemented")
+}
+
+func (s *fakeAPIKeyStore) ResetMonthlyUsage(context.Context, string) error {
+	panic("not implemented")
+}
+
 // baseJob builds a completed video job with an api key attached so callers
 // can drop it into a Recorder without extra setup.
 func baseJob() *domain.Job {

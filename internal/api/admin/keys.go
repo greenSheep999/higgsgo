@@ -33,6 +33,12 @@ func (h *KeysHandler) Register(r chi.Router) {
 	r.Post("/keys", h.Create)
 	r.Get("/keys/{id}", h.Get)
 	r.Delete("/keys/{id}", h.Revoke)
+	// Write ops beyond simple create/revoke. Each returns only the id
+	// and the relevant field so the response never leaks key_hash.
+	r.Post("/keys/{id}/rotate", h.Rotate)
+	r.Post("/keys/{id}/pause", h.Pause)
+	r.Post("/keys/{id}/resume", h.Resume)
+	r.Post("/keys/{id}/reset_usage", h.ResetUsage)
 }
 
 // List returns every api_keys row (never the plaintext).
@@ -84,7 +90,7 @@ func (h *KeysHandler) Create(w http.ResponseWriter, r *http.Request) {
 		KeyHash:      hash,
 		Name:         req.Name,
 		CreatedBy:    req.CreatedBy,
-		Status:       "active",
+		Status:       domain.APIKeyStatusActive,
 		MonthlyQuota: req.MonthlyQuota,
 		MarkupPct:    req.MarkupPct,
 		CreatedAt:    time.Now().UTC(),
@@ -126,7 +132,86 @@ func (h *KeysHandler) Revoke(w http.ResponseWriter, r *http.Request) {
 		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"id": id, "status": "revoked"})
+	writeJSON(w, http.StatusOK, map[string]any{"id": id, "status": domain.APIKeyStatusRevoked})
+}
+
+// Rotate mints a fresh plaintext for an existing key and returns it
+// exactly once. All other columns (name, quota, markup, group bindings)
+// are preserved so downstream routing / accounting keeps working across
+// the rotation.
+func (h *KeysHandler) Rotate(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	plaintext, err := h.Store.Rotate(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, domain.ErrAPIKeyNotFound) {
+			writeErr(w, http.StatusNotFound, "not_found", "api key not found")
+			return
+		}
+		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"id":           id,
+		"key":          plaintext,
+		"display_hint": "Store this key now — it will not be shown again.",
+	})
+}
+
+// Pause suspends a key without soft-deleting it. Usage counters and group
+// bindings are preserved so a resume flips the row back to the exact
+// same state.
+func (h *KeysHandler) Pause(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if err := h.Store.Pause(r.Context(), id); err != nil {
+		if errors.Is(err, domain.ErrAPIKeyNotFound) {
+			writeErr(w, http.StatusNotFound, "not_found", "api key not found")
+			return
+		}
+		if errors.Is(err, domain.ErrAPIKeyRevoked) {
+			writeErr(w, http.StatusConflict, "api_key_revoked", "revoked keys cannot be paused")
+			return
+		}
+		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"id": id, "status": domain.APIKeyStatusPaused})
+}
+
+// Resume flips a paused key back to active. Revoked keys are terminal
+// and cannot be resumed — the store surfaces ErrAPIKeyRevoked in that
+// case and we translate it to a 409.
+func (h *KeysHandler) Resume(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if err := h.Store.Resume(r.Context(), id); err != nil {
+		if errors.Is(err, domain.ErrAPIKeyNotFound) {
+			writeErr(w, http.StatusNotFound, "not_found", "api key not found")
+			return
+		}
+		if errors.Is(err, domain.ErrAPIKeyRevoked) {
+			writeErr(w, http.StatusConflict, "api_key_revoked", "revoked keys cannot be resumed")
+			return
+		}
+		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"id": id, "status": domain.APIKeyStatusActive})
+}
+
+// ResetUsage zeros the monthly_used counter. Called manually by an
+// operator on refund / complaint flows or (eventually) automatically by
+// a month-boundary ticker. Never touches monthly_quota so the caller
+// keeps their configured cap.
+func (h *KeysHandler) ResetUsage(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if err := h.Store.ResetMonthlyUsage(r.Context(), id); err != nil {
+		if errors.Is(err, domain.ErrAPIKeyNotFound) {
+			writeErr(w, http.StatusNotFound, "not_found", "api key not found")
+			return
+		}
+		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"id": id, "monthly_used": 0})
 }
 
 // apiKeyView is the public-safe representation of an APIKey (no plaintext).

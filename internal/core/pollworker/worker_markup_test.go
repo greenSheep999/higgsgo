@@ -49,6 +49,14 @@ func (s *fakeAPIKeyStore) List(context.Context) ([]domain.APIKey, error) {
 func (s *fakeAPIKeyStore) ListByCPAPartner(context.Context, string) ([]domain.APIKey, error) {
 	panic("not implemented")
 }
+func (s *fakeAPIKeyStore) Rotate(context.Context, string) (string, error) {
+	panic("not implemented")
+}
+func (s *fakeAPIKeyStore) Pause(context.Context, string) error  { panic("not implemented") }
+func (s *fakeAPIKeyStore) Resume(context.Context, string) error { panic("not implemented") }
+func (s *fakeAPIKeyStore) ResetMonthlyUsage(context.Context, string) error {
+	panic("not implemented")
+}
 
 // pendingJob is a small helper — every test starts from the same base job,
 // only the api_key_id and PreBalanceH vary. Keeping this here avoids

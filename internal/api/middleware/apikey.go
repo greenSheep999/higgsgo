@@ -76,9 +76,25 @@ func APIKeyAuth(store ports.APIKeyStore, optional bool) func(http.Handler) http.
 				writeAuthError(w, http.StatusInternalServerError, "auth_error", err.Error())
 				return
 			}
-			if k.Status != "active" {
-				writeAuthError(w, http.StatusForbidden, "api_key_revoked",
-					"this API key has been revoked or disabled")
+			// Only "active" keys are allowed through /v1/*. "paused"
+			// and "revoked" both get a 401 with a status-specific error
+			// type so the client can distinguish a temporary suspension
+			// (retry after operator resume) from a permanent revocation
+			// (need to mint a fresh key).
+			switch k.Status {
+			case domain.APIKeyStatusActive:
+				// fall through to the budget check below.
+			case domain.APIKeyStatusPaused:
+				writeAuthError(w, http.StatusUnauthorized, "api_key_paused",
+					"this API key is paused")
+				return
+			case domain.APIKeyStatusRevoked:
+				writeAuthError(w, http.StatusUnauthorized, "api_key_revoked",
+					"this API key has been revoked")
+				return
+			default:
+				writeAuthError(w, http.StatusUnauthorized, "api_key_disabled",
+					"this API key is not in an active state")
 				return
 			}
 			if !k.HasBudget(0) {
