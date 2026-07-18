@@ -1,0 +1,183 @@
+{
+  "_schema": {
+    "description": "Supplementary spec fields not present in verified-models.json — max output resolution and duration per alias. Loaded by the registry at startup / Reload. Missing aliases render as '—' in the admin UI.",
+    "sources": [
+      "higgsfield-register/docs/PRICING-OFFICIAL.md (per-N-second cost tables)",
+      "higgsfield-register/docs/MODELS.md (section 3: video per-second cost by resolution)",
+      "higgsfield-register/server/data/costs.json (authoritative /job-sets/costs dump)",
+      "higgsfield-register/server/src/mapping/video_models.mjs (defaultDuration + defaultResolution)",
+      "higgsfield-register/server/src/mapping/image_models.mjs (defaultResolution)"
+    ],
+    "confidence": "Only entries backed by at least two of the above are included. Absence means 'not authoritatively known' — the UI will show '—'.",
+    "units": {
+      "max_resolution": "One of '480p' | '512p' | '720p' | '768p' | '1080p' | '4k' | '1k' | '2k' | '<WxH>' (image pixel form).",
+      "max_duration_sec": "Integer seconds. Omitted when duration is not applicable (image / static-length audio)."
+    }
+  },
+  "aliases": {
+    "kling-3": {
+      "max_resolution": "4k",
+      "max_duration_sec": 10
+    },
+    "kling-2.6": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 10
+    },
+    "kling-3-turbo": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 10
+    },
+    "kling2-6-motion-control": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 5
+    },
+    "kling-o3-image-reference": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 5
+    },
+    "kling-o3-flf": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 5
+    },
+    "kling-omni-flf": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 5
+    },
+    "kling-omni-image-reference": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 5
+    },
+    "kling2-6-lipsync": {
+      "max_resolution": "720p",
+      "max_duration_sec": 5
+    },
+    "kling-transition": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 5
+    },
+    "seedance-2-0": {
+      "max_resolution": "4k",
+      "max_duration_sec": 10
+    },
+    "seedance-2-0-mini": {
+      "max_resolution": "720p",
+      "max_duration_sec": 15
+    },
+    "seedance-1.5": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 10
+    },
+    "seedance": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 5
+    },
+    "veo3-1": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 8
+    },
+    "veo-3.1-lite": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 8
+    },
+    "veo3-1-speak": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 8
+    },
+    "veo-gemini-omni": {
+      "max_resolution": "4k",
+      "max_duration_sec": 8
+    },
+    "sora2-video": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 8
+    },
+    "grok-video-v15": {
+      "max_resolution": "720p",
+      "max_duration_sec": 5
+    },
+    "grok-video-edit": {
+      "max_resolution": "720p",
+      "max_duration_sec": 5
+    },
+    "grok-video": {
+      "max_resolution": "720p",
+      "max_duration_sec": 5
+    },
+    "minimax-hailuo": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 6
+    },
+    "minimax-hailuo-draw": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 6
+    },
+    "wan2-2-video": {
+      "max_resolution": "720p",
+      "max_duration_sec": 5
+    },
+    "wan2-5-video": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 5
+    },
+    "wan2-6": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 5
+    },
+    "wan2-7": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 5
+    },
+    "wan2-5-speak": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 5
+    },
+    "wan2-2-animate": {
+      "max_resolution": "720p",
+      "max_duration_sec": 5
+    },
+    "cinematic-studio-3-0": {
+      "max_resolution": "4k",
+      "max_duration_sec": 5
+    },
+    "cinematic-studio-video-3-5": {
+      "max_resolution": "4k",
+      "max_duration_sec": 5
+    },
+    "marketing-studio-video": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 5
+    },
+    "happy-horse-video": {
+      "max_resolution": "1080p",
+      "max_duration_sec": 5
+    },
+    "sync-so": {
+      "max_resolution": "4k",
+      "max_duration_sec": 2
+    },
+    "nano-banana-2": { "max_resolution": "1k" },
+    "nano-banana": { "max_resolution": "1k" },
+    "nano-banana-flash": { "max_resolution": "1k" },
+    "nano-banana-2-lite": { "max_resolution": "1k" },
+    "nano-banana-2-upscale": { "max_resolution": "4k" },
+    "seedream": { "max_resolution": "1k" },
+    "seedream-v4-5": { "max_resolution": "4k" },
+    "seedream-5-lite": { "max_resolution": "2k" },
+    "flux-2": { "max_resolution": "2k" },
+    "flux-kontext": { "max_resolution": "1k" },
+    "gpt-image": { "max_resolution": "1k" },
+    "openai-hazel": { "max_resolution": "1024x1024" },
+    "openai-hazel-mini": { "max_resolution": "1024x1024" },
+    "grok-image": { "max_resolution": "1k" },
+    "imagegen-2": { "max_resolution": "1k" },
+    "recraft-v4": { "max_resolution": "2k" },
+    "reve": { "max_resolution": "1k" },
+    "wan2-2-image": { "max_resolution": "1k" },
+    "z-image": { "max_resolution": "1k" },
+    "kling-omni-image": { "max_resolution": "1k" },
+    "ai-influencer": { "max_resolution": "1k" },
+    "text2image-gpt": { "max_resolution": "1k" },
+    "text2image-soul-v2": { "max_resolution": "1k" },
+    "text2image-soul": { "max_resolution": "1k" }
+  }
+}
