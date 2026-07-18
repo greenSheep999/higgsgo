@@ -73,8 +73,12 @@ function GroupDetail() {
     queryFn: () => admin.listGroupMembers(id),
   });
 
+  // Namespaced queryKey: the same /admin/groups/{id}/bindings endpoint
+  // is consumed by useKeyGroups and useGroupCounts too, each with a
+  // different return shape. A bare shared key silently corrupts caches
+  // across pages, so each caller tags its own view.
   const bindingsQ = useQuery({
-    queryKey: ["admin", "groups", id, "bindings"],
+    queryKey: ["admin", "groups", id, "bindings", "detail-view"],
     queryFn: async () => {
       const bearer = localStorage.getItem("higgsgo.adminBearer") ?? "";
       const r = await fetch(`/admin/groups/${id}/bindings`, {
@@ -196,12 +200,20 @@ function InfoTab({
   const { t } = useTranslation();
   const [name, setName] = useState(group.name);
   const [description, setDescription] = useState(group.description);
-  const [maxJobs, setMaxJobs] = useState(String(group.max_concurrent_jobs));
+  // Empty string is the "unlimited" sentinel for the three numeric
+  // caps; the placeholder shows "无限制" instead of a bare 0.
+  const [maxJobs, setMaxJobs] = useState(
+    group.max_concurrent_jobs > 0 ? String(group.max_concurrent_jobs) : "",
+  );
   const [maxPerAcct, setMaxPerAcct] = useState(
-    String(group.max_concurrent_per_account),
+    group.max_concurrent_per_account > 0
+      ? String(group.max_concurrent_per_account)
+      : "",
   );
   const [budget, setBudget] = useState(
-    String(group.monthly_credit_budget / 100),
+    group.monthly_credit_budget > 0
+      ? String(group.monthly_credit_budget / 100)
+      : "",
   );
   const [route, setRoute] = useState(group.route_strategy);
 
@@ -258,6 +270,7 @@ function InfoTab({
           id="g-max"
           type="number"
           min={0}
+          placeholder={t("common.unlimited")}
           value={maxJobs}
           onChange={(e) => setMaxJobs(e.target.value)}
         />
@@ -268,6 +281,7 @@ function InfoTab({
           id="g-max-per"
           type="number"
           min={0}
+          placeholder={t("common.unlimited")}
           value={maxPerAcct}
           onChange={(e) => setMaxPerAcct(e.target.value)}
         />
@@ -279,6 +293,7 @@ function InfoTab({
           type="number"
           min={0}
           step="0.01"
+          placeholder={t("common.unlimited")}
           value={budget}
           onChange={(e) => setBudget(e.target.value)}
         />

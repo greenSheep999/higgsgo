@@ -22,11 +22,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ModelMultiSelect } from "@/components/groups/model-multiselect";
 
-// CreateGroupDialog wraps POST /admin/groups. The form exposes the two
-// levers operators reach for most often (route strategy + monthly
-// budget) up front; the rest — regex-based model allowlists, owner
-// binding — are advanced settings deferred to the detail sheet.
+// CreateGroupDialog wraps POST /admin/groups. The form covers the
+// levers operators tune most often (name / description / concurrency /
+// budget / route / model filters). Owner binding stays on the detail
+// sheet — most groups leave it null at create-time.
 
 interface Props {
   open: boolean;
@@ -38,10 +39,14 @@ export function CreateGroupDialog({ open, onOpenChange, onCreated }: Props) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [maxJobs, setMaxJobs] = useState("0");
-  const [maxPerAcct, setMaxPerAcct] = useState("0");
-  const [budget, setBudget] = useState("0");
+  // Empty string is the "no cap" sentinel — the placeholder shows
+  // "无限制" instead of a literal 0 in the number input.
+  const [maxJobs, setMaxJobs] = useState("");
+  const [maxPerAcct, setMaxPerAcct] = useState("");
+  const [budget, setBudget] = useState("");
   const [route, setRoute] = useState("round_robin");
+  const [allowed, setAllowed] = useState("");
+  const [blocked, setBlocked] = useState("");
 
   const create = useMutation({
     mutationFn: () =>
@@ -52,6 +57,8 @@ export function CreateGroupDialog({ open, onOpenChange, onCreated }: Props) {
         max_concurrent_per_account: parseInt(maxPerAcct || "0", 10),
         monthly_credit_budget: Math.round(parseFloat(budget || "0") * 100),
         route_strategy: route,
+        allowed_models_regex: allowed || undefined,
+        blocked_models_regex: blocked || undefined,
       }),
     onSuccess: (res) => {
       toast.success(t("groups.toasts.created", { name: res.name }));
@@ -59,10 +66,12 @@ export function CreateGroupDialog({ open, onOpenChange, onCreated }: Props) {
       onOpenChange(false);
       setName("");
       setDescription("");
-      setMaxJobs("0");
-      setMaxPerAcct("0");
-      setBudget("0");
+      setMaxJobs("");
+      setMaxPerAcct("");
+      setBudget("");
       setRoute("round_robin");
+      setAllowed("");
+      setBlocked("");
     },
     onError: (err) => {
       toast.error(
@@ -111,6 +120,7 @@ export function CreateGroupDialog({ open, onOpenChange, onCreated }: Props) {
                 id="grp-max"
                 type="number"
                 min={0}
+                placeholder={t("common.unlimited")}
                 value={maxJobs}
                 onChange={(e) => setMaxJobs(e.target.value)}
               />
@@ -123,6 +133,7 @@ export function CreateGroupDialog({ open, onOpenChange, onCreated }: Props) {
                 id="grp-max-per"
                 type="number"
                 min={0}
+                placeholder={t("common.unlimited")}
                 value={maxPerAcct}
                 onChange={(e) => setMaxPerAcct(e.target.value)}
               />
@@ -137,6 +148,7 @@ export function CreateGroupDialog({ open, onOpenChange, onCreated }: Props) {
               type="number"
               min={0}
               step="0.01"
+              placeholder={t("common.unlimited")}
               value={budget}
               onChange={(e) => setBudget(e.target.value)}
             />
@@ -156,6 +168,20 @@ export function CreateGroupDialog({ open, onOpenChange, onCreated }: Props) {
                 <SelectItem value="priority">priority</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="grid gap-2">
+            <Label>{t("groups.form.allowedRegex")}</Label>
+            <ModelMultiSelect value={allowed} onChange={setAllowed} />
+            <p className="text-xs text-muted-foreground">
+              {t("groups.form.allowedRegexHint")}
+            </p>
+          </div>
+          <div className="grid gap-2">
+            <Label>{t("groups.form.blockedRegex")}</Label>
+            <ModelMultiSelect value={blocked} onChange={setBlocked} />
+            <p className="text-xs text-muted-foreground">
+              {t("groups.form.blockedRegexHint")}
+            </p>
           </div>
         </div>
 
