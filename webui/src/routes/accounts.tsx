@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 import {
   IconActivityHeartbeat,
   IconClipboardCopy,
+  IconCrown,
   IconDotsVertical,
   IconDownload,
   IconEdit,
@@ -484,7 +485,7 @@ function Accounts() {
                           {/* Email + id */}
                           <TableCell className="whitespace-nowrap">
                             <div className="flex items-center gap-2">
-                              <div className="flex size-7 shrink-0 items-center justify-center rounded bg-[#D1FE16]/30 p-1">
+                              <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-[#D1FE16]/30 p-1.5">
                                 <img src={logoBrand} alt="" className="size-full" />
                               </div>
                               <div>
@@ -508,9 +509,10 @@ function Accounts() {
                           {/* Plan badges */}
                           <TableCell className="whitespace-nowrap text-center">
                             <div className="inline-flex flex-wrap gap-1 justify-center">
-                              <StatusBadge tone="muted">
+                              <span className="inline-flex items-center gap-1 rounded-md border border-[#D1FE16] bg-[#D1FE16] px-1.5 py-0.5 text-xs font-semibold text-black">
+                                <IconCrown className="size-3" />
                                 {a.plan_type || t("accounts.tags.noPlan")}
-                              </StatusBadge>
+                              </span>
                               {a.has_unlim && (
                                 <StatusBadge tone="brand">
                                   {t("accounts.tags.unlim")}

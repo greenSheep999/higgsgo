@@ -1,7 +1,9 @@
+import { useLayoutEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   IconActivityHeartbeat,
   IconClipboardCopy,
+  IconCrown,
   IconDotsVertical,
   IconEdit,
   IconEye,
@@ -65,6 +67,14 @@ import type { AccountGroupIndex } from "./use-account-groups";
 
 const CONCURRENCY_CAP = 6; // upstream limit — matches Account.AvailableSlots.
 
+// Card grid columns by container width (max 4):
+//   default:  1  — mobile / narrow
+//   @xl:      2  — small desktop
+//   @5xl:     3  — medium desktop
+//   @7xl:     4  — wide desktop (cap)
+const CARD_GRID_CLASS =
+  "grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3 @7xl/main:grid-cols-4";
+
 interface Props {
   rows: Account[];
   loading: boolean;
@@ -87,7 +97,7 @@ export function AccountCardGrid(props: Props) {
 
   if (props.loading) {
     return (
-      <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
+      <div className={CARD_GRID_CLASS}>
         {Array.from({ length: 6 }).map((_, i) => (
           <Card key={i}>
             <CardHeader>
@@ -105,7 +115,7 @@ export function AccountCardGrid(props: Props) {
   }
 
   return (
-    <div className="grid grid-cols-1 gap-4 @xl/main:grid-cols-2 @5xl/main:grid-cols-3">
+    <div className={CARD_GRID_CLASS}>
       {props.rows.map((a) => (
         <AccountCard
           key={a.id}
@@ -200,71 +210,40 @@ function AccountCard({
   return (
     <Card
       data-selected={selected}
-      className="group flex flex-col overflow-hidden cursor-pointer shadow-none transition-all hover:shadow-xl hover:border-primary/40 data-[selected=true]:border-primary data-[selected=true]:ring-1 data-[selected=true]:ring-primary/40"
+      className="group flex flex-col cursor-pointer shadow-none transition-all hover:shadow-xl hover:border-primary/40 data-[selected=true]:border-primary data-[selected=true]:ring-1 data-[selected=true]:ring-primary/40"
       onClick={() => onOpen(a.id)}
     >
       <CardHeader>
-        {/* Row 1: checkbox + email + Switch on the right. The checkbox
-            column is fixed-width so the email + badges beneath it
-            share the same left edge. */}
-        <div className="flex items-start gap-2">
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="flex h-9 items-center"
-          >
-            <Checkbox
-              checked={selected}
-              onCheckedChange={(v) => onToggleSelect(a.id, v === true)}
-              aria-label={t("accounts.card.selectAccount")}
-            />
+        {/* 三段 flex 布局：左固定 | 中 flex-1 min-w-0 | 右固定 */}
+        <div className="flex w-full min-w-0 items-start gap-2">
+          {/* 左：checkbox + logo 固定宽度 */}
+          <div className="flex shrink-0 items-start gap-2">
+            <div
+              onClick={(e) => e.stopPropagation()}
+              className="flex h-9 items-center"
+            >
+              <Checkbox
+                checked={selected}
+                onCheckedChange={(v) => onToggleSelect(a.id, v === true)}
+                aria-label={t("accounts.card.selectAccount")}
+              />
+            </div>
+            <div className="flex size-9 items-center justify-center rounded-md bg-[#D1FE16]/30 p-1.5">
+              <img src={logoBrand} alt="" className="size-full" />
+            </div>
           </div>
-          <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[#D1FE16]/30 p-1.5">
-            <img src={logoBrand} alt="" className="size-full" />
-          </div>
+          {/* 中：email/id/tags — flex-1 min-w-0 让 truncate 生效 */}
           <div className="min-w-0 flex-1">
             <div className="truncate text-base font-semibold">{a.email}</div>
             <div className="truncate font-mono text-xs text-muted-foreground">
               {a.id}
             </div>
-
-            {/* Row 2: pills. Same column as email so they line up. */}
-            <div className="mt-2 flex flex-wrap items-center gap-1.5">
-              <StatusBadge tone={accountStatusTone(a.status)}>
-                {t(`accounts.status.${a.status}`, { defaultValue: a.status })}
-              </StatusBadge>
-              <StatusBadge tone="muted">
-                {a.plan_type || t("accounts.tags.noPlan")}
-              </StatusBadge>
-              {a.cohort ? (
-                <StatusBadge tone="info">
-                  {t("accounts.card.tierPrefix")}·{a.cohort}
-                </StatusBadge>
-              ) : null}
-              {a.has_unlim ? (
-                <StatusBadge tone="brand">
-                  {t("accounts.tags.unlim")}
-                </StatusBadge>
-              ) : null}
-              {a.has_flex_unlim ? (
-                <StatusBadge tone="info">
-                  {t("accounts.tags.flexUnlim")}
-                </StatusBadge>
-              ) : null}
-              {a.status === "banned" ? (
-                <StatusBadge tone="danger">
-                  {t("accounts.card.disabled")}
-                </StatusBadge>
-              ) : null}
-              {groups.map((g) => (
-                <StatusBadge key={g.id} tone="muted">
-                  {g.name}
-                </StatusBadge>
-              ))}
-            </div>
+            <TagsRow account={a} groups={groups} t={t} />
           </div>
+          {/* 右:Switch 固定宽度 */}
           <div
             onClick={(e) => e.stopPropagation()}
-            className="flex h-9 items-center"
+            className="flex h-9 shrink-0 items-center"
           >
             <Switch
               checked={switchOn}
@@ -276,7 +255,7 @@ function AccountCard({
         </div>
       </CardHeader>
 
-      <CardContent className="flex-1 space-y-4">
+      <CardContent className="-mt-6 flex-1 space-y-2.5">
         {/* Credits block — progress bar + subscription/extra/free
             triplet all live inside one rounded card so the operator
             reads them as parts of one "how much can this account
@@ -403,35 +382,41 @@ function AccountCard({
       {/* Footer: primary actions inline, "more" tucked into a dropdown */}
       <CardFooter
         onClick={(e) => e.stopPropagation()}
-        className="mt-auto flex items-center justify-between gap-2 border-t pt-3"
+        className="mt-auto flex flex-wrap items-center justify-between gap-1 border-t pt-3"
       >
-        <div className="flex gap-1">
+        <div className="flex flex-wrap gap-1">
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
+            className="size-8"
             onClick={() => onOpen(a.id)}
+            title={t("accounts.card.openDetail")}
           >
-            <IconEye /> {t("accounts.card.openDetail")}
+            <IconEye className="size-4" />
           </Button>
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
+            className="size-8"
             onClick={() => onRefresh(a.id)}
+            title={t("accounts.card.refresh")}
           >
-            <IconRefresh /> {t("accounts.card.refresh")}
+            <IconRefresh className="size-4" />
           </Button>
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
+            className="size-8"
             onClick={() => onProbe(a.id)}
+            title={t("accounts.card.probe")}
           >
-            <IconActivityHeartbeat /> {t("accounts.card.probe")}
+            <IconActivityHeartbeat className="size-4" />
           </Button>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <IconDotsVertical /> {t("accounts.card.more")}
+            <Button variant="ghost" size="icon" className="size-8">
+              <IconDotsVertical className="size-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
@@ -466,6 +451,170 @@ function AccountCard({
         </DropdownMenu>
       </CardFooter>
     </Card>
+  );
+}
+
+// TagsRow: 限制 pills 最多 2 行，溢出显示 +N。
+function TagsRow({
+  account: a,
+  groups,
+  t,
+}: {
+  account: Account;
+  groups: { id: string; name: string }[];
+  t: ReturnType<typeof useTranslation>["t"];
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const [visibleCount, setVisibleCount] = useState<number>(-1);
+
+  type Pill =
+    | { kind: "plan" }
+    | { kind: "status" }
+    | { kind: "cohort" }
+    | { kind: "unlim" }
+    | { kind: "flexUnlim" }
+    | { kind: "banned" }
+    | { kind: "group"; id: string; name: string };
+
+  const pills: Pill[] = [
+    { kind: "plan" },
+    { kind: "status" },
+    ...(a.cohort ? [{ kind: "cohort" as const }] : []),
+    ...(a.has_unlim ? [{ kind: "unlim" as const }] : []),
+    ...(a.has_flex_unlim ? [{ kind: "flexUnlim" as const }] : []),
+    ...(a.status === "banned" ? [{ kind: "banned" as const }] : []),
+    ...groups.map((g) => ({ kind: "group" as const, id: g.id, name: g.name })),
+  ];
+
+  const renderPill = (p: Pill, key: string | number) => {
+    switch (p.kind) {
+      case "plan":
+        return (
+          <span
+            key={key}
+            data-pill
+            className="inline-flex items-center gap-1 rounded-md border border-[#D1FE16] bg-[#D1FE16] px-1.5 py-0.5 text-xs font-semibold text-black"
+          >
+            <IconCrown className="size-3" />
+            {a.plan_type || t("accounts.tags.noPlan")}
+          </span>
+        );
+      case "status":
+        return (
+          <StatusBadge key={key} data-pill tone={accountStatusTone(a.status)}>
+            {t(`accounts.status.${a.status}`, { defaultValue: a.status })}
+          </StatusBadge>
+        );
+      case "cohort":
+        return (
+          <StatusBadge key={key} data-pill tone="info">
+            {t("accounts.card.tierPrefix")}·{a.cohort}
+          </StatusBadge>
+        );
+      case "unlim":
+        return (
+          <StatusBadge key={key} data-pill tone="brand">
+            {t("accounts.tags.unlim")}
+          </StatusBadge>
+        );
+      case "flexUnlim":
+        return (
+          <StatusBadge key={key} data-pill tone="info">
+            {t("accounts.tags.flexUnlim")}
+          </StatusBadge>
+        );
+      case "banned":
+        return (
+          <StatusBadge key={key} data-pill tone="danger">
+            {t("accounts.card.disabled")}
+          </StatusBadge>
+        );
+      case "group":
+        return (
+          <StatusBadge key={key} data-pill tone="muted">
+            {p.name}
+          </StatusBadge>
+        );
+    }
+  };
+
+  const measureRef = useRef<HTMLDivElement | null>(null);
+
+  // 测量：在隐藏容器渲染全部 pill，找到第 3 行开始的位置，砍到那之前。
+  // 这样 ResizeObserver 触发时测的永远是完整列表，不会反复抖动。
+  useLayoutEffect(() => {
+    const el = measureRef.current;
+    if (!el) return;
+    const measure = () => {
+      const children = Array.from(
+        el.querySelectorAll<HTMLElement>("[data-pill]"),
+      );
+      if (children.length === 0) {
+        setVisibleCount(0);
+        return;
+      }
+      const tops = children.map((c) => c.offsetTop);
+      const firstRowTop = tops[0];
+      let secondRowTop: number | null = null;
+      let overflowIndex = -1;
+      for (let i = 0; i < tops.length; i++) {
+        if (tops[i] !== firstRowTop) {
+          if (secondRowTop === null) secondRowTop = tops[i];
+          else if (tops[i] !== secondRowTop) {
+            overflowIndex = i;
+            break;
+          }
+        }
+      }
+      if (overflowIndex === -1) {
+        setVisibleCount(children.length);
+      } else {
+        setVisibleCount(overflowIndex);
+      }
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    if (containerRef.current) ro.observe(containerRef.current);
+    return () => ro.disconnect();
+  }, [pills.length]);
+
+  const measured = visibleCount !== -1;
+  const shown = measured ? pills.slice(0, visibleCount) : [];
+  const hidden = measured ? pills.length - visibleCount : 0;
+
+  return (
+    <div
+      ref={containerRef}
+      className="relative mt-1.5"
+      style={{ height: "3rem" }}
+    >
+      {/* 隐藏测量层：渲染全部 pills，用来计算行数 */}
+      <div
+        ref={measureRef}
+        aria-hidden
+        className="pointer-events-none absolute inset-0 flex flex-wrap items-start gap-1"
+        style={{ visibility: "hidden" }}
+      >
+        {pills.map((p, i) =>
+          renderPill(p, p.kind === "group" ? `g-${p.id}` : `${p.kind}-${i}`),
+        )}
+      </div>
+      {/* 可见层：只渲染前 N 个 + N */}
+      <div
+        className="flex flex-wrap items-start gap-1 overflow-hidden"
+        style={{
+          maxHeight: "3rem",
+          visibility: measured ? "visible" : "hidden",
+        }}
+      >
+        {shown.map((p, i) =>
+          renderPill(p, p.kind === "group" ? `g-${p.id}` : `${p.kind}-${i}`),
+        )}
+        {hidden > 0 ? (
+          <StatusBadge tone="muted">+{hidden}</StatusBadge>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
