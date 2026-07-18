@@ -41,6 +41,7 @@ func buildRegistrar(
 	logger *slog.Logger,
 	_ *config.Config,
 	regStore ports.RegistrationStore,
+	accountStore ports.AccountStore,
 ) (ports.Registrar, error) {
 	logger.Info("registrar: full build (-tags register) — plugins/register bridge active")
 
@@ -79,6 +80,7 @@ func buildRegistrar(
 
 	deps := higgsfield.Deps{
 		Store:       regStore,
+		Accounts:    accountStore, // ROADMAP §5.4 P4-3c: MarkCompleted upserts here
 		Driver:      driver,
 		Config:      register.DefaultConfig(),
 		Logger:      logger,

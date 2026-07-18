@@ -27,6 +27,7 @@ func buildRegistrar(
 	logger *slog.Logger,
 	_ *config.Config,
 	_ ports.RegistrationStore,
+	_ ports.AccountStore,
 ) (ports.Registrar, error) {
 	logger.Info("registrar: slim build (stub) — set -tags register for the real bridge")
 	return higgsfield.NewRegistrar(higgsfield.Deps{})

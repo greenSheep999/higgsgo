@@ -29,6 +29,7 @@ package higgsfield
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"strconv"
@@ -50,6 +51,19 @@ type Deps struct {
 	// RegistrationStore interface (which uses string ids). Nil means
 	// no persistence — NewRegistrar returns an error.
 	Store ports.RegistrationStore
+
+	// Accounts, when non-nil, is called by the storeAdapter's
+	// MarkCompleted to upsert a fully-populated Account row from
+	// the driver's CompletedResult (cookies, UA, session_id,
+	// datadome_id, plan_type, credits). Without it a successful
+	// registration lands a `success` row on registrations but
+	// nothing enters the pool — the produced account_id is a
+	// dangling reference. See ROADMAP §5.4 P4-3c.
+	//
+	// Nil is safe: MarkCompleted logs a warn and skips the upsert,
+	// mirroring the deliberate-degradation contract the rest of
+	// the bridge uses.
+	Accounts ports.AccountStore
 
 	// Browser drives the actual sign-up UI (camoufox / cloak / mock).
 	// Provided by main.go from the config.Registrar.Browser section.
@@ -105,8 +119,9 @@ func NewRegistrar(deps Deps) (ports.Registrar, error) {
 	}
 
 	adapter := &storeAdapter{
-		main: deps.Store,
-		log:  deps.Logger,
+		main:     deps.Store,
+		accounts: deps.Accounts,
+		log:      deps.Logger,
 	}
 
 	// Worker wiring: prefer Driver (P4-3b path) when provided; fall
@@ -295,8 +310,9 @@ func toRegistrationRow(r *ports.Registration) *ports.RegistrationRow {
 // Because plugins/register/Worker only calls the store methods, this
 // adapter is the only surface where translation lives.
 type storeAdapter struct {
-	main ports.RegistrationStore
-	log  *slog.Logger
+	main     ports.RegistrationStore
+	accounts ports.AccountStore // optional; MarkCompleted uses it to upsert Accounts
+	log      *slog.Logger
 }
 
 // Compile-time assertion so the interface stays in sync as the plugin evolves.
@@ -348,12 +364,110 @@ func (a *storeAdapter) MarkCompleted(ctx context.Context, id string, result regi
 	if err != nil {
 		return err
 	}
-	// TODO(registrar): wire result.Cookies / UserAgent / DataDomeID /
-	// PlanType / Credits into an account_store.Upsert call so a
-	// completed registration lands a fully-populated Account row.
-	// The account_id parameter below records the produced id but
-	// doesn't create the row.
+	// Two-step transition:
+	//   1. Upsert the Account row so the produced account_id
+	//      actually points to a usable pool member. Done FIRST so
+	//      that when step 2's MarkCompleted commits, there's no
+	//      window where the registrations row references a
+	//      non-existent account.
+	//   2. Flip the registrations row to success. Failure here
+	//      leaves the Account created but registration in
+	//      running/otp_wait — the retry path re-runs the flow
+	//      idempotently against the same email (Upsert is
+	//      idempotent).
+	//
+	// See ROADMAP §5.4 P4-3c.
+	if err := a.upsertAccountFromResult(ctx, n, result); err != nil {
+		return fmt.Errorf("upsert account: %w", err)
+	}
 	return a.main.MarkCompleted(ctx, n, result.AccountID)
+}
+
+// upsertAccountFromResult maps a driver.CompletedResult into a
+// domain.Account and writes it via AccountStore.Upsert. Best-effort
+// mapping: fields the driver didn't fill land as zero values, and a
+// nil AccountStore just logs and skips (matches the
+// "no accounts wired" degrade mode the rest of the bridge uses).
+//
+// Preserves the pending row's email + bound_proxy_url by reading
+// the registration row first — the driver's result deliberately
+// doesn't echo request inputs.
+func (a *storeAdapter) upsertAccountFromResult(ctx context.Context, regID int64, result register.CompletedResult) error {
+	if a.accounts == nil {
+		if a.log != nil {
+			a.log.Warn("registrar: AccountStore not wired; skipping account upsert",
+				slog.String("account_id", result.AccountID))
+		}
+		return nil
+	}
+	if result.AccountID == "" {
+		return fmt.Errorf("driver did not return account_id")
+	}
+	// Read the registration row for email + proxy_url. The driver
+	// doesn't echo these in CompletedResult because they were
+	// caller-provided; pulling them from the row keeps the mapping
+	// declarative here.
+	reg, err := a.main.Get(ctx, regID)
+	if err != nil {
+		return fmt.Errorf("load registration %d: %w", regID, err)
+	}
+
+	cookiesJSON, err := json.Marshal(result.Cookies)
+	if err != nil {
+		// Marshal of a slice of structs shouldn't fail; if it
+		// does, fall back to an empty JSON array so the row
+		// still writes.
+		cookiesJSON = []byte("[]")
+	}
+
+	// Credits arrive from the driver in the "float credits" unit
+	// higgsfield uses on GET /user. Convert to the int64 hundredths
+	// unit accounts.subscription_balance is stored in.
+	subH := int64(result.Credits * 100)
+
+	acc := &domain.Account{
+		ID:                  result.AccountID,
+		Email:               reg.Email,
+		Password:            reg.Password,
+		SessionID:           result.SessionID,
+		CookiesJSON:         string(cookiesJSON),
+		UserAgent:           result.UserAgent,
+		DataDomeClientID:    result.DataDomeID,
+		PlanType:            mapPlanTypeString(result.PlanType),
+		SubscriptionBalance: subH,
+		TotalPlanCredits:    subH, // best-effort: initial balance == total until upstream reconciles
+		Status:              domain.StatusActive,
+		BoundProxyURL:       reg.ProxyURL,
+		RegisteredAt:        time.Now().UTC(),
+		ImportedAt:          time.Now().UTC(),
+		Source:              "registered",
+	}
+	if err := a.accounts.Upsert(ctx, acc); err != nil {
+		return err
+	}
+	if a.log != nil {
+		a.log.Info("registrar: account upserted from completed registration",
+			slog.String("account_id", acc.ID),
+			slog.String("email", acc.Email),
+			slog.String("plan", string(acc.PlanType)))
+	}
+	return nil
+}
+
+// mapPlanTypeString converts the driver's plan string into the
+// domain enum. Unknown strings map to PlanFree so a mis-classified
+// account still enters the pool at the lowest tier rather than
+// crashing the upsert.
+func mapPlanTypeString(s string) domain.PlanType {
+	switch domain.PlanType(s) {
+	case domain.PlanFree, domain.PlanStarter, domain.PlanBasic,
+		domain.PlanPro, domain.PlanPlus, domain.PlanCreator,
+		domain.PlanTeam, domain.PlanScale, domain.PlanUltimate,
+		domain.PlanUltra, domain.PlanEnt:
+		return domain.PlanType(s)
+	default:
+		return domain.PlanFree
+	}
 }
 
 func (a *storeAdapter) MarkFailed(ctx context.Context, id string, reason string) error {

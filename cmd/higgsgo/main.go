@@ -421,7 +421,7 @@ func run() error {
 	// bridge that wires plugins/register through a storeAdapter.
 	// See docs/PLUGGABLE.md §0 and cmd/higgsgo/registrar_*.go for
 	// the per-tag construction.
-	registrar, err := buildRegistrar(ctx, logger, cfg, registrationStore)
+	registrar, err := buildRegistrar(ctx, logger, cfg, registrationStore, accountStore)
 	if err != nil {
 		return fmt.Errorf("build registrar: %w", err)
 	}
