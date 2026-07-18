@@ -127,12 +127,12 @@ export function EditAccountDialog({ account, onOpenChange }: Props) {
       // Group membership diff — add/remove as needed.
       for (const gid of groupIds) {
         if (!originalGroupIds.has(gid)) {
-          await admin.bindKeyToGroup(gid, account.id);
+          await admin.addGroupMember(gid, account.id);
         }
       }
       for (const gid of originalGroupIds) {
         if (!groupIds.has(gid)) {
-          await admin.unbindKeyFromGroup(gid, account.id);
+          await admin.removeGroupMember(gid, account.id);
         }
       }
 

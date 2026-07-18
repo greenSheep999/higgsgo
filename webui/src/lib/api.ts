@@ -534,6 +534,16 @@ export const admin = {
     request<{ group_id: string; members: string[] }>(
       `/admin/groups/${id}/members`,
     ),
+  addGroupMember: (groupId: string, accountId: string) =>
+    request<{ group_id: string; account_id: string }>(
+      `/admin/groups/${groupId}/members`,
+      { method: "POST", body: JSON.stringify({ account_id: accountId }) },
+    ),
+  removeGroupMember: (groupId: string, accountId: string) =>
+    request<{ group_id: string; account_id: string }>(
+      `/admin/groups/${groupId}/members/${accountId}`,
+      { method: "DELETE" },
+    ),
 
   listJobs: (filter: JobFilter = {}) => {
     const q = new URLSearchParams();
