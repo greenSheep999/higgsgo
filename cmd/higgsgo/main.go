@@ -423,6 +423,11 @@ func run() error {
 	srv.FailoverOverrides = failoverOverrs
 	srv.FailoverConfig = &cfg.Failover
 	srv.ModelOverrides = modelOverrides
+	// POST /admin/accounts/{id}/probe (ROADMAP P2-6): active health
+	// check through the upstream client. Adapter converts
+	// upstream.Wallet → admin.ProbeWallet so the admin package stays
+	// free of a direct upstream import.
+	srv.Prober = &upstreamProber{c: upstreamClient}
 	if err := srv.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("serve: %w", err)
 	}

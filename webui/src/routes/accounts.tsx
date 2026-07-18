@@ -173,6 +173,40 @@ function Accounts() {
     onError: (err) => toast.error(errMsg(err)),
   });
 
+  // Probe: actively ping a single account through the upstream client.
+  // Backend returns 200 for both success and failure — the ok bool
+  // discriminates. See docs/ROADMAP.md P2-6.
+  //
+  // Toast style:
+  //   ok=true  → success toast with balance + latency
+  //   ok=false → error toast tagged by kind so operators can tell an
+  //              expired session (401) from a broken proxy (network)
+  //              from a Higgsfield outage (upstream_5xx).
+  const probe = useMutation({
+    mutationFn: admin.probeAccount,
+    onSuccess: (res) => {
+      if (res.ok) {
+        const bal = res.balance?.subscription_hundredths ?? 0;
+        toast.success(
+          t("accounts.card.probeOk", {
+            latency: res.latency_ms,
+            balance: formatCredits(bal),
+          }),
+        );
+      } else {
+        const kind = res.error?.kind ?? "internal";
+        toast.error(
+          t("accounts.card.probeFail", {
+            kind,
+            message: res.error?.message ?? "",
+            latency: res.latency_ms,
+          }),
+        );
+      }
+    },
+    onError: (err) => toast.error(errMsg(err)),
+  });
+
   // runBulk fans a mutation out over every selected account id and
   // aggregates the outcome into a single toast. The batch is bounded
   // (typically <100 rows) and each call is a distinct HTTP request —
@@ -410,9 +444,7 @@ function Accounts() {
                     );
                   }
                 }}
-                onProbe={(id) => {
-                  toast.success(t("accounts.card.probeTriggered"));
-                }}
+                onProbe={(id) => probe.mutate(id)}
               />
             </>
           ) : (
@@ -640,8 +672,12 @@ function Accounts() {
                                 variant="ghost"
                                 size="icon"
                                 className="size-7"
-                                onClick={() => toast.success(t("accounts.card.probeTriggered"))}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  probe.mutate(a.id);
+                                }}
                                 title={t("accounts.card.probe")}
+                                disabled={probe.isPending}
                               >
                                 <IconActivityHeartbeat className="size-3.5" />
                               </Button>

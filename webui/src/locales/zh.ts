@@ -217,6 +217,8 @@ const zh: Dict = {
       refresh: "刷新",
       probe: "测活",
       probeTriggered: "已触发健康检测",
+      probeOk: "健康 ({{latency}}ms) — 余额 {{balance}}",
+      probeFail: "探活失败 [{{kind}}] {{message}} ({{latency}}ms)",
       copyId: "复制 ID",
       copiedId: "已复制账号 ID",
       selectAccount: "选中此账号",

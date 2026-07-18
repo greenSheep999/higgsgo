@@ -67,6 +67,14 @@ type Server struct {
 	// this in).
 	Bearer *bearer.Manager
 
+	// Prober is optional; when set, powers POST
+	// /admin/accounts/{id}/probe by actively pinging the account
+	// through the upstream client. main.go builds a thin adapter
+	// around *upstream.Client so this file stays free of a hard
+	// upstream dependency (keeps the layering discipline documented
+	// in PLUGGABLE §8).
+	Prober admin.Prober
+
 	public   *http.Server
 	admin    *http.Server
 	internal *http.Server
@@ -319,6 +327,12 @@ func (s *Server) adminRouter() http.Handler {
 		if s.Accounts != nil {
 			ah := admin.NewAccountsHandler(s.Accounts)
 			ah.Registry = s.Registry
+			// Prober is optional. When s.Prober is nil the handler's
+			// /accounts/{id}/probe answers 503 probe_disabled instead
+			// of pretending to work.
+			if s.Prober != nil {
+				ah.Prober = s.Prober
+			}
 			ah.Register(r)
 			admin.NewStatsHandler(s.Accounts, s.Jobs).Register(r)
 		}

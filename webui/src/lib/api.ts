@@ -97,6 +97,36 @@ export interface PatchAccountRequest {
   source?: string;
 }
 
+// ProbeAccountResponse mirrors POST /admin/accounts/{id}/probe. The
+// backend returns 200 for both successful and failed probes — the ok
+// bool discriminates. This keeps error-path UI code identical to
+// success-path UI code (no throw / catch, no HTTP-status switching).
+// See docs/ROADMAP.md P2-6.
+export interface ProbeAccountResponse {
+  account_id: string;
+  ok: boolean;
+  latency_ms: number;
+  balance?: {
+    workspace_id: string;
+    subscription_hundredths: number;
+    credits_hundredths: number;
+  };
+  error?: {
+    // Coarse category — the WebUI branches on this for icon / color
+    // choice. Message carries the human-readable detail.
+    kind:
+      | "unauthorized"
+      | "forbidden"
+      | "rate_limit"
+      | "upstream_5xx"
+      | "timeout"
+      | "network"
+      | "internal";
+    message: string;
+  };
+  ts: string;
+}
+
 export interface AccountFilter {
   plan_type?: string;
   status?: string;
@@ -451,6 +481,18 @@ export const admin = {
     request<Account>(`/admin/accounts/${id}`, {
       method: "PATCH",
       body: JSON.stringify(patch),
+    }),
+  // probeAccount actively pings the account through the upstream
+  // client (JWT mint + per-account proxy + TLS fingerprint). Returns
+  // 200 with ok=false + a classified error on upstream failure — so
+  // the UI can render success and failure with the same code path
+  // instead of a try/catch. See docs/ROADMAP.md P2-6.
+  //
+  // Failure kinds: "unauthorized" | "forbidden" | "rate_limit" |
+  //                "upstream_5xx" | "timeout" | "network" | "internal"
+  probeAccount: (id: string) =>
+    request<ProbeAccountResponse>(`/admin/accounts/${id}/probe`, {
+      method: "POST",
     }),
   importAccounts: (body: unknown) =>
     request<{ imported: number; skipped?: number }>("/admin/accounts", {

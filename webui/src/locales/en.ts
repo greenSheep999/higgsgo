@@ -216,6 +216,8 @@ const en = {
       refresh: "Refresh",
       probe: "Health",
       probeTriggered: "Health check triggered",
+      probeOk: "Healthy ({{latency}}ms) — balance {{balance}}",
+      probeFail: "Probe failed [{{kind}}] {{message}} ({{latency}}ms)",
       copyId: "Copy ID",
       copiedId: "Account ID copied",
       selectAccount: "Select this account",

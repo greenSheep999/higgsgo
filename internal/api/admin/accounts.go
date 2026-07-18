@@ -24,6 +24,11 @@ import (
 type AccountsHandler struct {
 	Accounts ports.AccountStore
 	Registry ports.ModelRegistry
+	// Prober is optional; when set, POST /accounts/{id}/probe actively
+	// pings the account through the upstream client. Nil = the endpoint
+	// answers 503 probe_disabled, distinct from "500 something broke".
+	// The upstream.Client's method set satisfies Prober directly.
+	Prober Prober
 }
 
 // NewAccountsHandler wires an AccountsHandler over the given store.
@@ -46,6 +51,10 @@ func (h *AccountsHandler) Register(r chi.Router) {
 	r.Post("/accounts/{id}/resume", h.Resume)
 	r.Delete("/accounts/{id}", h.SoftDelete)
 	r.Get("/accounts/{id}/eligible-models", h.EligibleModels)
+	// /accounts/{id}/probe actively pings the account through the
+	// upstream client. Nil h.Prober answers 503 probe_disabled so the
+	// WebUI can distinguish "not configured" from "call failed".
+	r.Post("/accounts/{id}/probe", h.Probe)
 }
 
 // EligibleModels returns the models this account is entitled to run,
