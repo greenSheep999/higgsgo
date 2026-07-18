@@ -937,13 +937,27 @@ const zh: Dict = {
     description:
       "higgsfield 账号注册队列。每一行会依次完成 OTP 邮箱验证、验证码破解与工作区创建，最终生成一个进池账号。",
     enqueue: "新建注册",
+    enqueueDescription:
+      "入队一个新的 higgsfield 注册。约 5 秒后 worker 会 poll 队列，然后通过 Node driver 子进程执行浏览器 flow。",
     enqueueHint:
       "该入口对应 POST /admin/registrations。需要构建时加上 `-tags register` 才能启用。",
-    empty:
-      "暂无注册记录。启用 register build tag 后，可通过 POST /admin/registrations 入队。",
+    empty: "暂无注册记录。点击「新建注册」入队一条。",
     disabledTitle: "注册功能已剥离",
     disabledHint:
       "当前二进制未启用 `register` build tag，higgsfield 注册流程为占位实现。重新编译并加上 `-tags register`，同时配置 Mailbox / Captcha / Browser Provider 后可启用。",
+    retry: "重试",
+    retryHint: "将该行重置为 pending，worker 会重新执行 flow。",
+    form: {
+      email: "邮箱",
+      oauth: "登录方式",
+      oauthPassword: "密码 + OTP",
+      proxy: "代理",
+      hint: "留空代理让 pool 自动选择健康的 socks5。OAuth 流程会跳过 mailbox 步骤。",
+    },
+    toasts: {
+      enqueued: "注册已入队 ({{id}})",
+      retried: "注册 {{id}} 已重置为 pending",
+    },
     columns: {
       id: "编号",
       email: "邮箱",
@@ -952,6 +966,7 @@ const zh: Dict = {
       account: "账号",
       created: "创建时间",
       finished: "完成时间",
+      actions: "",
     },
     status: {
       pending: "等待中",

@@ -955,13 +955,29 @@ const en = {
     description:
       "Queued higgsfield signup attempts. Each row runs OTP verification, captcha solve, and workspace creation before an account lands in the pool.",
     enqueue: "New registration",
+    enqueueDescription:
+      "Queue a fresh higgsfield signup. The worker picks it up on the next poll (~5s) and runs the browser flow via the Node driver subprocess.",
     enqueueHint:
       "The enqueue action is wired to POST /admin/registrations. Enable it by building with `-tags register`.",
     empty:
-      "No registrations yet. Enqueue via POST /admin/registrations once the register build tag is set.",
+      "No registrations yet. Click New registration to queue one.",
     disabledTitle: "Registrar disabled",
     disabledHint:
       "This deploy was built without the `register` tag, so the higgsfield signup flow is stubbed out. Rebuild with `-tags register` and configure the Mailbox / Captcha / Browser providers to enable it.",
+    retry: "Retry",
+    retryHint: "Reset to pending; the worker will re-run the flow.",
+    form: {
+      email: "Email",
+      oauth: "Auth",
+      oauthPassword: "Password + OTP",
+      proxy: "Proxy",
+      hint:
+        "Leave the proxy field empty to let the pool picker choose a healthy socks5. OAuth flows skip the mailbox step.",
+    },
+    toasts: {
+      enqueued: "Registration queued ({{id}})",
+      retried: "Registration {{id}} reset to pending",
+    },
     columns: {
       id: "Id",
       email: "Email",
@@ -970,6 +986,7 @@ const en = {
       account: "Account",
       created: "Created",
       finished: "Finished",
+      actions: "",
     },
     status: {
       pending: "Pending",
