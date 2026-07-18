@@ -19,8 +19,11 @@ import (
 // AccountsHandler serves /admin/accounts endpoints. It never leaks
 // password_enc / cookies_json values back to clients — those columns are
 // sensitive at rest and only the pool internals should ever read them.
+// Registry is optional; when set, /accounts/{id}/eligible-models can
+// answer which models the account is entitled to run.
 type AccountsHandler struct {
 	Accounts ports.AccountStore
+	Registry ports.ModelRegistry
 }
 
 // NewAccountsHandler wires an AccountsHandler over the given store.
@@ -38,9 +41,171 @@ func (h *AccountsHandler) Register(r chi.Router) {
 	r.Get("/accounts/export", h.Export)
 	r.Post("/accounts", h.Import)
 	r.Get("/accounts/{id}", h.Get)
+	r.Patch("/accounts/{id}", h.Patch)
 	r.Post("/accounts/{id}/pause", h.Pause)
 	r.Post("/accounts/{id}/resume", h.Resume)
 	r.Delete("/accounts/{id}", h.SoftDelete)
+	r.Get("/accounts/{id}/eligible-models", h.EligibleModels)
+}
+
+// EligibleModels returns the models this account is entitled to run,
+// based on its plan_type + unlim/flex flags. Combines domain rules
+// (PlanType.IsPaid; account.HasUnlim; account.HasFlexUnlim) with the
+// model registry's per-spec gate flags (RequiresPaid / RequiresUltra
+// / RequiresUnlim / StarterLocked). Read-only; expensive computation
+// runs entirely in memory over the registry.
+//
+// Returns 503 when the registry is not wired.
+func (h *AccountsHandler) EligibleModels(w http.ResponseWriter, r *http.Request) {
+	if h.Registry == nil {
+		writeErr(w, http.StatusServiceUnavailable, "unavailable", "model registry not configured")
+		return
+	}
+	id := chi.URLParam(r, "id")
+	acc, err := h.Accounts.Get(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, domain.ErrAccountNotFound) {
+			writeErr(w, http.StatusNotFound, "not_found", "account not found")
+			return
+		}
+		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	all := h.Registry.List(ports.ModelFilter{})
+	eligible := make([]map[string]any, 0, len(all))
+	var eligibleImage, eligibleVideo, eligibleAudio int
+	for _, m := range all {
+		ok, reason := accountCanRun(acc, m)
+		if !ok {
+			continue
+		}
+		_ = reason
+		eligible = append(eligible, map[string]any{
+			"alias":     m.Alias,
+			"jst":       m.JST,
+			"output":    m.Output,
+			"est_cost":  float64(m.EstCostHundredths) / 100.0,
+			"unstable":  m.Unstable,
+		})
+		switch m.Output {
+		case "image":
+			eligibleImage++
+		case "video":
+			eligibleVideo++
+		case "audio":
+			eligibleAudio++
+		}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"account_id":  acc.ID,
+		"total":       len(all),
+		"eligible":    len(eligible),
+		"by_output": map[string]int{
+			"image": eligibleImage,
+			"video": eligibleVideo,
+			"audio": eligibleAudio,
+		},
+		"data": eligible,
+	})
+}
+
+// accountCanRun encodes the same eligibility rules the pool router uses:
+//   - StarterLocked model requires a paid tier (PlanType.IsPaid())
+//   - RequiresPaid  → PlanType.IsPaid()
+//   - RequiresUltra → PlanType in {ultra, ultimate, scale, creator, team, enterprise}
+//   - RequiresUnlim → HasUnlim (any flavour)
+// Returns (true, "") when the account can run the model, or
+// (false, reason) with a short human-readable reason otherwise.
+func accountCanRun(a *domain.Account, m *domain.ModelSpec) (bool, string) {
+	if m.Deprecated {
+		return false, "deprecated"
+	}
+	if m.StarterLocked && !a.PlanType.IsPaid() {
+		return false, "starter_locked"
+	}
+	if m.RequiresPaid && !a.PlanType.IsPaid() {
+		return false, "requires_paid"
+	}
+	if m.RequiresUltra {
+		switch a.PlanType {
+		case domain.PlanUltra, domain.PlanUltimate, domain.PlanScale,
+			domain.PlanCreator, domain.PlanTeam, domain.PlanEnt:
+			// ok
+		default:
+			return false, "requires_ultra"
+		}
+	}
+	if m.RequiresUnlim && !a.HasUnlim && !a.HasFlexUnlim {
+		return false, "requires_unlim"
+	}
+	return true, ""
+}
+
+// patchAccountRequest is the body shape for PATCH /admin/accounts/{id}.
+// All fields are pointers so callers can send a partial update; a nil
+// pointer leaves the existing value untouched.
+type patchAccountRequest struct {
+	Priority      *int    `json:"priority,omitempty"`
+	BoundProxyURL *string `json:"bound_proxy_url,omitempty"`
+}
+
+// priorityRange bounds the operator-managed sort hint so a typo can't
+// send the row to Int.MaxValue and monopolise the pool router.
+const (
+	priorityMin = -1000
+	priorityMax = 1000
+)
+
+// Patch performs a partial update on the mutable admin-managed columns
+// of an account row (priority, bound_proxy_url). Balances, entitlements
+// and status flow through their own endpoints so a caller cannot leak
+// unrelated state through this generic PATCH.
+func (h *AccountsHandler) Patch(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	existing, err := h.Accounts.Get(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, domain.ErrAccountNotFound) {
+			writeErr(w, http.StatusNotFound, "not_found", "account not found")
+			return
+		}
+		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+
+	raw, err := io.ReadAll(io.LimitReader(r.Body, 8192))
+	if err != nil {
+		writeErr(w, http.StatusBadRequest, "invalid_body", err.Error())
+		return
+	}
+	var req patchAccountRequest
+	if len(raw) > 0 {
+		if err := json.Unmarshal(raw, &req); err != nil {
+			writeErr(w, http.StatusBadRequest, "invalid_body", err.Error())
+			return
+		}
+	}
+
+	if req.Priority != nil {
+		if *req.Priority < priorityMin || *req.Priority > priorityMax {
+			writeErr(w, http.StatusBadRequest, "invalid_body",
+				fmt.Sprintf("priority must be in [%d, %d]", priorityMin, priorityMax))
+			return
+		}
+		existing.Priority = *req.Priority
+	}
+	if req.BoundProxyURL != nil {
+		existing.BoundProxyURL = *req.BoundProxyURL
+	}
+
+	// Upsert rewrites every column, so the two writes above collide with
+	// nothing else — the entitlement / balance refresher goroutines run on
+	// different columns and don't race with this handler for the fields
+	// we touch here.
+	if err := h.Accounts.Upsert(r.Context(), existing); err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, accountView(existing))
 }
 
 // List returns all accounts, optionally filtered by ?plan_type=, ?status=,
@@ -604,6 +769,7 @@ func accountView(a *domain.Account) map[string]any {
 		"in_flight_jobs":       a.InFlightJobs,
 		"fail_streak":          a.FailStreak,
 		"bound_proxy_url":      a.BoundProxyURL,
+		"priority":             a.Priority,
 	}
 	if !a.PlanEndsAt.IsZero() {
 		v["plan_ends_at"] = a.PlanEndsAt.UTC().Format(time.RFC3339)

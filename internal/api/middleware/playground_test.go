@@ -109,3 +109,27 @@ func TestPlaygroundGate_FullAllowed(t *testing.T) {
 		t.Errorf("status: got %d want 200", rec.Code)
 	}
 }
+
+// TestPlaygroundGate_AdminBearerAllowed covers the WebUI admin-login flow:
+// a request whose context carries the admin-bearer marker (set by
+// BearerAuth or PlaygroundAuth on a matching deploy secret) skips the
+// scope check entirely and reaches the downstream handler, where the
+// per-model resolver treats the caller as scope=full.
+func TestPlaygroundGate_AdminBearerAllowed(t *testing.T) {
+	reached := false
+	next := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		reached = true
+		w.WriteHeader(http.StatusOK)
+	})
+	req := httptest.NewRequest(http.MethodGet, "/v1/playground/models", nil)
+	req = req.WithContext(WithAdminBearer(context.Background()))
+	rec := httptest.NewRecorder()
+	PlaygroundGate()(next).ServeHTTP(rec, req)
+	if !reached {
+		t.Fatalf("downstream not reached for admin bearer (status=%d, body=%q)",
+			rec.Code, rec.Body.String())
+	}
+	if rec.Code != http.StatusOK {
+		t.Errorf("status: got %d want 200", rec.Code)
+	}
+}

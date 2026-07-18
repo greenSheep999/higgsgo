@@ -450,3 +450,7 @@ func TestRegistrations_501(t *testing.T) {
 		t.Errorf("error.type = %v", errObj["type"])
 	}
 }
+
+func (s *fakeAPIKeyStore) UpdateMeta(context.Context, string, ports.APIKeyMetaPatch) error {
+	return nil
+}

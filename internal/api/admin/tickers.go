@@ -4,17 +4,14 @@ import (
 	"context"
 	"log/slog"
 	"net/http"
+	"reflect"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 )
 
 // triggerTimeout caps a single admin-triggered tick so a misbehaving
-// upstream cannot pin a request indefinitely. The refresher walks every
-// account sequentially per goroutine and the regression sweep may fan out
-// several image probes, so a couple of seconds is not enough but half a
-// minute is: it comfortably fits typical fan-out fan-in patterns and still
-// bounds admin HTTP hangs.
+// upstream cannot pin a request indefinitely.
 const triggerTimeout = 30 * time.Second
 
 // RefresherRunner is the narrow slice of *refresher.Refresher used by the
@@ -40,14 +37,39 @@ type TickersHandler struct {
 	Logger     *slog.Logger
 }
 
-// NewTickersHandler builds a handler over the given runners. Either may be
-// nil (see field docs on TickersHandler).
+// NewTickersHandler builds a handler over the given runners. Either may
+// be nil. main.go passes a typed nil pointer (`var tk *regression.Ticker`)
+// when the ticker is disabled — that lands here as a non-nil interface
+// wrapping a nil concrete pointer, so a plain `== nil` check in the
+// handler silently passes and TriggerOnce panics with a nil receiver.
+// Normalise both runners here so the handler's nil check works.
 func NewTickersHandler(refresher RefresherRunner, regression RegressionRunner, logger *slog.Logger) *TickersHandler {
+	if isNilInterface(refresher) {
+		refresher = nil
+	}
+	if isNilInterface(regression) {
+		regression = nil
+	}
 	return &TickersHandler{
 		Refresher:  refresher,
 		Regression: regression,
 		Logger:     logger,
 	}
+}
+
+// isNilInterface returns true both for a literal-nil interface and for
+// an interface value wrapping a nil pointer / channel / map / slice.
+func isNilInterface(v any) bool {
+	if v == nil {
+		return true
+	}
+	rv := reflect.ValueOf(v)
+	switch rv.Kind() {
+	case reflect.Ptr, reflect.Chan, reflect.Func, reflect.Interface,
+		reflect.Map, reflect.Slice:
+		return rv.IsNil()
+	}
+	return false
 }
 
 // Register mounts the routes under /admin/tickers.

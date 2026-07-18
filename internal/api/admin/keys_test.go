@@ -56,6 +56,10 @@ func (f *fakeKeysStore) ResetMonthlyUsage(_ context.Context, id string) error {
 	f.resetCalls = append(f.resetCalls, id)
 	return f.resetErr
 }
+func (f *fakeKeysStore) UpdateMeta(context.Context, string, ports.APIKeyMetaPatch) error {
+	return nil
+}
+
 func (f *fakeKeysStore) UpdatePlaygroundScope(context.Context, string, domain.PlaygroundScope) error {
 	panic("not implemented")
 }

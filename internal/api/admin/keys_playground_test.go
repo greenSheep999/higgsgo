@@ -40,6 +40,10 @@ func (f *pgFakeStore) Create(_ context.Context, k *domain.APIKey) error {
 	f.created = append(f.created, *k)
 	return nil
 }
+func (f *pgFakeStore) UpdateMeta(_ context.Context, _ string, _ ports.APIKeyMetaPatch) error {
+	return nil
+}
+
 func (f *pgFakeStore) UpdatePlaygroundScope(_ context.Context, id string, scope domain.PlaygroundScope) error {
 	f.updateCalls++
 	f.updateID = id

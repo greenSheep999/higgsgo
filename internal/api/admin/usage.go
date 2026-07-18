@@ -45,6 +45,7 @@ var aggregateGroupByWhitelist = map[string]struct{}{
 	"account_id":     {},
 	"group_id":       {},
 	"model_alias":    {},
+	"billing_hour":   {}, // synthetic strftime('%Y-%m-%dT%H:00:00Z', ts) bucket
 	"billing_day":    {},
 	"billing_month":  {},
 	"media_type":     {},

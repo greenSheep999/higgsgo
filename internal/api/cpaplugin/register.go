@@ -58,11 +58,15 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	plaintext, hash, err := apikey.Generate()
+	// CPA partner registrations always mint project keys — the
+	// downstream service is what receives them, so the sk-hg-
+	// prefix is correct.
+	plaintext, hash, err := apikey.GenerateProject()
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "gen_key", err.Error())
 		return
 	}
+	last4 := apikey.Last4(plaintext)
 
 	name := req.Name
 	if name == "" {
@@ -79,6 +83,7 @@ func (h *Handler) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		MonthlyQuota: req.MonthlyLimit,
 		MarkupPct:    req.MarkupPct,
 		CreatedAt:    time.Now().UTC(),
+		KeyLast4:     last4,
 	}
 	if err := h.APIKeys.Create(r.Context(), k); err != nil {
 		writeErr(w, http.StatusInternalServerError, "insert", err.Error())

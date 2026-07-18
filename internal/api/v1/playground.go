@@ -42,13 +42,12 @@ const playgroundBlockedReasonCostTooHigh = "cost_too_high"
 // mirror /v1/models so the WebUI can toggle them via the same query
 // params if it wants to.
 func (h *Handler) HandlePlaygroundModels(w http.ResponseWriter, r *http.Request) {
-	key, ok := middleware.APIKeyFromContext(r.Context())
-	if !ok || key == nil {
+	scope, ok := resolvePlaygroundScope(r)
+	if !ok {
 		writeError(w, http.StatusForbidden, "playground_disabled",
 			"api key is not permitted to use the playground")
 		return
 	}
-	scope := effectivePlaygroundScope(key)
 	q := r.URL.Query()
 	regFilter := ports.ModelFilter{
 		Output:            q.Get("output"),
@@ -90,8 +89,8 @@ type playgroundEstimateRequest struct {
 // RequiresUnlim, we report will_charge=false so the WebUI can flag the
 // call as free-from-user-credits.
 func (h *Handler) HandlePlaygroundEstimate(w http.ResponseWriter, r *http.Request) {
-	key, ok := middleware.APIKeyFromContext(r.Context())
-	if !ok || key == nil {
+	scope, ok := resolvePlaygroundScope(r)
+	if !ok {
 		writeError(w, http.StatusForbidden, "playground_disabled",
 			"api key is not permitted to use the playground")
 		return
@@ -117,7 +116,6 @@ func (h *Handler) HandlePlaygroundEstimate(w http.ResponseWriter, r *http.Reques
 		writeError(w, http.StatusNotFound, "model_not_found", err.Error())
 		return
 	}
-	scope := effectivePlaygroundScope(key)
 	if !scope.AllowsModel(spec.EstCostHundredths) {
 		writeError(w, http.StatusForbidden, "blocked_by_scope",
 			"api key playground_scope does not permit this model")
@@ -155,8 +153,8 @@ func (h *Handler) HandlePlaygroundEstimate(w http.ResponseWriter, r *http.Reques
 // long-running video jobs from the WebUI without holding the HTTP
 // request open.
 func (h *Handler) HandlePlaygroundExecute(w http.ResponseWriter, r *http.Request) {
-	key, ok := middleware.APIKeyFromContext(r.Context())
-	if !ok || key == nil {
+	scope, ok := resolvePlaygroundScope(r)
+	if !ok {
 		writeError(w, http.StatusForbidden, "playground_disabled",
 			"api key is not permitted to use the playground")
 		return
@@ -186,7 +184,6 @@ func (h *Handler) HandlePlaygroundExecute(w http.ResponseWriter, r *http.Request
 		writeError(w, http.StatusNotFound, "model_not_found", err.Error())
 		return
 	}
-	scope := effectivePlaygroundScope(key)
 	if !scope.AllowsModel(spec.EstCostHundredths) {
 		writeError(w, http.StatusForbidden, "blocked_by_scope",
 			"api key playground_scope does not permit this model")
@@ -205,19 +202,31 @@ func (h *Handler) HandlePlaygroundExecute(w http.ResponseWriter, r *http.Request
 	h.HandleVideoGeneration(w, r2)
 }
 
-// effectivePlaygroundScope returns the scope of the given key, normalising
-// the empty string to PlaygroundScopeNone so downstream code can compare
-// against the enum without a nil-guard. Kept as a helper so both the
-// models / estimate / execute paths stay in sync.
-func effectivePlaygroundScope(k *domain.APIKey) domain.PlaygroundScope {
-	if k == nil {
-		return domain.PlaygroundScopeNone
+// resolvePlaygroundScope inspects the request context for either the admin
+// bearer marker (set by BearerAuth / PlaygroundAuth on a matching deploy
+// bearer) or a resolved APIKey (set by APIKeyAuth / PlaygroundAuth on a
+// matching sk-hg- token) and returns the effective scope for the caller.
+//
+// The returned ok flag is false only when neither credential is present —
+// which in production means the request slipped past auth (a wiring bug).
+// The handlers still fail closed in that case to defend against a future
+// mount regression. Admin bearer callers always resolve to
+// PlaygroundScopeFull; API-key callers get their column value normalised
+// (empty / unknown → none) so downstream comparisons stay total.
+func resolvePlaygroundScope(r *http.Request) (domain.PlaygroundScope, bool) {
+	ctx := r.Context()
+	if middleware.IsAdminBearer(ctx) {
+		return domain.PlaygroundScopeFull, true
+	}
+	k, ok := middleware.APIKeyFromContext(ctx)
+	if !ok || k == nil {
+		return domain.PlaygroundScopeNone, false
 	}
 	switch k.PlaygroundScope {
 	case domain.PlaygroundScopeCheap, domain.PlaygroundScopeFull:
-		return k.PlaygroundScope
+		return k.PlaygroundScope, true
 	default:
-		return domain.PlaygroundScopeNone
+		return domain.PlaygroundScopeNone, true
 	}
 }
 

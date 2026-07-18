@@ -20,6 +20,7 @@ import (
 	"github.com/greensheep999/higgsgo/internal/core/webhook"
 	"github.com/greensheep999/higgsgo/internal/observability"
 	"github.com/greensheep999/higgsgo/internal/ports"
+	"github.com/greensheep999/higgsgo/webui"
 )
 
 // Server is the higgsgo HTTP server. It listens on three ports (public,
@@ -162,7 +163,7 @@ func (s *Server) publicRouter() http.Handler {
 				r.Get("/models", s.V1.HandleModelsList)
 				r.Get("/models/{alias}", s.V1.HandleModelDetail)
 			})
-			// Everything else requires a valid API key.
+			// Non-playground /v1 traffic requires a real sk-hg- API key.
 			r.Group(func(r chi.Router) {
 				if s.APIKeys != nil {
 					r.Use(middleware.APIKeyAuth(s.APIKeys, false))
@@ -180,15 +181,31 @@ func (s *Server) publicRouter() http.Handler {
 				r.Post("/images/generations", s.V1.HandleImageGeneration)
 				r.Get("/jobs", s.V1.HandleJobsList)
 				r.Get("/jobs/{id}", s.V1.HandleJobFetch)
-				// Playground surface for the WebUI. Gate lives inside
-				// the group so scope=none keys are rejected before the
-				// route dispatchers even see the request.
-				r.Route("/playground", func(r chi.Router) {
-					r.Use(middleware.PlaygroundGate())
-					r.Get("/models", s.V1.HandlePlaygroundModels)
-					r.Post("/estimate", s.V1.HandlePlaygroundEstimate)
-					r.Post("/execute", s.V1.HandlePlaygroundExecute)
-				})
+			})
+			// Playground surface for the WebUI. Uses a bespoke auth
+			// middleware that accepts either the deploy-wide admin bearer
+			// (treated as scope=full so the console can drive every model
+			// without minting a key) or a sk-hg- API key (subject to the
+			// column-level PlaygroundScope check enforced by the gate).
+			// Mounted as its own group — outside the APIKeyAuth block —
+			// so admin bearer traffic is not rejected before reaching the
+			// scope resolver in the handler.
+			r.Route("/playground", func(r chi.Router) {
+				r.Use(middleware.PlaygroundAuth(s.Config.Server.AdminBearer, s.APIKeys))
+				// Rate-limit still applies to API-key callers (bucket keyed
+				// off APIKey.ID). Admin bearer callers land with no APIKey
+				// in ctx and pass through unlimited — acceptable given the
+				// low-volume console traffic pattern.
+				rl := &middleware.RateLimit{
+					RPS:    s.Config.Server.RateLimit.RPS,
+					Burst:  s.Config.Server.RateLimit.Burst,
+					Logger: s.Logger,
+				}
+				r.Use(rl.Middleware)
+				r.Use(middleware.PlaygroundGate())
+				r.Get("/models", s.V1.HandlePlaygroundModels)
+				r.Post("/estimate", s.V1.HandlePlaygroundEstimate)
+				r.Post("/execute", s.V1.HandlePlaygroundExecute)
 			})
 		})
 	}
@@ -213,6 +230,29 @@ func (s *Server) adminRouter() http.Handler {
 
 	r.Get("/health", s.healthHandler)
 
+	// Mirror the playground surface on the admin listener so the WebUI
+	// can drive it through a single base URL (VITE_HIGGSGO_ADMIN_URL).
+	// The public listener still hosts the canonical /v1/playground/*
+	// with API-key auth; this mirror only accepts the admin bearer
+	// (treated as scope=full) and reuses the same handlers. Rate limit
+	// and PlaygroundGate still apply — admin bearer bypasses the gate
+	// scope check downstream via IsAdminBearer marker.
+	if s.V1 != nil {
+		r.Route("/v1/playground", func(r chi.Router) {
+			r.Use(middleware.PlaygroundAuth(s.Config.Server.AdminBearer, s.APIKeys))
+			rl := &middleware.RateLimit{
+				RPS:    s.Config.Server.RateLimit.RPS,
+				Burst:  s.Config.Server.RateLimit.Burst,
+				Logger: s.Logger,
+			}
+			r.Use(rl.Middleware)
+			r.Use(middleware.PlaygroundGate())
+			r.Get("/models", s.V1.HandlePlaygroundModels)
+			r.Post("/estimate", s.V1.HandlePlaygroundEstimate)
+			r.Post("/execute", s.V1.HandlePlaygroundExecute)
+		})
+	}
+
 	// All admin handlers live under /admin so the URL scheme matches the
 	// documented API surface (docs/API_REFERENCE.md, docs/OPERATIONS.md)
 	// and the WebUI client which prefixes every request with /admin.
@@ -222,10 +262,19 @@ func (s *Server) adminRouter() http.Handler {
 			r.Use(middleware.Audit(s.Audit, s.Logger))
 		}
 		if s.APIKeys != nil {
-			admin.NewKeysHandler(s.APIKeys).Register(r)
+			kh := admin.NewKeysHandler(s.APIKeys)
+			// Optional dependencies for the read-only detail endpoints
+			// (/keys/{id}/groups and /keys/{id}/stats). Nil-safe on the
+			// handler side so the mutating routes still work if either
+			// store is not wired in a slimmer deployment.
+			kh.Groups = s.Groups
+			kh.Usage = s.Usage
+			kh.Register(r)
 		}
 		if s.Accounts != nil {
-			admin.NewAccountsHandler(s.Accounts).Register(r)
+			ah := admin.NewAccountsHandler(s.Accounts)
+			ah.Registry = s.Registry
+			ah.Register(r)
 			admin.NewStatsHandler(s.Accounts, s.Jobs).Register(r)
 		}
 		if s.Jobs != nil {
@@ -251,6 +300,14 @@ func (s *Server) adminRouter() http.Handler {
 			admin.NewModelsHandler(s.Registry, s.Logger).Register(r)
 		}
 	})
+
+	// SPA fallback. Serves the embedded webui/ dist for any path that
+	// wasn't matched above. Bearer auth is enforced by the /admin/*
+	// XHR calls the SPA makes at runtime; the static assets themselves
+	// (HTML/JS/CSS) are non-sensitive and don't need a token to fetch.
+	spa := webui.Handler()
+	r.NotFound(spa.ServeHTTP)
+	r.Get("/", spa.ServeHTTP)
 	return r
 }
 
