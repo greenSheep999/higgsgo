@@ -97,6 +97,19 @@ func keyRef(id, groupID string) *domain.APIKey {
 	return &domain.APIKey{ID: id, GroupID: groupID}
 }
 
+// singleGroup is a shorthand for asserting resolveGroup returned a
+// one-element slice with the expected id. Removes the visual noise of
+// checking len() and index [0] in every case.
+func singleGroup(t *testing.T, got []string, want string) {
+	t.Helper()
+	if len(got) != 1 {
+		t.Fatalf("resolved candidates = %v, want [%q]", got, want)
+	}
+	if got[0] != want {
+		t.Fatalf("resolved candidate = %q, want %q", got[0], want)
+	}
+}
+
 // TestResolveGroup_SingleBinding: a one-group binding is applied silently.
 func TestResolveGroup_SingleBinding(t *testing.T) {
 	store := &fakeGroupStore{listResult: []domain.Group{{ID: "g1"}}}
@@ -105,9 +118,7 @@ func TestResolveGroup_SingleBinding(t *testing.T) {
 	if herr != nil {
 		t.Fatalf("unexpected httpError: %+v", herr)
 	}
-	if got != "g1" {
-		t.Fatalf("resolved group = %q, want %q", got, "g1")
-	}
+	singleGroup(t, got, "g1")
 	if store.listCalls != 1 {
 		t.Fatalf("ListGroupsForAPIKey call count = %d, want 1", store.listCalls)
 	}
@@ -116,26 +127,27 @@ func TestResolveGroup_SingleBinding(t *testing.T) {
 	}
 }
 
-// TestResolveGroup_MultiBinding: multi-binding forces the caller to pick.
+// TestResolveGroup_MultiBinding: multi-binding now returns the ordered
+// spillover list instead of an ambiguous_group error (ROADMAP P3-10).
+// The order is stable sort by group name.
 func TestResolveGroup_MultiBinding(t *testing.T) {
-	store := &fakeGroupStore{listResult: []domain.Group{{ID: "g1"}, {ID: "g2"}}}
+	store := &fakeGroupStore{listResult: []domain.Group{
+		{ID: "g2", Name: "primary"},
+		{ID: "g1", Name: "fallback"},
+	}}
 
 	got, herr := resolveGroup(context.Background(), store, nil, keyRef("key_1", ""), "")
-	if got != "" {
-		t.Fatalf("resolved group = %q, want empty on ambiguity", got)
+	if herr != nil {
+		t.Fatalf("unexpected httpError: %+v", herr)
 	}
-	if herr == nil {
-		t.Fatal("expected ambiguous_group httpError, got nil")
-	}
-	if herr.Status != 400 || herr.Kind != "ambiguous_group" {
-		t.Fatalf("httpError = %+v, want 400/ambiguous_group", herr)
-	}
-	if herr.Message == "" {
-		t.Fatal("httpError message must be non-empty for client guidance")
+	// Sorted by name asc: "fallback" (g1) < "primary" (g2)
+	if len(got) != 2 || got[0] != "g1" || got[1] != "g2" {
+		t.Fatalf("resolved candidates = %v, want [g1, g2] (sorted by name)", got)
 	}
 }
 
-// TestResolveGroup_NoBinding: unbound api key resolves to the empty scope.
+// TestResolveGroup_NoBinding: unbound api key resolves to a single empty
+// candidate — the "global pool" scope.
 func TestResolveGroup_NoBinding(t *testing.T) {
 	store := &fakeGroupStore{listResult: nil}
 
@@ -143,9 +155,7 @@ func TestResolveGroup_NoBinding(t *testing.T) {
 	if herr != nil {
 		t.Fatalf("unexpected httpError: %+v", herr)
 	}
-	if got != "" {
-		t.Fatalf("resolved group = %q, want empty for zero bindings", got)
-	}
+	singleGroup(t, got, "")
 	if store.listCalls != 1 {
 		t.Fatalf("ListGroupsForAPIKey call count = %d, want 1", store.listCalls)
 	}
@@ -160,9 +170,7 @@ func TestResolveGroup_ExplicitOverride(t *testing.T) {
 	if herr != nil {
 		t.Fatalf("unexpected httpError: %+v", herr)
 	}
-	if got != "gX" {
-		t.Fatalf("resolved group = %q, want %q (explicit override)", got, "gX")
-	}
+	singleGroup(t, got, "gX")
 	if store.listCalls != 0 {
 		t.Fatalf("ListGroupsForAPIKey call count = %d, want 0 (store must not be consulted)", store.listCalls)
 	}
@@ -178,9 +186,7 @@ func TestResolveGroup_GroupStoreError(t *testing.T) {
 	if herr != nil {
 		t.Fatalf("unexpected httpError: %+v", herr)
 	}
-	if got != "" {
-		t.Fatalf("resolved group = %q, want empty on store failure", got)
-	}
+	singleGroup(t, got, "")
 	if store.listCalls != 1 {
 		t.Fatalf("ListGroupsForAPIKey call count = %d, want 1", store.listCalls)
 	}
@@ -193,9 +199,7 @@ func TestResolveGroup_NilStore(t *testing.T) {
 	if herr != nil {
 		t.Fatalf("unexpected httpError: %+v", herr)
 	}
-	if got != "" {
-		t.Fatalf("resolved group = %q, want empty when store is nil", got)
-	}
+	singleGroup(t, got, "")
 }
 
 // TestResolveGroup_EmptyAPIKey: an unauthenticated (or misconfigured) caller
@@ -208,9 +212,7 @@ func TestResolveGroup_EmptyAPIKey(t *testing.T) {
 	if herr != nil {
 		t.Fatalf("unexpected httpError: %+v", herr)
 	}
-	if got != "" {
-		t.Fatalf("resolved group = %q, want empty when api key is nil", got)
-	}
+	singleGroup(t, got, "")
 	if store.listCalls != 0 {
 		t.Fatalf("ListGroupsForAPIKey call count = %d, want 0", store.listCalls)
 	}
@@ -218,29 +220,24 @@ func TestResolveGroup_EmptyAPIKey(t *testing.T) {
 
 // TestResolveGroup_DirectBindingWins: when the caller's APIKey carries a
 // non-empty GroupID (migration 005 direct 1:1 binding), resolveGroup must
-// return that value without consulting the M:N binding table. This is the
-// fast path that migration 005 was introduced to enable.
+// return that value without consulting the M:N binding table.
 func TestResolveGroup_DirectBindingWins(t *testing.T) {
-	// Store would happily return a different group if asked — but it must
-	// not be asked at all when direct binding is present.
 	store := &fakeGroupStore{listResult: []domain.Group{{ID: "g_mn"}}}
 
 	got, herr := resolveGroup(context.Background(), store, nil, keyRef("key_direct", "g_direct"), "")
 	if herr != nil {
 		t.Fatalf("unexpected httpError: %+v", herr)
 	}
-	if got != "g_direct" {
-		t.Fatalf("resolved group = %q, want %q (direct 1:1 binding wins)", got, "g_direct")
-	}
+	singleGroup(t, got, "g_direct")
 	if store.listCalls != 0 {
 		t.Fatalf("ListGroupsForAPIKey call count = %d, want 0 (direct binding must short-circuit M:N lookup)", store.listCalls)
 	}
 }
 
-// TestResolveGroup_DirectBindingPreemptsMulti: even a key that would be
-// ambiguous under the M:N table (multiple bindings → 400) resolves cleanly
-// when it also carries a direct 1:1 binding. The direct column is the
-// authoritative override.
+// TestResolveGroup_DirectBindingPreemptsMulti: a direct 1:1 binding beats
+// even a multi-binding M:N list, so the direct column stays the
+// authoritative single-group override. Spillover only kicks in when the
+// M:N table is the source of truth.
 func TestResolveGroup_DirectBindingPreemptsMulti(t *testing.T) {
 	store := &fakeGroupStore{listResult: []domain.Group{{ID: "g_a"}, {ID: "g_b"}}}
 
@@ -248,9 +245,7 @@ func TestResolveGroup_DirectBindingPreemptsMulti(t *testing.T) {
 	if herr != nil {
 		t.Fatalf("unexpected httpError: %+v", herr)
 	}
-	if got != "g_direct" {
-		t.Fatalf("resolved group = %q, want %q (direct binding must preempt multi-M:N ambiguity)", got, "g_direct")
-	}
+	singleGroup(t, got, "g_direct")
 	if store.listCalls != 0 {
 		t.Fatalf("ListGroupsForAPIKey call count = %d, want 0", store.listCalls)
 	}
@@ -266,9 +261,7 @@ func TestResolveGroup_ExplicitOverridesDirectBinding(t *testing.T) {
 	if herr != nil {
 		t.Fatalf("unexpected httpError: %+v", herr)
 	}
-	if got != "g_explicit" {
-		t.Fatalf("resolved group = %q, want %q (explicit override beats direct binding)", got, "g_explicit")
-	}
+	singleGroup(t, got, "g_explicit")
 	if store.listCalls != 0 {
 		t.Fatalf("ListGroupsForAPIKey call count = %d, want 0", store.listCalls)
 	}
@@ -285,9 +278,7 @@ func TestResolveGroup_FallsBackToBinding(t *testing.T) {
 	if herr != nil {
 		t.Fatalf("unexpected httpError: %+v", herr)
 	}
-	if got != "g_from_mn" {
-		t.Fatalf("resolved group = %q, want %q (empty GroupID must fall back to M:N)", got, "g_from_mn")
-	}
+	singleGroup(t, got, "g_from_mn")
 	if store.listCalls != 1 {
 		t.Fatalf("ListGroupsForAPIKey call count = %d, want 1", store.listCalls)
 	}

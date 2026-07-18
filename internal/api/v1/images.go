@@ -81,20 +81,24 @@ func (h *Handler) HandleImageGeneration(w http.ResponseWriter, r *http.Request) 
 		apiKey = key
 		apiKeyID = key.ID
 	}
-	groupID, herr := resolveGroup(r.Context(), h.Groups, h.Logger, apiKey, ir.GroupID)
+	groupCandidates, herr := resolveGroup(r.Context(), h.Groups, h.Logger, apiKey, ir.GroupID)
 	if herr != nil {
 		writeError(w, herr.Status, herr.Kind, herr.Message)
 		return
 	}
+	// See videos.go — primary carries accounting; spillover (P3-10)
+	// tries the rest in order.
+	primaryGroup := groupCandidates[0]
 
 	greq := proxy.GenerationRequest{
-		Model:         ir.Model,
-		UserParams:    userParams,
-		Async:         ir.Async,
-		SyncRequested: syncRequested,
-		CallbackURL:   ir.CallbackURL,
-		GroupID:       groupID,
-		APIKeyID:      apiKeyID,
+		Model:           ir.Model,
+		UserParams:      userParams,
+		Async:           ir.Async,
+		SyncRequested:   syncRequested,
+		CallbackURL:     ir.CallbackURL,
+		GroupID:         primaryGroup,
+		GroupCandidates: groupCandidates,
+		APIKeyID:        apiKeyID,
 	}
 	// Forward quota state so proxy.Service.enforceKeyGates can
 	// reject over-limit requests pre-pick (ROADMAP P2-9).

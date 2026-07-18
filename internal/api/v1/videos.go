@@ -85,20 +85,27 @@ func (h *Handler) HandleVideoGeneration(w http.ResponseWriter, r *http.Request) 
 		apiKey = key
 		apiKeyID = key.ID
 	}
-	groupID, herr := resolveGroup(r.Context(), h.Groups, h.Logger, apiKey, vr.GroupID)
+	groupCandidates, herr := resolveGroup(r.Context(), h.Groups, h.Logger, apiKey, vr.GroupID)
 	if herr != nil {
 		writeError(w, herr.Status, herr.Kind, herr.Message)
 		return
 	}
+	// Primary group for accounting is the first candidate; spillover
+	// (P3-10) tries the rest in order when the primary hits a
+	// group-scoped capacity error. Empty string in position 0 means
+	// "global pool", which never spills over — there's nowhere to
+	// spill to.
+	primaryGroup := groupCandidates[0]
 
 	greq := proxy.GenerationRequest{
-		Model:         vr.Model,
-		UserParams:    userParams,
-		Async:         vr.Async,
-		SyncRequested: syncRequested,
-		CallbackURL:   vr.CallbackURL,
-		GroupID:       groupID,
-		APIKeyID:      apiKeyID,
+		Model:           vr.Model,
+		UserParams:      userParams,
+		Async:           vr.Async,
+		SyncRequested:   syncRequested,
+		CallbackURL:     vr.CallbackURL,
+		GroupID:         primaryGroup,
+		GroupCandidates: groupCandidates,
+		APIKeyID:        apiKeyID,
 	}
 	// Forward quota state so proxy.Service.enforceKeyGates can
 	// reject over-limit requests pre-pick (ROADMAP P2-9). Nil-safe:

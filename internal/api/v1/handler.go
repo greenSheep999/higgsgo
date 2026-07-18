@@ -16,6 +16,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -298,16 +299,21 @@ type httpError struct {
 // match:
 //
 //  1. An explicit `group_id` in the request body wins outright — the
-//     canonical way for a caller to disambiguate a multi-binding key.
+//     canonical way for a caller to pin one group.
 //  2. Direct 1:1 binding on api_keys.group_id (migration 005): when the
 //     caller's APIKey row carries a non-empty GroupID, it is used
 //     verbatim and the M:N table is not consulted. This is the fast
 //     path for the common CPA case (one partner key → one pool group).
 //  3. Fall back to the M:N apikey_group_bindings table via GroupStore:
-//     - zero bindings: returns "" and no error (default group scope).
-//     - one binding:   returns that group's ID.
-//     - multiple:      returns an ambiguous_group httpError so the
-//     caller disambiguates by setting group_id explicitly.
+//     - zero bindings: returns [""] (default global pool).
+//     - one binding:   returns [that group's id].
+//     - multiple:      returns all bound group ids, sorted by name
+//       ascending. This is the ROADMAP P3-10 spillover list — Generate
+//       tries them in order and fails over on
+//       ErrGroupConcurrencyMax / ErrGroupQuotaExhausted /
+//       ErrNoEligibleAccount. Callers who need a specific group can
+//       still pin it via the explicit request body field, which
+//       short-circuits at tier 1.
 //
 // GroupStore errors are treated as best-effort failures: they are logged
 // (when logger is non-nil) but not surfaced to the caller — the request
@@ -315,17 +321,17 @@ type httpError struct {
 // black-hole every generation request.
 //
 // apiKey may be nil; that skips both tier 2 and tier 3.
-func resolveGroup(ctx context.Context, groups ports.GroupStore, logger *slog.Logger, apiKey *domain.APIKey, requested string) (string, *httpError) {
+func resolveGroup(ctx context.Context, groups ports.GroupStore, logger *slog.Logger, apiKey *domain.APIKey, requested string) ([]string, *httpError) {
 	if requested != "" {
-		return requested, nil
+		return []string{requested}, nil
 	}
 	// Tier 2: direct 1:1 binding wins over the M:N table.
 	if apiKey != nil && apiKey.GroupID != "" {
-		return apiKey.GroupID, nil
+		return []string{apiKey.GroupID}, nil
 	}
 	// Tier 3: fall back to the M:N binding table.
 	if groups == nil || apiKey == nil || apiKey.ID == "" {
-		return "", nil
+		return []string{""}, nil
 	}
 	bound, err := groups.ListGroupsForAPIKey(ctx, apiKey.ID)
 	if err != nil {
@@ -335,18 +341,37 @@ func resolveGroup(ctx context.Context, groups ports.GroupStore, logger *slog.Log
 				slog.String("err", err.Error()),
 			)
 		}
-		return "", nil
+		return []string{""}, nil
 	}
 	switch len(bound) {
 	case 0:
-		return "", nil
+		return []string{""}, nil
 	case 1:
-		return bound[0].ID, nil
+		return []string{bound[0].ID}, nil
 	default:
-		return "", &httpError{
-			Status:  http.StatusBadRequest,
-			Kind:    "ambiguous_group",
-			Message: "api key is bound to multiple groups; please specify group_id in the request",
+		// Sort by name for a stable, operator-controllable order.
+		// Operators use name conventions like "primary" / "fallback-1"
+		// / "fallback-2" to drive spillover priority — no schema
+		// change needed. Stable sort so ties (unlikely: names are
+		// unique per store) stay in ListGroupsForAPIKey order.
+		out := make([]string, 0, len(bound))
+		names := make([]string, len(bound))
+		for i, g := range bound {
+			names[i] = g.Name
 		}
+		type pair struct {
+			id, name string
+		}
+		pairs := make([]pair, len(bound))
+		for i, g := range bound {
+			pairs[i] = pair{id: g.ID, name: g.Name}
+		}
+		sort.SliceStable(pairs, func(i, j int) bool {
+			return pairs[i].name < pairs[j].name
+		})
+		for _, p := range pairs {
+			out = append(out, p.id)
+		}
+		return out, nil
 	}
 }

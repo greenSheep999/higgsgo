@@ -320,9 +320,38 @@ to accept the fields the SQL WHERE / ORDER BY layer needs.
    - Tests: `TestPollworker_ReleasesInFlightOnTerminalSuccess`,
      `TestPollworker_ReleasesInFlightOnTimeout`,
      `TestPollworker_HoldsInFlightWhileFetchTerminalRetries`.
-10. **Inter-group spillover** — currently one API key = one closed pool.
-    If Group A is exhausted, consider trying Group B in the key's binding
-    list before returning 429.
+10. **Inter-group spillover** — ✅ **DONE (P3-10)**
+    - `resolveGroup` returns `[]string` — the ordered spillover
+      candidate list — instead of a single group or `ambiguous_group`
+      error. Multi-binding keys used to 400; now they sort their
+      bindings by name ascending so operators can drive priority
+      with a naming convention (`primary`, `fallback-1`,
+      `fallback-2`).
+    - `GenerationRequest.GroupCandidates []string` carries the list
+      to `proxy.Service.Generate`. Legacy callers (CPA plugin,
+      tests) that leave it empty degenerate to a one-shot with the
+      pinned `GroupID` — behavior unchanged.
+    - `Generate`'s pick section loops through candidates. On each
+      iteration it runs `enforceGroupGates` + `PickAndLock`; a
+      failure that satisfies `isSpilloverEligible` (group cap,
+      group budget, no eligible account, blocked/allowed regex
+      mismatch) triggers the next candidate. Non-eligible errors
+      (`ErrAPIKeyQuotaExceed`, upstream errors) short-circuit
+      immediately. `req.GroupID` is rewritten to the group that
+      actually served the pick so downstream accounting (Job row,
+      metering event, webhook) is honest.
+    - Pre-pick key gate (`enforceKeyGates`) runs BEFORE the loop
+      because a per-key overrun cannot be helped by trying a
+      different group.
+    - Tests: `TestIsSpilloverEligible` (8 cases covering every
+      sentinel that should / shouldn't be eligible),
+      `TestPickAndLock_SpilloverContract` (proves the pool layer
+      returns the right sentinel for the loop to switch on), plus
+      the refreshed `group_resolve_test.go` matrix now asserts on
+      the returned slice shape instead of a single string.
+    - Explicit `group_id` in the request body still pins one group
+      (tier 1 of resolveGroup) — spillover only kicks in when the
+      key's M:N binding table is the source of truth.
 11. **Weighted or lease-based load balancing** — deferred until we have
     QPS data showing LRU hot-spots are a real problem in production.
 

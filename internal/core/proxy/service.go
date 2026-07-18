@@ -103,8 +103,25 @@ type GenerationRequest struct {
 	// PollDeadline caps synchronous poll time. Default 3m.
 	PollDeadline time.Duration
 
-	// GroupID for group-scoped pool pick. Empty selects the "default" group.
+	// GroupID for group-scoped pool pick. Empty selects the "default"
+	// (global) pool. Also carried on the persisted Job row for
+	// accounting — for spillover requests this is the group that
+	// ACTUALLY picked, not necessarily the first candidate.
 	GroupID string
+
+	// GroupCandidates is the ordered spillover list from the v1
+	// handler (ROADMAP P3-10). When a key is bound to multiple
+	// groups the handler builds this list sorted by group name;
+	// Generate tries each in order and falls over on
+	// ErrGroupConcurrencyMax / ErrGroupQuotaExhausted /
+	// ErrNoEligibleAccount. Errors that are not group-scoped
+	// (ErrModelBlocked, ErrAPIKeyQuotaExceed, etc.) short-circuit
+	// the whole request — no point trying another group if the
+	// alias is blocked policy-wide or the caller's own key ran out.
+	//
+	// Empty or single-element slice = no spillover; behavior matches
+	// pre-P3-10 code.
+	GroupCandidates []string
 
 	// APIKeyID / CPAPartnerID are set by the auth middleware for accounting.
 	APIKeyID     string
@@ -185,44 +202,97 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 		async = true
 	}
 
-	// Resolve the group policy once so route strategy, concurrency
-	// caps, model regex, and budget stay consistent across the pick —
-	// a second Get during PickAndLock could see a mid-request PUT of
-	// the group config.
-	policy := s.resolveGroupPolicy(ctx, req.GroupID)
-
-	// Pre-pick group gates (ROADMAP P1-4): reject requests that would
-	// pick an account only to fail at charge time. Runs before
-	// PickAndLock so we don't consume an in_flight slot on a doomed
-	// request. Nil-safe when Groups is unwired.
-	if err := s.enforceGroupGates(policy, spec.Alias, spec.EstCostHundredths); err != nil {
-		return nil, err
-	}
 	// Pre-pick per-Key gates (ROADMAP P2-9): reject a request whose
-	// caller key has already exhausted its monthly quota. Runs
-	// alongside the group gate so a downstream integration hitting
-	// its cap gets a fast, honest 402 instead of consuming a pool
-	// slot and only failing when the recorder reconciles credits
-	// after the job. Nil-safe: zero quota (== unlimited) is a no-op.
+	// caller key has already exhausted its monthly quota. Runs BEFORE
+	// spillover — key limits are not group-scoped, so an over-quota
+	// request should fail fast regardless of which group we would try
+	// next. Nil-safe: zero quota (== unlimited) is a no-op.
 	if err := enforceKeyGates(req, spec.EstCostHundredths); err != nil {
 		return nil, err
 	}
 
-	// Pick an account from the pool.
-	pickParams := ports.PickParams{
-		JST:                     spec.JST,
-		EstCostHundredths:       spec.EstCostHundredths,
-		RequiresPaid:            s.Registry.StarterLocked(spec.JST) || spec.RequiresPaid,
-		RequiresUltra:           spec.RequiresUltra,
-		GroupID:                 req.GroupID,
-		RouteStrategy:           policy.RouteStrategy,
-		MaxGroupInFlight:        policy.MaxGroupInFlight,
-		MaxConcurrentPerAccount: policy.MaxConcurrentPerAccount,
+	// Cross-group spillover (ROADMAP P3-10): try each candidate in
+	// order. When the caller pinned a single group (or the key has
+	// only one binding) the loop degenerates to one iteration.
+	// Failover triggers on group-scoped capacity errors only —
+	// ErrGroupConcurrencyMax / ErrGroupQuotaExhausted /
+	// ErrNoEligibleAccount — because those may succeed against a
+	// less-loaded sibling group. ErrModelBlocked and
+	// ErrModelNotAllowed are policy statements that should not vary
+	// by group (matching aliases in one group's regex but not
+	// another's is a legitimate use case, so those DO fall through
+	// to the next group). The final error is whatever the LAST
+	// attempt returned so the caller sees an accurate reason.
+	candidates := req.GroupCandidates
+	if len(candidates) == 0 {
+		// Legacy callers that don't set GroupCandidates (CPA plugin,
+		// tests) get a one-shot with the pinned GroupID.
+		candidates = []string{req.GroupID}
 	}
-	acc, lockToken, err := s.Store.PickAndLock(ctx, pickParams)
-	if err != nil {
-		return nil, err
+	var (
+		acc       *domain.Account
+		lockToken string
+		pickedID  string
+		pickErr   error
+	)
+	for i, gid := range candidates {
+		p := s.resolveGroupPolicy(ctx, gid)
+		// Pre-pick group gates (P1-4): reject on model-regex OR
+		// budget miss — but only for this candidate. A blocked
+		// alias in group A may still be allowed in group B, so
+		// treat these as spillover-eligible.
+		if gateErr := s.enforceGroupGates(p, spec.Alias, spec.EstCostHundredths); gateErr != nil {
+			pickErr = gateErr
+			if i < len(candidates)-1 && isSpilloverEligible(gateErr) {
+				continue
+			}
+			return nil, gateErr
+		}
+		pickParams := ports.PickParams{
+			JST:                     spec.JST,
+			EstCostHundredths:       spec.EstCostHundredths,
+			RequiresPaid:            s.Registry.StarterLocked(spec.JST) || spec.RequiresPaid,
+			RequiresUltra:           spec.RequiresUltra,
+			GroupID:                 gid,
+			RouteStrategy:           p.RouteStrategy,
+			MaxGroupInFlight:        p.MaxGroupInFlight,
+			MaxConcurrentPerAccount: p.MaxConcurrentPerAccount,
+		}
+		var err error
+		acc, lockToken, err = s.Store.PickAndLock(ctx, pickParams)
+		if err != nil {
+			pickErr = err
+			if i < len(candidates)-1 && isSpilloverEligible(err) {
+				if s.Logger != nil {
+					s.Logger.Info("group spillover",
+						slog.String("from_group", gid),
+						slog.String("err", err.Error()))
+				}
+				continue
+			}
+			return nil, err
+		}
+		// Success — record which group actually served the request.
+		// The winning policy is not currently used after pick, but
+		// the loop keeps it around under `p` so a future consumer
+		// (e.g. per-group markup) can read from a stable var.
+		_ = p
+		pickedID = gid
+		pickErr = nil
+		break
 	}
+	if acc == nil {
+		// Every candidate failed; propagate the last error.
+		if pickErr == nil {
+			pickErr = domain.ErrNoEligibleAccount
+		}
+		return nil, pickErr
+	}
+	// Rewrite req.GroupID to the group that ACTUALLY served the pick
+	// so downstream accounting (Job row, metering event, webhook,
+	// pollworker) is honest about which group the credits landed on.
+	// The original candidate list is retained by value in req.
+	req.GroupID = pickedID
 	// Snapshot the pre-job balance so metering can attribute exact credits
 	// consumed via (preBalance - post.SubscriptionBalance). Zero means
 	// "unknown" downstream; the account was just picked so a real balance
@@ -691,6 +761,24 @@ func (s *Service) enforceGroupGates(policy groupPolicy, alias string, estCost in
 		}
 	}
 	return nil
+}
+
+// isSpilloverEligible returns true when err comes from a group-scoped
+// capacity or gate mismatch — the kind of failure that might succeed
+// against a sibling group in the caller's binding list. ROADMAP P3-10.
+//
+// Deliberately excludes:
+//   - ErrAPIKeyQuotaExceed: caller-level, no group will help.
+//   - Upstream errors (rate limit, forbidden, etc.): the pool already
+//     picked and CreateJob failed; spillover happens BEFORE that call.
+//   - Anything unlisted: bail out — spillover is a best-effort
+//     optimisation, not a way to paper over unknown failures.
+func isSpilloverEligible(err error) bool {
+	return errors.Is(err, domain.ErrGroupConcurrencyMax) ||
+		errors.Is(err, domain.ErrGroupQuotaExhausted) ||
+		errors.Is(err, domain.ErrNoEligibleAccount) ||
+		errors.Is(err, domain.ErrModelBlocked) ||
+		errors.Is(err, domain.ErrModelNotAllowed)
 }
 
 // enforceKeyGates rejects a request whose caller key has already used

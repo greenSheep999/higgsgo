@@ -614,15 +614,24 @@ need real fair-share, ROADMAP P2-8 sketches the cheapest upgrade
 **Design.** A key can be bound to multiple groups; tried in some order;
 falls back on exhaustion; every-group-exhausted returns 429/402.
 
-**Reality (2026-07-18).** ⚠️ Partial. `resolveGroup`
-(`internal/api/v1/handler.go:318-352`) picks **exactly one** group via
-this precedence: (1) explicit `group_id` in the request body, (2)
-`api_keys.group_id` direct column, (3) if a key has exactly one entry in
-`apikey_group_bindings` use it, if it has zero fall back to the global
-pool (empty group filter), if it has multiple return
-`400 ambiguous_group`. There is **no inter-group spillover** — an
-exhausted group returns without trying the caller's other bindings. See
-ROADMAP P3-10 if we decide spillover is needed.
+**Reality (2026-07-19).** ✅ **Live with inter-group spillover (P3-10).**
+`resolveGroup` returns an ordered slice of candidate groups via this
+precedence: (1) explicit `group_id` in the request body — one element,
+one attempt; (2) `api_keys.group_id` direct column — same; (3) M:N
+`apikey_group_bindings` — zero bindings degrade to the global pool,
+one binding is a single-element list, multiple bindings return every
+group sorted by name ascending so operators can drive spillover
+priority with a naming convention (`primary`, `fallback-1`,
+`fallback-2`).
+
+`proxy.Service.Generate` iterates the candidates. A failure that
+satisfies `isSpilloverEligible` (group cap tripped, group budget
+exhausted, no eligible account, model regex mismatch) triggers the
+next candidate. Non-eligible errors (`ErrAPIKeyQuotaExceed`, upstream
+errors) short-circuit — a per-key overrun or upstream 429 can't be
+fixed by trying another group. `req.GroupID` is rewritten to the
+group that actually served the pick so the Job row, metering event,
+and webhook all reflect where credits were spent.
 
 ### 7.4 CPA Plugin: REST or gRPC
 
