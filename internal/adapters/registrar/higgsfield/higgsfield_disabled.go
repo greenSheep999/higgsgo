@@ -18,6 +18,12 @@ type Deps struct{}
 // NewRegistrar returns the stub Registrar that answers 503 on every
 // admin call. Slim / proxy-only deploys build with this variant so
 // no puppeteer / captcha code is linked in.
-func NewRegistrar(_ Deps) ports.Registrar {
-	return cpaplugin.StubRegistrar{}
+//
+// Signature matches the -tags register variant's
+// `func(Deps) (ports.Registrar, error)` so cmd/higgsgo/main.go
+// doesn't need a build-tag switch at the call site. The stub never
+// errors — the error return is purely for symmetry with the real
+// bridge, which has to validate its dependency bag at construction.
+func NewRegistrar(_ Deps) (ports.Registrar, error) {
+	return cpaplugin.StubRegistrar{}, nil
 }

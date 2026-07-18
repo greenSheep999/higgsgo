@@ -23,7 +23,6 @@ import (
 
 	"github.com/greensheep999/higgsgo/internal/adapters/httpclient/utls"
 	"github.com/greensheep999/higgsgo/internal/adapters/modelregistry/jsonstatic"
-	"github.com/greensheep999/higgsgo/internal/adapters/registrar/higgsfield"
 	"github.com/greensheep999/higgsgo/internal/adapters/storage/sqlite"
 	"github.com/greensheep999/higgsgo/internal/api"
 	"github.com/greensheep999/higgsgo/internal/api/cpaplugin"
@@ -77,17 +76,18 @@ func run() error {
 
 	// Storage.
 	var (
-		accountStore     ports.AccountStore
-		jobStore         ports.JobStore
-		apiKeyStore      ports.APIKeyStore
-		usageStore       ports.UsageEventStore
-		groupStore       ports.GroupStore
-		modelHealthStore ports.ModelHealthStore
-		auditStore       ports.AuditStore
-		settingsStore    ports.SettingsStore
-		failoverEvents   ports.FailoverEventStore
-		failoverOverrs   ports.FailoverOverridesStore
-		modelOverrides   ports.ModelOverrideStore
+		accountStore      ports.AccountStore
+		jobStore          ports.JobStore
+		apiKeyStore       ports.APIKeyStore
+		usageStore        ports.UsageEventStore
+		groupStore        ports.GroupStore
+		modelHealthStore  ports.ModelHealthStore
+		auditStore        ports.AuditStore
+		settingsStore     ports.SettingsStore
+		failoverEvents    ports.FailoverEventStore
+		failoverOverrs    ports.FailoverOverridesStore
+		modelOverrides    ports.ModelOverrideStore
+		registrationStore ports.RegistrationStore
 	)
 	switch cfg.Storage.Driver {
 	case "sqlite":
@@ -108,6 +108,11 @@ func run() error {
 		failoverEvents = sqlite.NewFailoverEventStore(db)
 		failoverOverrs = sqlite.NewFailoverOverridesStore(db)
 		modelOverrides = sqlite.NewModelOverrideStore(db)
+		// Registration queue store — always constructed even in the
+		// default (slim) build so the admin queue table has consistent
+		// CRUD access. The registrar bridge (registrar_register.go)
+		// consumes it under -tags register; the slim stub ignores it.
+		registrationStore = sqlite.NewRegistrationStore(db)
 
 		// Seed a default admin key on first boot so the WebUI's
 		// Keys list has an operator-facing sk-adm- key waiting when
@@ -411,9 +416,22 @@ func run() error {
 
 	// Boot API server.
 	// Registrar (higgsfield signup flow). Build tag "register" swaps
-	// higgsfield.NewRegistrar between stub (returns ErrRegistrarDisabled
-	// on every method) and the real puppeteer/OTP/captcha skeleton.
-	registrar := higgsfield.NewRegistrar(higgsfield.Deps{})
+	// buildRegistrar between the slim stub (returns
+	// ErrRegistrarDisabled on every method) and the real plugin
+	// bridge that wires plugins/register through a storeAdapter.
+	// See docs/PLUGGABLE.md §0 and cmd/higgsgo/registrar_*.go for
+	// the per-tag construction.
+	registrar, err := buildRegistrar(ctx, logger, cfg, registrationStore)
+	if err != nil {
+		return fmt.Errorf("build registrar: %w", err)
+	}
+	// -tags register variant exposes an optional Start(ctx) method
+	// that launches the background worker goroutine. The slim stub
+	// doesn't implement it. Duck-type check keeps main.go tag-free.
+	if starter, ok := registrar.(interface{ Start(context.Context) }); ok {
+		starter.Start(ctx)
+		logger.Info("registrar background worker started")
+	}
 
 	srv := api.New(cfg, logger, v1h, apiKeyStore, accountStore, jobStore, usageStore, groupStore, metrics, cpaHandler, modelHealthStore, webhooks, rf, tk, auditStore, registry, settingsStore, bearerMgr)
 	srv.Registrar = registrar

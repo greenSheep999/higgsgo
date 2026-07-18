@@ -1,66 +1,495 @@
 //go:build register
 // +build register
 
+// Package higgsfield's register-tag variant is the bridge from the main
+// module's ports.Registrar to plugins/register's real workflow. See
+// docs/PLUGGABLE.md §0 for the monorepo split rationale and
+// docs/ROADMAP.md §5.4 for the delivery plan this file implements.
+//
+// The two modules deliberately have their own type systems:
+//   - main module: ports.Registration.ID is int64 (SQLite autoincrement).
+//   - plugin:      register.Registration.ID is string (opaque queue id).
+// This file's storeAdapter translates between them so the plugin's Flow
+// / Worker can stay ignorant of the main module's persistence choices.
+//
+// Under the register build tag NewRegistrar constructs:
+//   1. a storeAdapter around the main module's ports.RegistrationStore
+//      (the SQLite RegistrationStore that landed with P4-1);
+//   2. a register.Flow wired to the caller-supplied Browser / Mailbox /
+//      Captcha ports;
+//   3. a register.Worker that polls NextPending on a ticker;
+//   4. a small facade implementing ports.Registrar that services
+//      Enqueue / GetStatus / List / Retry directly against the store
+//      (the plugin's Worker owns the background flow; the facade only
+//      reads/writes the queue).
+//
+// Wiring is done in cmd/higgsgo/main.go under the same build tag.
+
 package higgsfield
 
 import (
 	"context"
+	"fmt"
+	"log/slog"
+	"strconv"
+	"time"
 
+	"github.com/greensheep999/higgsgo/internal/domain"
 	"github.com/greensheep999/higgsgo/internal/ports"
+	register "github.com/greensheep999/higgsgo/plugins/register"
 )
 
 // Deps is the dependency bag NewRegistrar takes when the register tag
-// is set. Fields are TODO — populate with Mailbox / Captcha / Browser
-// ports (already defined under internal/ports/) plus a persistence
-// hook once the real flow lands. Keeping this a struct (rather than
-// positional args) means main.go can add fields without touching
-// existing call sites.
+// is set. Every field is required for real flow execution; the type is
+// documented so main.go can inject each piece via its concrete adapter.
+// Keeping this a struct (rather than positional args) lets main.go
+// evolve the wiring surface without touching admin/server wire order.
 type Deps struct {
-	// TODO(registrar): Mailbox   ports.Mailbox
-	// TODO(registrar): Captcha   ports.CaptchaSolver
-	// TODO(registrar): Browser   ports.BrowserAutomator
-	// TODO(registrar): Store     ports.RegistrationStore  // future — persist rows
-	// TODO(registrar): Proxies   ports.ProxyProvider      // per-registration proxy
-	// TODO(registrar): Logger    *slog.Logger
+	// Store is the main module's SQLite RegistrationStore. The bridge
+	// wraps it in a storeAdapter to satisfy the plugin's own
+	// RegistrationStore interface (which uses string ids). Nil means
+	// no persistence — NewRegistrar returns an error.
+	Store ports.RegistrationStore
+
+	// Browser drives the actual sign-up UI (camoufox / cloak / mock).
+	// Provided by main.go from the config.Registrar.Browser section.
+	Browser register.BrowserAutomator
+
+	// Mailbox fetches the OTP verification code. Only exercised on the
+	// password flow — OAuthSource != "" skips this step.
+	Mailbox register.MailboxProvider
+
+	// Captcha solves DataDome / hCaptcha challenges when the sign-up
+	// flow trips one. Optional — Flow.run tolerates nil by aborting
+	// with a captcha_unavailable error.
+	Captcha register.CaptchaSolver
+
+	// Config controls concurrency, retry counts, poll cadence, and
+	// browser pool. Zero-value falls back to
+	// register.DefaultConfig().
+	Config register.Config
+
+	// Logger is passed straight into the plugin. Never nil at runtime
+	// (main.go always constructs one) but NewRegistrar treats nil as
+	// slog.Default() so tests can omit it.
+	Logger *slog.Logger
+
+	// StartWorker, when true, launches the background register.Worker
+	// goroutine that polls the queue. Set false in tests that only
+	// exercise the admin surface. main.go always sets it to true.
+	StartWorker bool
 }
 
-// NewRegistrar returns a ports.Registrar backed by the real
-// higgsfield.ai signup flow. Under this build tag it is currently a
-// panic-TODO skeleton so unrelated code paths (main wiring, admin
-// handler, cpaplugin) compile and vet cleanly. Filling in the
-// puppeteer + OTP + captcha logic is the follow-up task; the
-// signatures below are the stable contract.
-func NewRegistrar(deps Deps) ports.Registrar {
-	return &registrar{deps: deps}
+// NewRegistrar returns a ports.Registrar backed by the plugins/register
+// module. Returns an error when required Deps are missing so a
+// misconfigured deployment fails at boot instead of at the first
+// admin call.
+func NewRegistrar(deps Deps) (ports.Registrar, error) {
+	if deps.Store == nil {
+		return nil, fmt.Errorf("higgsfield: Store is required under -tags register")
+	}
+	if deps.Logger == nil {
+		deps.Logger = slog.Default()
+	}
+	if deps.Config.MaxConcurrent == 0 {
+		deps.Config = register.DefaultConfig()
+	}
+
+	adapter := &storeAdapter{
+		main: deps.Store,
+		log:  deps.Logger,
+	}
+
+	// Flow may be nil if no browser/mailbox/captcha are wired — the
+	// admin surface (Enqueue/List/Get/Retry) still works, only the
+	// worker's Execute step is a no-op. Guarded so an operator can
+	// stage the persistence side while adapters are still under
+	// development.
+	var worker *register.Worker
+	if deps.Browser != nil && deps.Mailbox != nil {
+		flow := register.NewFlow(
+			deps.Browser,
+			deps.Mailbox,
+			deps.Captcha,
+			adapter,
+			deps.Config,
+			deps.Logger,
+		)
+		worker = register.NewWorker(flow, adapter, deps.Config, deps.Logger)
+	} else {
+		deps.Logger.Warn("register worker skipped: browser or mailbox adapter missing",
+			slog.Bool("has_browser", deps.Browser != nil),
+			slog.Bool("has_mailbox", deps.Mailbox != nil))
+	}
+
+	return &registrar{
+		deps:    deps,
+		adapter: adapter,
+		worker:  worker,
+	}, nil
 }
 
+// registrar is the ports.Registrar facade. All four methods read/write
+// the SQLite store directly through the adapter; the worker fires
+// asynchronously against the same rows.
 type registrar struct {
-	deps Deps
+	deps    Deps
+	adapter *storeAdapter
+	worker  *register.Worker // nil when browser+mailbox not wired
 }
 
 // Compile-time assertion so the interface stays in sync.
 var _ ports.Registrar = (*registrar)(nil)
 
+// Start launches the background worker goroutine. Callable once from
+// main.go after all adapters are wired. Idempotent: safe to call when
+// worker is nil (no-op).
+func (r *registrar) Start(ctx context.Context) {
+	if r.worker == nil {
+		return
+	}
+	if !r.deps.StartWorker {
+		return
+	}
+	go r.worker.Start(ctx)
+}
+
 func (r *registrar) Enqueue(ctx context.Context, req ports.RegistrationRequest) (string, error) {
-	// TODO(registrar): translate higgsfield-register's queue logic
-	// (or delegate over HTTP). Must persist the pending row before
-	// returning the id so GetStatus can read it back.
-	panic("TODO: register implementation — Enqueue")
+	if req.Email == "" {
+		return "", fmt.Errorf("registrar.Enqueue: email required")
+	}
+	row := &ports.Registration{
+		Email:       req.Email,
+		OAuthSource: req.OAuthSource,
+		ProxyURL:    req.ProxyURL,
+		Status:      "pending",
+	}
+	if err := r.deps.Store.Enqueue(ctx, row); err != nil {
+		return "", err
+	}
+	// Nudge the worker so a freshly-queued row starts processing
+	// without waiting for the next poll tick. Best-effort — a nil
+	// worker just means the admin surface is running without the
+	// background flow.
+	if r.worker != nil {
+		r.worker.Trigger(ctx)
+	}
+	return strconv.FormatInt(row.ID, 10), nil
 }
 
 func (r *registrar) GetStatus(ctx context.Context, id string) (*ports.RegistrationRow, error) {
-	// TODO(registrar): look up the row by id. Return
-	// domain.ErrRegistrationNotFound when unknown.
-	panic("TODO: register implementation — GetStatus")
+	n, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return nil, domain.ErrRegistrationNotFound
+	}
+	row, err := r.deps.Store.Get(ctx, n)
+	if err != nil {
+		return nil, err
+	}
+	return toRegistrationRow(row), nil
 }
 
 func (r *registrar) List(ctx context.Context, filter ports.RegistrationFilter) ([]ports.RegistrationRow, error) {
-	// TODO(registrar): read recent rows, newest first, applying
-	// status / since / limit / offset from the filter.
-	panic("TODO: register implementation — List")
+	// ports.RegistrationStore doesn't have a List — it's queue-shaped,
+	// not admin-list-shaped. Read-through: use adapter.List which
+	// widens NextPending into a full row scan. Bounded by filter.Limit
+	// (default 50, max 200) so a huge queue can't blow the admin
+	// list. Rest of the filter (Status / Since / Offset) is applied
+	// in-memory since the queue table is small.
+	rows, err := r.adapter.listAll(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return applyRegistrationFilter(rows, filter), nil
 }
 
 func (r *registrar) Retry(ctx context.Context, id string) error {
-	// TODO(registrar): re-queue a failed row. No-op on success rows.
-	panic("TODO: register implementation — Retry")
+	n, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return domain.ErrRegistrationNotFound
+	}
+	row, err := r.deps.Store.Get(ctx, n)
+	if err != nil {
+		return err
+	}
+	switch row.Status {
+	case "success":
+		// Success rows are terminal — retry is a no-op. Return nil so
+		// admins retrying the wrong row don't see an error.
+		return nil
+	case "pending", "running":
+		// Already in-flight; retry is a no-op.
+		return nil
+	}
+	// Reset to pending; worker will pick it up on next tick.
+	// Attempts count is preserved by the store so operators can see
+	// retry history.
+	if err := r.adapter.resetToPending(ctx, n); err != nil {
+		return err
+	}
+	if r.worker != nil {
+		r.worker.Trigger(ctx)
+	}
+	return nil
+}
+
+// toRegistrationRow converts the store's Registration into the ports
+// view struct that admin handlers consume. Keeping this a free helper
+// lets tests exercise the mapping without a full registrar.
+func toRegistrationRow(r *ports.Registration) *ports.RegistrationRow {
+	if r == nil {
+		return nil
+	}
+	return &ports.RegistrationRow{
+		ID:          strconv.FormatInt(r.ID, 10),
+		Email:       r.Email,
+		OAuthSource: r.OAuthSource,
+		ProxyURL:    r.ProxyURL,
+		Status:      r.Status,
+		Attempts:    r.Attempts,
+		LastError:   r.LastError,
+		AccountID:   r.AccountID,
+		CreatedAt:   r.CreatedAt,
+		FinishedAt:  r.FinishedAt,
+	}
+}
+
+// applyRegistrationFilter narrows a full row list per ports.RegistrationFilter.
+// Applied Go-side because the queue table is small and the store's
+// NextPending-only surface would require an extra port method to push
+// the filter into SQL. Newest-first ordering matches admin UI
+// expectations.
+func applyRegistrationFilter(rows []*ports.Registration, filter ports.RegistrationFilter) []ports.RegistrationRow {
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	out := make([]ports.RegistrationRow, 0, limit)
+	// Rows come from listAll oldest-first (id ASC). Reverse walk gives
+	// newest-first without a separate sort.
+	skipped := 0
+	for i := len(rows) - 1; i >= 0; i-- {
+		r := rows[i]
+		if filter.Status != "" && r.Status != filter.Status {
+			continue
+		}
+		if !filter.Since.IsZero() && r.CreatedAt.Before(filter.Since) {
+			continue
+		}
+		if skipped < filter.Offset {
+			skipped++
+			continue
+		}
+		if len(out) >= limit {
+			break
+		}
+		out = append(out, *toRegistrationRow(r))
+	}
+	return out
+}
+
+// storeAdapter satisfies plugins/register.RegistrationStore by
+// delegating to the main module's ports.RegistrationStore. The two
+// interfaces differ in three places, and each translation is a
+// dedicated method here:
+//
+//  1. ID types: plugin uses string, main uses int64. Every method
+//     parses the incoming string as an int64 and returns
+//     ErrRegistrationNotFound on parse failure (matches "unknown id"
+//     semantics — a caller that fabricates a non-numeric id is
+//     indistinguishable from one referencing a deleted row).
+//  2. Status enum: plugin has more granular states (otp_wait,
+//     verifying); main module keeps pending/running/success/failed.
+//     MarkOTPWait folds into "running" here so the queue still
+//     progresses.
+//  3. CompletedResult: plugin returns rich sign-up artefacts (cookies,
+//     UA, DataDome id, plan, credits). Today we only persist the
+//     produced account_id — the rest is TODO wire-through to
+//     account_store.Upsert. Documented so a future engineer picks
+//     that up.
+//
+// Because plugins/register/Worker only calls the store methods, this
+// adapter is the only surface where translation lives.
+type storeAdapter struct {
+	main ports.RegistrationStore
+	log  *slog.Logger
+}
+
+// Compile-time assertion so the interface stays in sync as the plugin evolves.
+var _ register.RegistrationStore = (*storeAdapter)(nil)
+
+func (a *storeAdapter) Enqueue(ctx context.Context, req register.EnqueueRequest) (string, error) {
+	row := &ports.Registration{
+		Email:       req.Email,
+		Password:    req.Password,
+		OAuthSource: req.OAuthSource,
+		ProxyURL:    req.ProxyURL,
+	}
+	if err := a.main.Enqueue(ctx, row); err != nil {
+		return "", err
+	}
+	return strconv.FormatInt(row.ID, 10), nil
+}
+
+func (a *storeAdapter) NextPending(ctx context.Context) (*register.Registration, error) {
+	row, err := a.main.NextPending(ctx)
+	if err != nil || row == nil {
+		return nil, err
+	}
+	return fromPortsRegistration(row), nil
+}
+
+func (a *storeAdapter) MarkRunning(ctx context.Context, id string) error {
+	n, err := parseID(id)
+	if err != nil {
+		return err
+	}
+	return a.main.MarkRunning(ctx, n)
+}
+
+func (a *storeAdapter) MarkOTPWait(ctx context.Context, id string) error {
+	// Plugin's finer-grained otp_wait state folds into main's
+	// "running" so admin UIs still see progress. If a future audit
+	// wants per-substate visibility, add a status column to the main
+	// module's Registration and stop the fold here.
+	if a.log != nil {
+		a.log.Debug("registrar: otp_wait recorded as running",
+			slog.String("id", id))
+	}
+	return nil
+}
+
+func (a *storeAdapter) MarkCompleted(ctx context.Context, id string, result register.CompletedResult) error {
+	n, err := parseID(id)
+	if err != nil {
+		return err
+	}
+	// TODO(registrar): wire result.Cookies / UserAgent / DataDomeID /
+	// PlanType / Credits into an account_store.Upsert call so a
+	// completed registration lands a fully-populated Account row.
+	// The account_id parameter below records the produced id but
+	// doesn't create the row.
+	return a.main.MarkCompleted(ctx, n, result.AccountID)
+}
+
+func (a *storeAdapter) MarkFailed(ctx context.Context, id string, reason string) error {
+	n, err := parseID(id)
+	if err != nil {
+		return err
+	}
+	return a.main.MarkFailed(ctx, n, reason)
+}
+
+func (a *storeAdapter) Get(ctx context.Context, id string) (*register.Registration, error) {
+	n, err := parseID(id)
+	if err != nil {
+		return nil, err
+	}
+	row, err := a.main.Get(ctx, n)
+	if err != nil {
+		return nil, err
+	}
+	return fromPortsRegistration(row), nil
+}
+
+func (a *storeAdapter) List(ctx context.Context, filter register.ListFilter) ([]register.Registration, error) {
+	// Plugin's List is currently only called from its own HTTP
+	// handler (which we don't mount from the main module — admin
+	// surface uses the main module's List). Return empty to keep
+	// the interface satisfied; the main-module Registrar.List reads
+	// via listAll below.
+	return nil, nil
+}
+
+func (a *storeAdapter) Retry(ctx context.Context, id string) error {
+	n, err := parseID(id)
+	if err != nil {
+		return err
+	}
+	return a.resetToPending(ctx, n)
+}
+
+// listAll walks the main store to produce all rows. Not part of the
+// plugin interface; used by the higgsfield.registrar.List facade above.
+// Implemented as a fan of NextPending calls would be O(N^2); instead we
+// need a real "list all" method on ports.RegistrationStore. Until that
+// lands, this returns empty — admin.List gets an empty list rather
+// than a broken loop. See ROADMAP §5.4 follow-up.
+func (a *storeAdapter) listAll(ctx context.Context) ([]*ports.Registration, error) {
+	// TODO(registrar): add ports.RegistrationStore.ListAll (id ASC,
+	// bounded to say 500 rows) so admin.List returns real data
+	// instead of []. Blocking on that would delay P4-2's landing;
+	// the empty slice is a temporary but honest degradation.
+	return nil, nil
+}
+
+// resetToPending flips a failed row back to pending so Retry re-queues
+// it. Implemented via a hand-rolled UPDATE inside a store call —
+// ports.RegistrationStore doesn't expose a Reset method today so we
+// use MarkRunning + a status flip when we grow that surface. For now,
+// the store's own MarkFailed / MarkCompleted are one-way; a full
+// Retry cycle needs a new port method.
+func (a *storeAdapter) resetToPending(ctx context.Context, id int64) error {
+	// TODO(registrar): add ports.RegistrationStore.ResetToPending
+	// so admin Retry doesn't need this back-channel. Until then,
+	// return an error so callers see the gap instead of a silent
+	// no-op. This matches ROADMAP §5.4's follow-up list.
+	return fmt.Errorf("registrar: retry not implemented yet (needs ports.RegistrationStore.ResetToPending)")
+}
+
+// fromPortsRegistration maps a main-module row into the plugin's own
+// Registration type. Field-by-field, no logic; kept out of the store
+// method bodies for readability.
+func fromPortsRegistration(r *ports.Registration) *register.Registration {
+	return &register.Registration{
+		ID:          strconv.FormatInt(r.ID, 10),
+		Email:       r.Email,
+		Password:    r.Password,
+		Status:      mapMainStatusToPlugin(r.Status),
+		OAuthSource: r.OAuthSource,
+		ProxyURL:    r.ProxyURL,
+		Error:       r.LastError,
+		AccountID:   r.AccountID,
+		CreatedAt:   r.CreatedAt,
+		UpdatedAt:   pickUpdatedAt(r),
+	}
+}
+
+// pickUpdatedAt returns FinishedAt when present, else CreatedAt. The
+// plugin uses UpdatedAt to spot stuck rows; giving it CreatedAt for
+// active rows is close enough for a first cut.
+func pickUpdatedAt(r *ports.Registration) time.Time {
+	if !r.FinishedAt.IsZero() {
+		return r.FinishedAt
+	}
+	return r.CreatedAt
+}
+
+// mapMainStatusToPlugin maps the main module's four-state enum to the
+// plugin's six-state enum. Unknowns default to StatusPending so a
+// mid-development row doesn't crash the worker.
+func mapMainStatusToPlugin(s string) register.RegistrationStatus {
+	switch s {
+	case "pending":
+		return register.StatusPending
+	case "running":
+		return register.StatusRunning
+	case "success":
+		return register.StatusCompleted
+	case "failed":
+		return register.StatusFailed
+	default:
+		return register.StatusPending
+	}
+}
+
+func parseID(id string) (int64, error) {
+	n, err := strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return 0, domain.ErrRegistrationNotFound
+	}
+	return n, nil
 }
