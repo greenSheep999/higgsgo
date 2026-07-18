@@ -190,17 +190,19 @@ func (r *registrar) GetStatus(ctx context.Context, id string) (*ports.Registrati
 }
 
 func (r *registrar) List(ctx context.Context, filter ports.RegistrationFilter) ([]ports.RegistrationRow, error) {
-	// ports.RegistrationStore doesn't have a List — it's queue-shaped,
-	// not admin-list-shaped. Read-through: use adapter.List which
-	// widens NextPending into a full row scan. Bounded by filter.Limit
-	// (default 50, max 200) so a huge queue can't blow the admin
-	// list. Rest of the filter (Status / Since / Offset) is applied
-	// in-memory since the queue table is small.
-	rows, err := r.adapter.listAll(ctx)
+	// Store.List returns rows newest-first with status/since/limit/
+	// offset pushed into SQL. We just translate the shape for the
+	// admin surface. Limit defaults + capping are handled inside the
+	// store.
+	rows, err := r.deps.Store.List(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
-	return applyRegistrationFilter(rows, filter), nil
+	out := make([]ports.RegistrationRow, 0, len(rows))
+	for i := range rows {
+		out = append(out, *toRegistrationRow(&rows[i]))
+	}
+	return out, nil
 }
 
 func (r *registrar) Retry(ctx context.Context, id string) error {
@@ -252,43 +254,6 @@ func toRegistrationRow(r *ports.Registration) *ports.RegistrationRow {
 		CreatedAt:   r.CreatedAt,
 		FinishedAt:  r.FinishedAt,
 	}
-}
-
-// applyRegistrationFilter narrows a full row list per ports.RegistrationFilter.
-// Applied Go-side because the queue table is small and the store's
-// NextPending-only surface would require an extra port method to push
-// the filter into SQL. Newest-first ordering matches admin UI
-// expectations.
-func applyRegistrationFilter(rows []*ports.Registration, filter ports.RegistrationFilter) []ports.RegistrationRow {
-	limit := filter.Limit
-	if limit <= 0 {
-		limit = 50
-	}
-	if limit > 200 {
-		limit = 200
-	}
-	out := make([]ports.RegistrationRow, 0, limit)
-	// Rows come from listAll oldest-first (id ASC). Reverse walk gives
-	// newest-first without a separate sort.
-	skipped := 0
-	for i := len(rows) - 1; i >= 0; i-- {
-		r := rows[i]
-		if filter.Status != "" && r.Status != filter.Status {
-			continue
-		}
-		if !filter.Since.IsZero() && r.CreatedAt.Before(filter.Since) {
-			continue
-		}
-		if skipped < filter.Offset {
-			skipped++
-			continue
-		}
-		if len(out) >= limit {
-			break
-		}
-		out = append(out, *toRegistrationRow(r))
-	}
-	return out
 }
 
 // storeAdapter satisfies plugins/register.RegistrationStore by
@@ -396,12 +361,47 @@ func (a *storeAdapter) Get(ctx context.Context, id string) (*register.Registrati
 }
 
 func (a *storeAdapter) List(ctx context.Context, filter register.ListFilter) ([]register.Registration, error) {
-	// Plugin's List is currently only called from its own HTTP
-	// handler (which we don't mount from the main module — admin
-	// surface uses the main module's List). Return empty to keep
-	// the interface satisfied; the main-module Registrar.List reads
-	// via listAll below.
-	return nil, nil
+	// Translate the plugin's ListFilter (status pointer + limit/offset)
+	// into the main-module ports.RegistrationFilter (status string +
+	// limit/offset + since). Nil status means "any"; the main store's
+	// empty-string status likewise means any.
+	mainFilter := ports.RegistrationFilter{
+		Limit:  filter.Limit,
+		Offset: filter.Offset,
+	}
+	if filter.Status != nil {
+		mainFilter.Status = mapPluginStatusToMain(*filter.Status)
+	}
+	rows, err := a.main.List(ctx, mainFilter)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]register.Registration, 0, len(rows))
+	for i := range rows {
+		out = append(out, *fromPortsRegistration(&rows[i]))
+	}
+	return out, nil
+}
+
+// mapPluginStatusToMain converts the plugin's 6-state enum down to
+// the main module's 4-state enum for filtering. Substates like
+// otp_wait and verifying map to "running" — mirroring
+// storeAdapter.MarkOTPWait's fold. Unknown values pass through so a
+// caller supplying an unmapped status still gets an exact-match
+// filter (which will match nothing, cleanly failing).
+func mapPluginStatusToMain(s register.RegistrationStatus) string {
+	switch s {
+	case register.StatusPending:
+		return "pending"
+	case register.StatusRunning, register.StatusOTPWait, register.StatusVerifying:
+		return "running"
+	case register.StatusCompleted:
+		return "success"
+	case register.StatusFailed:
+		return "failed"
+	default:
+		return string(s)
+	}
 }
 
 func (a *storeAdapter) Retry(ctx context.Context, id string) error {
@@ -412,32 +412,12 @@ func (a *storeAdapter) Retry(ctx context.Context, id string) error {
 	return a.resetToPending(ctx, n)
 }
 
-// listAll walks the main store to produce all rows. Not part of the
-// plugin interface; used by the higgsfield.registrar.List facade above.
-// Implemented as a fan of NextPending calls would be O(N^2); instead we
-// need a real "list all" method on ports.RegistrationStore. Until that
-// lands, this returns empty — admin.List gets an empty list rather
-// than a broken loop. See ROADMAP §5.4 follow-up.
-func (a *storeAdapter) listAll(ctx context.Context) ([]*ports.Registration, error) {
-	// TODO(registrar): add ports.RegistrationStore.ListAll (id ASC,
-	// bounded to say 500 rows) so admin.List returns real data
-	// instead of []. Blocking on that would delay P4-2's landing;
-	// the empty slice is a temporary but honest degradation.
-	return nil, nil
-}
-
-// resetToPending flips a failed row back to pending so Retry re-queues
-// it. Implemented via a hand-rolled UPDATE inside a store call —
-// ports.RegistrationStore doesn't expose a Reset method today so we
-// use MarkRunning + a status flip when we grow that surface. For now,
-// the store's own MarkFailed / MarkCompleted are one-way; a full
-// Retry cycle needs a new port method.
+// resetToPending flips a failed / terminal row back to pending via
+// the store's dedicated ResetToPending method. Called from
+// registrar.Retry AND storeAdapter.Retry (both admin-triggered).
+// The store preserves attempts and clears last_error / finished_at.
 func (a *storeAdapter) resetToPending(ctx context.Context, id int64) error {
-	// TODO(registrar): add ports.RegistrationStore.ResetToPending
-	// so admin Retry doesn't need this back-channel. Until then,
-	// return an error so callers see the gap instead of a silent
-	// no-op. This matches ROADMAP §5.4's follow-up list.
-	return fmt.Errorf("registrar: retry not implemented yet (needs ports.RegistrationStore.ResetToPending)")
+	return a.main.ResetToPending(ctx, id)
 }
 
 // fromPortsRegistration maps a main-module row into the plugin's own

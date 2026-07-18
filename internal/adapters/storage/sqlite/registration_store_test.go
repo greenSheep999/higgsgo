@@ -146,3 +146,135 @@ func TestRegistrationStore_NextPending_EmptyQueue(t *testing.T) {
 		t.Errorf("empty queue: got %+v want nil", got)
 	}
 }
+
+// TestRegistrationStore_List_NewestFirstAndFilters covers the admin
+// list surface: newest-first ordering, status filter narrowing,
+// limit clamping, and offset paging. These are the four levers the
+// admin UI drives; a bug in any of them breaks the operator's view
+// of the queue.
+func TestRegistrationStore_List_NewestFirstAndFilters(t *testing.T) {
+	db := openMem(t)
+	store := NewRegistrationStore(db)
+	ctx := context.Background()
+
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Seed 5 rows across three statuses so filters have something
+	// to bite on. Enqueued in this order: p1 (pending), p2 (pending),
+	// f1 (failed), s1 (success), p3 (pending).
+	seeds := []struct {
+		email  string
+		status string
+	}{
+		{"p1@x.com", "pending"},
+		{"p2@x.com", "pending"},
+		{"f1@x.com", "failed"},
+		{"s1@x.com", "success"},
+		{"p3@x.com", "pending"},
+	}
+	for _, s := range seeds {
+		r := &ports.Registration{Email: s.email, Status: s.status}
+		must(store.Enqueue(ctx, r))
+	}
+
+	// Default List (no filter): all 5 rows, newest-first.
+	rows, err := store.List(ctx, ports.RegistrationFilter{})
+	must(err)
+	if len(rows) != 5 {
+		t.Fatalf("default List: got %d rows want 5", len(rows))
+	}
+	if rows[0].Email != "p3@x.com" || rows[4].Email != "p1@x.com" {
+		t.Errorf("newest-first ordering broken: first=%q last=%q", rows[0].Email, rows[4].Email)
+	}
+
+	// Status filter narrows correctly. 3 pending rows.
+	rows, err = store.List(ctx, ports.RegistrationFilter{Status: "pending"})
+	must(err)
+	if len(rows) != 3 {
+		t.Fatalf("status=pending: got %d rows want 3", len(rows))
+	}
+	for _, r := range rows {
+		if r.Status != "pending" {
+			t.Errorf("status filter leaked: got %q", r.Status)
+		}
+	}
+
+	// Limit + offset paging. Page size 2, offset 2 → third and
+	// fourth newest rows (0-indexed).
+	rows, err = store.List(ctx, ports.RegistrationFilter{Limit: 2, Offset: 2})
+	must(err)
+	if len(rows) != 2 {
+		t.Fatalf("limit=2 offset=2: got %d rows want 2", len(rows))
+	}
+	// Full ordering: p3, s1, f1, p2, p1. Offset 2 skips p3 & s1;
+	// next 2 = f1 & p2.
+	if rows[0].Email != "f1@x.com" || rows[1].Email != "p2@x.com" {
+		t.Errorf("paging broken: %q, %q", rows[0].Email, rows[1].Email)
+	}
+
+	// Limit clamp: asking for 500 gets capped at 200. Verified
+	// indirectly — we can't seed 500 rows cheaply, but a request
+	// with limit=500 must still return without error and no more
+	// than the actual row count.
+	rows, err = store.List(ctx, ports.RegistrationFilter{Limit: 500})
+	must(err)
+	if len(rows) != 5 {
+		t.Errorf("limit=500 (capped to 200): got %d rows, want all 5", len(rows))
+	}
+}
+
+// TestRegistrationStore_ResetToPending covers the Retry path: any
+// non-pending row can be flipped back to pending, attempts count is
+// preserved, and last_error / finished_at are cleared so the reset
+// row looks fresh in the admin UI.
+func TestRegistrationStore_ResetToPending(t *testing.T) {
+	db := openMem(t)
+	store := NewRegistrationStore(db)
+	ctx := context.Background()
+
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Seed a row, run it through the fail path, then reset.
+	r := &ports.Registration{Email: "retry@x.com"}
+	must(store.Enqueue(ctx, r))
+	must(store.MarkRunning(ctx, r.ID))
+	must(store.MarkFailed(ctx, r.ID, "captcha timeout"))
+
+	got, err := store.Get(ctx, r.ID)
+	must(err)
+	if got.Status != "failed" || got.LastError != "captcha timeout" || got.FinishedAt.IsZero() {
+		t.Fatalf("pre-reset state wrong: %+v", got)
+	}
+
+	must(store.ResetToPending(ctx, r.ID))
+
+	got, err = store.Get(ctx, r.ID)
+	must(err)
+	if got.Status != "pending" {
+		t.Errorf("status after reset: %q want pending", got.Status)
+	}
+	if got.LastError != "" {
+		t.Errorf("last_error should be cleared: %q", got.LastError)
+	}
+	if !got.FinishedAt.IsZero() {
+		t.Errorf("finished_at should be cleared, got %v", got.FinishedAt)
+	}
+	if got.Attempts != 1 {
+		t.Errorf("attempts should be preserved (was 1 after MarkRunning), got %d", got.Attempts)
+	}
+
+	// Unknown id returns ErrRegistrationNotFound.
+	if err := store.ResetToPending(ctx, 999); !errors.Is(err, domain.ErrRegistrationNotFound) {
+		t.Errorf("unknown id: got %v want ErrRegistrationNotFound", err)
+	}
+}

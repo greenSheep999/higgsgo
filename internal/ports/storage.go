@@ -363,7 +363,25 @@ type RegistrationStore interface {
 	MarkCompleted(ctx context.Context, id int64, accountID string) error
 	MarkFailed(ctx context.Context, id int64, errMsg string) error
 	Get(ctx context.Context, id int64) (*Registration, error)
+	// List returns rows matching the filter, newest-first
+	// (created_at DESC / id DESC). Empty Status matches all. Limit
+	// defaults to 50 and is capped at 200 by the adapter; a zero /
+	// negative value falls back to the default. Since=zero disables
+	// the time filter. Offset supports paging for the admin UI. See
+	// docs/ROADMAP.md §5.4.
+	List(ctx context.Context, filter RegistrationFilter) ([]Registration, error)
+	// ResetToPending flips a failed / terminal row back to pending
+	// so the worker re-picks it on the next tick. Used by
+	// admin.Retry. Attempts is preserved so operators can see how
+	// many times a row has been tried. Returns
+	// domain.ErrRegistrationNotFound on unknown id. Callers should
+	// only invoke this on rows currently in a non-terminal state
+	// that they know about — the store does not restrict source
+	// state so admins can force-retry from any state if they
+	// choose.
+	ResetToPending(ctx context.Context, id int64) error
 }
+// RegistrationFilter is declared in ports/registrar.go; reused here.
 
 // Registration is a pending or completed account registration attempt.
 type Registration struct {

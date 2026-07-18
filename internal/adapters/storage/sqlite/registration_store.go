@@ -190,6 +190,89 @@ func (s *RegistrationStore) MarkFailed(ctx context.Context, id int64, errMsg str
 	return nil
 }
 
+// List reads rows matching filter, newest-first. The registrations
+// table is small (bounded by real-world signup throughput — typically
+// hundreds of rows over the pool lifetime), so an unbounded SELECT
+// with a Go-side filter walk would work; we still push status + since
+// into SQL so the common admin-UI case ("show me the last 50
+// failures") stays cheap. Limit is capped at 200 to bound worst-case
+// bytes over the wire.
+func (s *RegistrationStore) List(ctx context.Context, filter ports.RegistrationFilter) ([]ports.Registration, error) {
+	limit := filter.Limit
+	if limit <= 0 {
+		limit = 50
+	}
+	if limit > 200 {
+		limit = 200
+	}
+	offset := filter.Offset
+	if offset < 0 {
+		offset = 0
+	}
+
+	// Build the WHERE clause dynamically. Kept as concatenation with
+	// placeholders (never string-interpolating the values) so this
+	// stays SQL-injection-safe. The `id DESC` tiebreaker after
+	// `created_at DESC` gives a total order — two rows inserted in
+	// the same second still sort deterministically.
+	q := `
+		SELECT id, email, password, oauth_source, refresh_token,
+		       proxy_url, status, attempts, last_error, account_id,
+		       created_at, finished_at
+		FROM registrations
+		WHERE 1=1`
+	args := []any{}
+	if filter.Status != "" {
+		q += ` AND status = ?`
+		args = append(args, filter.Status)
+	}
+	if !filter.Since.IsZero() {
+		q += ` AND created_at >= ?`
+		args = append(args, fmtTime(filter.Since))
+	}
+	q += ` ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`
+	args = append(args, limit, offset)
+
+	rows, err := s.db.QueryContext(ctx, q, args...)
+	if err != nil {
+		return nil, fmt.Errorf("list registrations: %w", err)
+	}
+	defer rows.Close()
+	out := make([]ports.Registration, 0, limit)
+	for rows.Next() {
+		r, err := scanRegistration(rows)
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, *r)
+	}
+	return out, rows.Err()
+}
+
+// ResetToPending flips a row back to pending so the worker re-picks
+// it on the next tick. Preserves attempts (operators can see retry
+// history) and clears last_error / finished_at so the reset row
+// looks unambiguously "fresh" in the admin UI. Called from
+// admin.Retry via the higgsfield storeAdapter.
+func (s *RegistrationStore) ResetToPending(ctx context.Context, id int64) error {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE registrations
+		SET status = 'pending',
+		    last_error = NULL,
+		    finished_at = NULL
+		WHERE id = ?`,
+		id,
+	)
+	if err != nil {
+		return fmt.Errorf("reset to pending: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return domain.ErrRegistrationNotFound
+	}
+	return nil
+}
+
 // Get returns a registration by id. ErrRegistrationNotFound when
 // missing — the admin handler translates that into 404, the worker
 // treats it as "someone deleted this while I was working, give up".
