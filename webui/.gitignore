@@ -1,0 +1,30 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+# dist/ is built by `pnpm build` before `go build`; the //go:embed directive
+# in embed.go picks it up from disk. We commit dist/.gitkeep (which is why
+# the whole dir is not gitignored) so a fresh clone's `go build ./...` still
+# compiles — you just won't see the SPA until you actually build the bundle.
+dist/assets
+dist/index.html
+dist/favicon.svg
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
