@@ -52,12 +52,12 @@ Fields you can set in the DB / admin API / WebUI that **have no runtime effect**
 | `AvailableSlots()` | `domain/account.go:140-149` | Const `upstreamLimit = 6` diverges from the enforced literal `5`. |
 | `cfg.Pool.MaxInFlightPerAccount` | `config.go:227,329` | **Ignored** by pick path. Only surfaced by config parser. |
 
-### ❌ UI-only placeholders (button does nothing meaningful)
+### UI-only placeholders (resolved)
 
 | Feature | UI location | Backend state |
 |---|---|---|
-| Account "probe" button | `webui/src/routes/accounts.tsx:413-415,643` | No `/admin/accounts/{id}/probe` handler exists. Click toasts success. |
-| Per-model uptime bars | `webui/src/routes/models.tsx:326-341` | Explicit comment `MOCK: backfill with mock values for any model not in health data`. Real health only reflects globally-triggered regression ticker output. |
+| Account "probe" button | `webui/src/routes/accounts.tsx` | ✅ **Real** (P2-6 landed). `POST /admin/accounts/{id}/probe` calls `upstream.Client.FetchWallet` — exercises JWT mint + per-account proxy + TLS fingerprint. Response body carries `ok`/`latency_ms`/`balance` on success, or a classified error kind on failure (unauthorized / forbidden / rate_limit / upstream_5xx / timeout / network / internal). Handler always mounted; nil Prober answers 503 `probe_disabled` so the WebUI can tell "not configured" from "call failed". |
+| Per-model uptime bars | `webui/src/routes/models.tsx` | ✅ **Honest** (P2-7 landed). No more `mockUptime` backfill. Rows without a `/admin/model-health` row show a muted "no data" bar + em-dash percentage; the detail sheet says "No probe data yet — run the regression ticker to populate". Real time-series probe data (per-slot success/fail counts) is still a P3 backend addition. |
 
 ---
 
@@ -212,12 +212,50 @@ to accept the fields the SQL WHERE / ORDER BY layer needs.
 
 ### P2 — user-facing honesty
 
-6. **Kill / implement account probe** — either wire a real
-   `POST /admin/accounts/{id}/probe` that hits a cheap Higgsfield endpoint
-   under the account's session, or hide the button.
-7. **Kill / annotate mock uptime** — `models.tsx:326-341` should either
-   display a real value or clearly mark cells as "no data" instead of
-   fabricating one.
+6. **Account probe endpoint** — ✅ **DONE**
+   - `POST /admin/accounts/{id}/probe`
+     (`internal/api/admin/accounts_probe.go`) actively fetches the
+     account's wallet through `upstream.Client.FetchWallet` — same
+     JWT minter, same per-account proxy (P1-5), same TLS
+     fingerprint the pool uses in production. A green probe is
+     therefore a strong signal.
+   - Response: 200 with structured JSON on both success and
+     failure. `ok=true` carries balance + latency; `ok=false`
+     carries `error.kind` (unauthorized / forbidden / rate_limit /
+     upstream_5xx / timeout / network / internal) + `error.message`.
+     No HTTP error status on upstream failure — the WebUI renders
+     both outcomes through the same code path.
+   - Guards: 404 when the account is gone, 409 when the account is
+     `banned` (deliberately soft-deleted — probing it would signal
+     "just unban and it works"), 503 `probe_disabled` when no
+     upstream client is wired (distinct from "call failed").
+   - 15 s outer deadline so a wedged proxy can't hang an admin
+     request.
+   - WebUI: `admin.probeAccount()` in `webui/src/lib/api.ts`, wired
+     to both card and table probe buttons in `routes/accounts.tsx`.
+     Toast shows latency + balance on success, `[kind] message` on
+     failure. Loading state via `probe.isPending`.
+   - Tests: `TestProbe_SuccessReportsBalanceAndLatency`,
+     `TestProbe_ErrorReturnsStructuredBody` (8-case matrix
+     covering every error kind incl. context timeout),
+     `TestProbe_NilProberReturns503`, `TestProbe_BannedAccountReturns409`.
+
+7. **Mock uptime removed** — ✅ **DONE**
+   - `webui/src/routes/models.tsx` no longer imports or calls
+     `mockUptime`. Rows without a `/admin/model-health` entry show
+     an em dash and a muted "no data" bar (`generateEmptySlots`).
+   - Detail sheet's uptime area shows "No probe data yet — run the
+     regression ticker to populate" when the JST has no health row,
+     instead of a fabricated 95-100% number.
+   - `generateMockSlots` in `uptime-bar.tsx` renamed to
+     `generateEmptySlots`; produces total=0 slots the bar renders
+     in muted gray with "No data" tooltips. The bar stays visible
+     to keep column widths stable, but the data it renders is
+     honest.
+   - Real time-series probe data (per-slot success/fail counts) is
+     still a P3 backend addition — model-health today gives one
+     aggregate `uptime_pct` per JST, not the per-slot detail the
+     bar was designed for. That's a separate task.
 8. **LRU → jittered tiebreaker** (see §2.3) — cheap fix for hot-spot
    ordering under concurrent bursts.
 

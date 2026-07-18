@@ -72,44 +72,26 @@ export function UptimeBar({ slots, size = "sm" }: UptimeBarProps) {
   );
 }
 
-// MOCK: remove when backend returns time-series health data
-// Generates deterministic mock slot data based on the model JST string.
-// Produces mostly green slots with occasional yellow/red for realism.
-export function generateMockSlots(jst: string, count: number): UptimeSlot[] {
-  // Simple deterministic hash seeded from the JST string
-  let hash = 0;
-  for (let i = 0; i < jst.length; i++) {
-    hash = (hash * 31 + jst.charCodeAt(i)) | 0;
-  }
-
+// generateEmptySlots returns `count` slots, each with total=0. The
+// UptimeBar renders these as muted-gray blocks with a "No data" tooltip
+// so the operator sees a real "we haven't probed this model yet" state
+// instead of a fabricated pseudo-random line.
+//
+// Time stamps are still spread across the requested window so the bar
+// visually anchors to a plausible time axis; a caller that wants to
+// display an explicit "no data" ribbon should hide the bar entirely
+// instead. See docs/ROADMAP.md P2-7 for why the previous mock
+// implementation was removed.
+export function generateEmptySlots(count: number): UptimeSlot[] {
   const now = Date.now();
-  const slotDuration = count <= 24 ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000; // 1h or 1d
-
+  const slotDuration = count <= 24 ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
   const slots: UptimeSlot[] = [];
   for (let i = count - 1; i >= 0; i--) {
-    const time = new Date(now - i * slotDuration).toISOString();
-    // Use hash to get a pseudo-random value per slot
-    hash = (hash * 1103515245 + 12345) | 0;
-    const rand = Math.abs(hash) % 100;
-
-    let total = 10;
-    let passed: number;
-    if (rand < 75) {
-      // 75% chance: all probes pass
-      passed = total;
-    } else if (rand < 90) {
-      // 15% chance: mostly pass (80-99%)
-      passed = 8 + (Math.abs(hash >> 8) % 2);
-    } else if (rand < 97) {
-      // 7% chance: partial failures
-      passed = 5 + (Math.abs(hash >> 4) % 3);
-    } else {
-      // 3% chance: severe failure
-      passed = Math.abs(hash >> 6) % 4;
-    }
-
-    slots.push({ time, total, passed });
+    slots.push({
+      time: new Date(now - i * slotDuration).toISOString(),
+      total: 0,
+      passed: 0,
+    });
   }
-
   return slots;
 }

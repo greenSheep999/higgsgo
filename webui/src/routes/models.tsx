@@ -65,7 +65,7 @@ import { parseAnchoredList } from "@/components/groups/model-multiselect";
 import { providerOf, type Provider } from "@/components/models/provider-map";
 import { ModelOverrideDialog } from "@/components/models/override-dialog";
 import { CodeExamples } from "@/components/models/code-examples";
-import { UptimeBar, generateMockSlots } from "@/components/models/uptime-bar";
+import { UptimeBar, generateEmptySlots } from "@/components/models/uptime-bar";
 
 // Models management — a read-only catalog view over GET /v1/models,
 // cross-referenced against the group model filters so an operator can
@@ -156,19 +156,6 @@ function uptimeTone(pct: number | null | undefined): StatusTone {
   if (pct >= 99) return "success";
   if (pct >= 95) return "warning";
   return "danger";
-}
-
-// MOCK: remove when real data flows
-// Generates a stable pseudo-random uptime between 95-100% for a given
-// model JST. Uses a simple string hash so the same model always shows
-// the same value across re-renders.
-function mockUptime(jst: string): number {
-  let hash = 0;
-  for (let i = 0; i < jst.length; i++) {
-    hash = (hash * 31 + jst.charCodeAt(i)) | 0;
-  }
-  // Map hash to 95.0 – 100.0 range
-  return 95 + (Math.abs(hash) % 500) / 100;
 }
 
 // formatMaxOutput renders the "highest fidelity this model can emit"
@@ -322,9 +309,9 @@ function Models() {
     placeholderData: keepPreviousData,
   });
 
-  // Build a jst -> uptime_pct map from health data.
-  // MOCK: remove when real data flows — falls back to mock uptime for
-  // models that have no health data yet.
+  // Build a jst -> uptime_pct map from real health data only. Models
+  // with no health row show a distinct "no data" state — no
+  // fabricated backfill (removed per docs/ROADMAP.md P2-7).
   const all = catalog.data?.data ?? [];
   const uptimeMap = useMemo(() => {
     const m = new Map<string, number | null>();
@@ -333,14 +320,8 @@ function Models() {
         m.set(row.jst, row.uptime_pct ?? null);
       }
     }
-    // MOCK: backfill with mock values for any model not in health data
-    for (const d of all) {
-      if (!m.has(d.jst)) {
-        m.set(d.jst, mockUptime(d.jst));
-      }
-    }
     return m;
-  }, [health.data, all]);
+  }, [health.data]);
 
   // The Model whose override dialog is currently open. null = dialog
   // closed. Not tied to the detail sheet — the operator opens the
@@ -889,10 +870,17 @@ function OverrideMarker() {
   );
 }
 
-// UptimeCell renders a mini uptime status bar in the table.
-// MOCK: remove when backend returns time-series health data
-function UptimeCell({ pct, jst }: { pct: number | null; jst: string }) {
-  const slots = useMemo(() => generateMockSlots(jst, 12), [jst]);
+// UptimeCell renders a mini uptime status bar in the table. When no
+// probe data exists for the JST the bar renders as muted "no data"
+// slots and the numeric percentage is replaced with an em dash — no
+// fabricated backfill. Once the regression ticker starts writing
+// time-series slots this component will consume them directly (backend
+// change tracked as P3 pool-health telemetry).
+function UptimeCell({ pct }: { pct: number | null; jst: string }) {
+  // Empty slots keep the bar visible so column widths stay stable
+  // between rows that have real health data and rows that don't; the
+  // muted colour + tooltip text make the "no data" state readable.
+  const slots = useMemo(() => generateEmptySlots(12), []);
   return (
     <div className="flex items-center gap-1.5">
       <UptimeBar slots={slots} size="mini" />
@@ -900,25 +888,42 @@ function UptimeCell({ pct, jst }: { pct: number | null; jst: string }) {
         <span className="text-[10px] tabular-nums text-muted-foreground">
           {pct.toFixed(0)}%
         </span>
-      ) : null}
+      ) : (
+        <span
+          className="text-[10px] text-muted-foreground/60"
+          title="No probe data yet"
+        >
+          —
+        </span>
+      )}
     </div>
   );
 }
 
 // UptimeBarDetail renders the larger uptime bar in the detail sheet.
-// MOCK: remove when backend returns time-series health data
-function UptimeBarDetail({ jst, uptimePct }: { jst: string; uptimePct: number }) {
-  const slots = useMemo(() => generateMockSlots(jst, 48), [jst]);
+// When uptimePct is null we still render the bar (empty slots) so the
+// layout doesn't jump, but the badge and caption explicitly say "no
+// data" instead of fabricating a value.
+function UptimeBarDetail({ uptimePct }: { uptimePct: number | null }) {
+  const slots = useMemo(() => generateEmptySlots(48), []);
   return (
     <div className="w-full space-y-2">
       <UptimeBar slots={slots} size="md" />
       <div className="flex items-center gap-2">
-        <StatusBadge tone={uptimeTone(uptimePct)}>
-          {uptimePct.toFixed(1)}%
-        </StatusBadge>
-        <span className="text-xs text-muted-foreground">
-          uptime in the last 48h
-        </span>
+        {uptimePct != null ? (
+          <>
+            <StatusBadge tone={uptimeTone(uptimePct)}>
+              {uptimePct.toFixed(1)}%
+            </StatusBadge>
+            <span className="text-xs text-muted-foreground">
+              uptime in the last 48h
+            </span>
+          </>
+        ) : (
+          <span className="text-xs text-muted-foreground">
+            No probe data yet — run the regression ticker to populate
+          </span>
+        )}
       </div>
     </div>
   );
@@ -947,8 +952,6 @@ function ModelDetail({
   onTestInPlayground: () => void;
 }) {
   const { t } = useTranslation();
-  // MOCK: remove when real data flows
-  const displayUptime = uptimePct ?? mockUptime(model.jst);
   return (
     <>
       <SheetHeader>
@@ -1135,7 +1138,7 @@ function ModelDetail({
             {t("models.detail.sectionHealth", { defaultValue: "Health" })}
           </h4>
           {/* MOCK: remove when backend returns time-series health data */}
-          <UptimeBarDetail jst={model.jst} uptimePct={displayUptime} />
+          <UptimeBarDetail uptimePct={uptimePct} />
         </div>
 
         <Separator />
