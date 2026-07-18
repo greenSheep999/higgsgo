@@ -9,7 +9,156 @@ Commits referenced inline as `[hash]` are reachable from `main`; run
 
 ## [Unreleased]
 
-### Added
+### Audit → Delivery Cycle (July 2026)
+
+A ground-up audit of the pool + admin surface found that many
+admin-editable fields were stored, indexed, and exposed through the
+WebUI but never consumed at request time — a class of "silent no-op"
+bug that turns operator effort into no-op configuration. The cycle
+below closes every one of those, plus the two "fake data" surfaces the
+audit turned up in the WebUI. See `docs/ROADMAP.md` for the full audit
+trail and per-item file:line references.
+
+#### Pool correctness (P0-2, P0-3, P1-4, P1-5, P2-8, P2-9, P3-10, P3-11)
+- **`in_flight_jobs` leak fix + boot reconciliation** (P0-2). The proxy's
+  three hand-rolled `unlock()` sites are now guarded by `sync.Once` +
+  a top-level `defer`, so a panic between `PickAndLock` and any
+  release site can no longer strand the counter. Startup runs a
+  single `UPDATE accounts SET in_flight_jobs = 0` to reconcile any
+  leaks from a prior crash. Commit `cf4000a`.
+- **Group `max_concurrent_jobs` + `max_concurrent_per_account` enforcement**
+  (P0-3). `PickAndLock` now runs a `SUM(in_flight_jobs)` subquery
+  inside the same transaction as the account SELECT+UPDATE, atomic
+  under SQLite's serialized writers. `ErrGroupConcurrencyMax` maps
+  to HTTP 429 `pool_saturated` (retryable) — distinct from 503
+  `no_account_available` (pool is dry). The historical hardcoded
+  literal `5` is now parameterised through `PickParams.MaxConcurrentPerAccount`
+  with a fallback default. Commit `cf4000a`.
+- **Group `allowed_models_regex` / `blocked_models_regex` /
+  `monthly_credit_budget` enforcement** (P1-4).
+  `proxy.Service.enforceGroupGates` runs the three checks BEFORE
+  `PickAndLock`, so a doomed request never consumes an in-flight
+  slot. `metering.Recorder.OnJobTerminal` now calls
+  `GroupStore.IncrementUsed` at every non-zero terminal so the
+  budget gate self-limits against real spend. Invalid regex
+  patterns log a WARN and fail open (no 500 from admin
+  misconfiguration). Commit `ef33fbc`.
+- **Per-account HTTP client honouring `bound_proxy_url`** (P1-5). The
+  `utls.Pool` type caches one `*utls.Client` per unique proxy URL
+  under a `sync.Mutex`. `upstream.Client.Resolver` is consulted
+  before every request; a resolver error is logged and falls back to
+  the shared default client so a misconfigured proxy degrades
+  gracefully. Before this fix every account shared one egress IP,
+  breaking the sticky-IP promise made to Higgsfield at registration
+  and inviting Cloudflare / DataDome to correlate accounts. Commit
+  `24c19c5`.
+- **Jittered LRU tiebreaker on every RouteStrategy** (P2-8). Ordering
+  now ends with `, in_flight_jobs ASC, RANDOM() LIMIT 1`. Primary
+  sort keys that tie under real load (identical `last_used_at`, same
+  `plan_type`, same `priority`) fall through to a least-loaded
+  preference then a random tiebreaker. Test seeds three
+  otherwise-identical rows and proves 30 picks land on at least 2
+  of them — previously all 30 hit row 0. Commit `04bec6c`.
+- **Per-Key monthly quota pre-pick gate** (P2-9). `GenerationRequest`
+  grew `APIKeyMonthlyQuota` + `APIKeyMonthlyUsed`; `/v1/videos` and
+  `/v1/images` forward them from the middleware context.
+  `proxy.Service.enforceKeyGates` returns
+  `domain.ErrAPIKeyQuotaExceed` (HTTP 402 `quota_exhausted`) before
+  the pool spends a slot on a doomed request. Zero quota preserves
+  the historical "unlimited" default. Commit `1c588f7`.
+- **Cross-group spillover for multi-binding API keys** (P3-10). Keys
+  bound to multiple groups used to 400 with `ambiguous_group`; now
+  `resolveGroup` returns the ordered candidate list sorted by group
+  name ascending (`primary`, `fallback-1`, `fallback-2`).
+  `proxy.Service.Generate` iterates and falls over on
+  `ErrGroupConcurrencyMax` / `ErrGroupQuotaExhausted` /
+  `ErrNoEligibleAccount` / model regex mismatch. `req.GroupID` is
+  rewritten to the group that actually served the pick so the Job
+  row, metering event, and webhook reflect where the credits landed.
+  Non-spillover-eligible errors (per-key quota, upstream errors)
+  short-circuit. Commit `feec5d8`.
+- **Async job in_flight tracking across the full lifecycle** (P3-11).
+  The async branch now hands ownership of the `in_flight` slot to
+  the pollworker instead of releasing it at `CreateJob` return.
+  `pollworker.Worker.releaseInFlight` fires at every terminal path
+  (successful transition, timeout, `markTimeout`); the
+  fetch-terminal stall path deliberately does NOT release so a
+  transient `FetchJob` failure doesn't oversubscribe on retry. This
+  makes the group + per-account concurrency caps (P0-3) enforce
+  across BOTH sync and async work — previously an async video
+  burst could oversubscribe an account because its slots freed at
+  `CreateJob` time even though upstream jobs were still running.
+  Commit `50142d3`.
+
+#### WebUI honesty (P0-1, P2-6, P2-7, P3-13)
+- **Per-group member priority editable in the WebUI** (P0-1). The
+  `account_group_members.priority` column was read by `PickAndLock`
+  under `route_strategy = priority` since day one, but the UI had
+  no way to see or change it — every membership landed on the DB
+  default of 100. Added `ListMembersWithPriority` to the
+  `GroupStore` port and a `members_detail` field on the group
+  members endpoint; the account edit dialog now shows a per-group
+  priority input beside each selected group and upserts on save.
+  Commit `32aa2a5`.
+- **Real account probe endpoint** (P2-6). Replaced the empty toast-
+  only "health" button with `POST /admin/accounts/{id}/probe` — an
+  active `upstream.FetchWallet` call that exercises the JWT
+  minter, the per-account HTTP client (P1-5), and the JA3
+  fingerprint the pool actually uses in production. Response is
+  200 for BOTH success and failure with `ok`/`latency_ms`/`balance`
+  or a classified `error.kind` (unauthorized / forbidden /
+  rate_limit / upstream_5xx / timeout / network / internal). 15 s
+  outer deadline. Nil-Prober answers 503 `probe_disabled` so the
+  WebUI can distinguish "not configured" from "call failed".
+  Commit `7b9357a`.
+- **Mock uptime removed** (P2-7). The `mockUptime()` helper that
+  fabricated 95-100% uptime for every model with no
+  `/admin/model-health` row is gone. Rows without real data show an
+  em dash + muted "no data" bar; the detail sheet says
+  "No probe data yet — run the regression ticker to populate".
+  `generateMockSlots` was renamed to `generateEmptySlots` and now
+  produces `total=0` slots that render as muted gray with "No data"
+  tooltips. Fabricated confidence is worse than a blank field —
+  operators use this tool to decide which accounts to disable.
+  Commit `d2c3fc6`.
+- **Per-slot time-series probe data** (P3-13). The `model_health`
+  table was already storing per-check verdicts; we just weren't
+  reading them as a time series. `ModelHealthStore.SlotsByJST` +
+  `GET /admin/model-health/{jst}/slots` bucket them into
+  fixed-width slots aligned to the current-slot top. The detail
+  sheet's uptime bar consumes real slots (`generateEmptySlots`
+  fallback for freshly-added models). Table view keeps the
+  aggregate percentage — no N+1 fetch. Commit `cb87a47`.
+
+#### Documentation refresh
+- **`docs/ROADMAP.md`** created as the single source of truth for
+  what is actually wired vs stored-only, with `file:line` evidence
+  and a P0/P1/P2/P3 fix list. Every audit finding tracks through
+  this file from "found" to "landed".
+- **`docs/POOL-AND-CPA.md`** §2.3 pick-logic SQL and §7.2 route
+  strategies corrected: `round_robin` is documented as LRU (its
+  actual behaviour), `least_used` sorts by lifetime consumed
+  credits (not month-to-date as the pre-audit doc claimed), and
+  every silent no-op field has a status marker.
+- **`docs/ARCHITECTURE.md`** §8 sticky-proxy claim marked as ❌ not
+  wired before P1-5 landed, then rewritten as ✅ live once it did.
+  Added §11a covering failover, bearer, settings, model overrides,
+  version endpoint, resolver, playground; added §2.0 documenting
+  the monorepo module split.
+- **`docs/PLUGGABLE.md`** rewrote §0 for the monorepo split
+  (`go.work`, `-tags register`, module-path alignment).
+  Retained the in-module Provider abstraction as §§1-8.
+- **`docs/API_REFERENCE.md`** backfilled 12 previously-undocumented
+  admin endpoint groups (failover, model_overrides, routing_settings,
+  settings/bearer, registrations, audit export, tickers, version,
+  webhooks, playground, plus the P2-6 probe + P3-13 slots surfaces).
+- **`docs/OPERATIONS.md`** added zero-downtime bearer rotation, the
+  failover console, runtime model overrides, audit export, and bulk
+  account import/export runbooks.
+- **`docs/STACK-DECISIONS.md`** added the WebUI stack section
+  (React 19 + Vite 7 + TanStack + shadcn + i18next + tabler-icons)
+  and the monorepo split rationale (Go workspace + build tags over
+  plugins / wasm / RPC).
 
 #### WebUI (React admin console)
 - **React admin console scaffolding** landed in-tree at `webui/`, embedded
