@@ -2,7 +2,7 @@
 
 **All code artifacts must be in English. No Chinese anywhere.**
 
-Scope: `higgsgo/` and future sibling repos (`higgs-cpa-plugin/`, `higgsgo-webui/`).
+Scope: `higgsgo/` (including in-tree `higgsgo/webui/`) and future sibling repos (`higgs-cpa-plugin/`).
 
 ---
 

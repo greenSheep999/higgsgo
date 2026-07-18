@@ -67,20 +67,29 @@ Rationale for the subprocess approach in both cases:
 
 ## Frontend
 
-**Separate repo** (`higgsgo-webui/`), sibling to higgsgo.
+**In-tree** at `higgsgo/webui/`, embedded into the Go binary via `//go:embed`.
 
 | Concern | Choice |
 |---|---|
-| Framework | React 18 |
-| Build tool | Vite |
-| Component library | shadcn/ui (Radix + Tailwind) |
+| Framework | React 19 |
+| Build tool | Vite 8 |
+| Component library | shadcn/ui — official primitives + `dashboard-01` block, no custom UI atoms |
+| Styling | Tailwind CSS v4 (no config file), shadcn `neutral` base + CSS variables |
 | Data fetching | TanStack Query |
+| Router | TanStack Router (hash history so the bundle is subpath-agnostic) |
 | Forms | React Hook Form + Zod |
-| Charts | Recharts |
-| Router | TanStack Router (or React Router) |
+| Charts | Recharts (shipped by `dashboard-01`) |
 
-Consumes `/admin/*` on the higgsgo backend. Same-origin deploy or CORS
-allowlist. Auth is admin bearer token (single per-deploy secret).
+Deploy: `pnpm --dir webui build` writes `webui/dist/`, then `go build` picks it up
+via `//go:embed all:dist`. The admin listener serves the SPA on any path not
+already matched by `/admin/*`, `/v1/playground/*`, `/health`, `/metrics`.
+Dev: `pnpm --dir webui dev` runs Vite on `:5173` and proxies `/admin` and
+`/v1/playground` to `http://127.0.0.1:18081`. Auth is the admin bearer token
+(same per-deploy secret as the `/admin/*` XHR calls).
+
+Sibling-repo mode was considered and rejected — a single binary + zero-nginx
+deploy story is worth more than the isolation, and shadcn's registry-based
+workflow means the UI can still be updated without touching Go code.
 
 ## CPA plugin (Mode B)
 
@@ -98,8 +107,8 @@ push events (usage / status_change) to the CPA dashboard in real time.
 - Node subprocess: ship a separate `higgsgo-registrar` image containing
   `node:20-alpine` + Playwright + CloakBrowser. Communicate over local
   Unix socket or TCP.
-- Docker Compose for dev: higgsgo + higgsgo-registrar + optional Postgres +
-  optional higgsgo-webui.
+- Docker Compose for dev: higgsgo + higgsgo-registrar + optional Postgres.
+  The webui is embedded into the higgsgo binary — no extra service.
 - Kubernetes manifests: TBD when we outgrow single-node.
 
 ## Observability
