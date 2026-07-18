@@ -71,7 +71,10 @@ export function EditKeyDialog({ keyRow, onOpenChange }: Props) {
   useEffect(() => {
     if (!keyRow) return;
     setName(keyRow.name);
-    setQuotaCredits((keyRow.monthly_quota / 100).toString());
+    // Empty → placeholder "无限制"; real caps render as-is.
+    setQuotaCredits(
+      keyRow.monthly_quota > 0 ? (keyRow.monthly_quota / 100).toString() : "",
+    );
     setMarkup(keyRow.markup_pct.toString());
   }, [keyRow]);
 
@@ -159,6 +162,7 @@ export function EditKeyDialog({ keyRow, onOpenChange }: Props) {
               type="number"
               min={0}
               step="0.01"
+              placeholder={t("common.unlimited")}
               value={quotaCredits}
               onChange={(e) => setQuotaCredits(e.target.value)}
             />

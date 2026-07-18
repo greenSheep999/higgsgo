@@ -17,9 +17,14 @@ export function useKeyGroups(): {
     queryFn: admin.listGroups,
   });
 
+  // queryKey is namespaced with the shape tag "keys-view" because the
+  // /admin/groups/{id}/bindings endpoint is fetched from THREE places
+  // (Keys page, Groups list, group-detail) with different return
+  // shapes — sharing the same key silently swaps caches and blows
+  // up downstream property access. Each caller owns its own shape.
   const bindingQueries = useQueries({
     queries: (groups.data ?? []).map((g: Group) => ({
-      queryKey: ["admin", "groups", g.id, "bindings"],
+      queryKey: ["admin", "groups", g.id, "bindings", "keys-view"],
       queryFn: async () => {
         const r = await fetch(`/admin/groups/${g.id}/bindings`, {
           headers: {
@@ -35,8 +40,8 @@ export function useKeyGroups(): {
 
   const index: KeyGroupIndex = new Map();
   bindingQueries.forEach((q) => {
-    if (!q.data) return;
-    q.data.keys.forEach((keyId) => {
+    if (!q.data || !q.data.group) return;
+    (q.data.keys ?? []).forEach((keyId) => {
       const prev = index.get(keyId) ?? [];
       prev.push({ id: q.data.group.id, name: q.data.group.name });
       index.set(keyId, prev);

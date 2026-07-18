@@ -8,7 +8,6 @@ import {
 } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  IconCopy,
   IconDotsVertical,
   IconKey,
   IconPlayerPause,
@@ -193,16 +192,19 @@ function Keys() {
                       goes right after Name so the operator can scan
                       "which of these are my own keys vs partner keys"
                       down the first two columns. */}
-                  <TableHead className="w-[10%]">
+                  <TableHead className="w-[3%] text-center text-muted-foreground">
+                    #
+                  </TableHead>
+                  <TableHead className="w-[11%]">
                     {t("keys.columns.name")}
                   </TableHead>
-                  <TableHead className="w-[7%] text-center">
+                  <TableHead className="w-[6%] text-center">
                     {t("keys.columns.kind")}
                   </TableHead>
-                  <TableHead className="w-[22%]">
+                  <TableHead className="w-[18%]">
                     {t("keys.columns.key")}
                   </TableHead>
-                  <TableHead className="w-[9%] text-center">
+                  <TableHead className="w-[8%] text-center">
                     {t("keys.columns.status")}
                   </TableHead>
                   <TableHead className="w-[9%] text-center">
@@ -234,14 +236,16 @@ function Keys() {
                 ) : rows.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={11}
+                      colSpan={12}
                       className="text-center text-sm text-muted-foreground"
                     >
                       {t("common.nothing")}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  rows.map((k) => <KeyRow key={k.id} k={k} />)
+                  rows.map((k, i) => (
+                    <KeyRow key={k.id} k={k} index={i + 1} />
+                  ))
                 )}
               </TableBody>
             </Table>
@@ -303,7 +307,7 @@ function Keys() {
   // scope — avoids threading five callbacks through props. React re-uses
   // the closure across renders anyway, so the extra allocation is not
   // meaningful at pool sizes we care about (<< 1000 keys).
-  function KeyRow({ k }: { k: ApiKey }) {
+  function KeyRow({ k, index }: { k: ApiKey; index: number }) {
     // Quota reads as "remaining" — bar fill = credits still available.
     // Matches the accounts card's mental model: green when the key
     // has plenty of headroom, red when it's almost exhausted.
@@ -330,6 +334,9 @@ function Keys() {
       : "";
     return (
       <TableRow>
+        <TableCell className="text-center text-xs tabular-nums text-muted-foreground">
+          #{index}
+        </TableCell>
         <TableCell>
           <div className="truncate font-medium">{k.name || "—"}</div>
           {k.created_by ? (
@@ -374,47 +381,23 @@ function Keys() {
             create, so we never render it or hint at it. Copy grabs
             the internal id for referencing this key from other
             admin endpoints. */}
+        {/* Copy-id lives in the ID column now; this cell is
+            purely the masked plaintext preview + tooltip. */}
         <TableCell>
-          <div className="flex items-center gap-1">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <code className="min-w-0 flex-1 truncate rounded bg-muted px-2 py-1 font-mono text-xs">
-                  {maskedKey(k)}
-                </code>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t(
-                  k.kind === "default"
-                    ? "keys.columns.keyHintAdmin"
-                    : "keys.columns.keyHintProject",
-                )}
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-7 shrink-0"
-                  onClick={async () => {
-                    try {
-                      await navigator.clipboard.writeText(k.id);
-                      toast.success(t("keys.columns.copiedId"));
-                    } catch (err) {
-                      toast.error(
-                        err instanceof Error ? err.message : String(err),
-                      );
-                    }
-                  }}
-                >
-                  <IconCopy className="size-3.5" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>
-                {t("keys.columns.copyIdTooltip")}
-              </TooltipContent>
-            </Tooltip>
-          </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <code className="block min-w-0 truncate rounded bg-muted px-2 py-1 font-mono text-xs">
+                {maskedKey(k)}
+              </code>
+            </TooltipTrigger>
+            <TooltipContent>
+              {t(
+                k.kind === "default"
+                  ? "keys.columns.keyHintAdmin"
+                  : "keys.columns.keyHintProject",
+              )}
+            </TooltipContent>
+          </Tooltip>
         </TableCell>
         <TableCell className="text-center">
           <StatusBadge tone={keyStatusTone(k.status)}>
@@ -481,7 +464,7 @@ function Keys() {
           ) : (
             <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
               <StatusBadge tone="brand">
-                {t("keys.unlimitedShort")}
+                {t("common.unlimited")}
               </StatusBadge>
               <span>{formatCredits(k.monthly_used)} used</span>
             </div>
@@ -609,7 +592,7 @@ function SkeletonRows() {
     <>
       {Array.from({ length: 5 }).map((_, i) => (
         <TableRow key={i}>
-          <TableCell colSpan={7}>
+          <TableCell colSpan={12}>
             <Skeleton className="h-6 w-full" />
           </TableCell>
         </TableRow>

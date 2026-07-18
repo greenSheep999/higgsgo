@@ -43,7 +43,9 @@ export function CreateKeyDialog({ open, onOpenChange, onCreated }: Props) {
   const [kind, setKind] = useState<"default" | "project">("project");
   const [name, setName] = useState("");
   const [createdBy, setCreatedBy] = useState("");
-  const [quotaCredits, setQuotaCredits] = useState("0");
+  // Empty string is the "no cap" sentinel — the placeholder shows
+  // 无限制 instead of a literal 0 in the number field.
+  const [quotaCredits, setQuotaCredits] = useState("");
   const [markup, setMarkup] = useState("1.0");
   const [scope, setScope] = useState<"none" | "cheap" | "full">("none");
 
@@ -55,7 +57,7 @@ export function CreateKeyDialog({ open, onOpenChange, onCreated }: Props) {
     setKind(k);
     if (k === "default") {
       setScope("full");
-      setQuotaCredits("0");
+      setQuotaCredits("");
     } else {
       setScope("none");
       setQuotaCredits("5000");
@@ -168,6 +170,7 @@ export function CreateKeyDialog({ open, onOpenChange, onCreated }: Props) {
                 type="number"
                 min={0}
                 step="0.01"
+                placeholder={t("common.unlimited")}
                 value={quotaCredits}
                 onChange={(e) => setQuotaCredits(e.target.value)}
               />
