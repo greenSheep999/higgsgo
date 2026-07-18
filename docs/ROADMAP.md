@@ -256,16 +256,44 @@ to accept the fields the SQL WHERE / ORDER BY layer needs.
      still a P3 backend addition — model-health today gives one
      aggregate `uptime_pct` per JST, not the per-slot detail the
      bar was designed for. That's a separate task.
-8. **LRU → jittered tiebreaker** (see §2.3) — cheap fix for hot-spot
-   ordering under concurrent bursts.
+8. **LRU → jittered tiebreaker** — ✅ **DONE**
+   - `PickAndLock` ORDER BY tail on every strategy is now
+     `, in_flight_jobs ASC, RANDOM() LIMIT 1`. Primary sort keys
+     that tie under real load (identical `last_used_at`, same
+     `plan_type`, same `priority`) fall through to a least-loaded
+     preference, then a random tiebreaker. Spreads concurrent picks
+     instead of hitting the same row until its `last_used_at`
+     commit advances.
+   - Test: `TestPickAndLock_JitterSpreadsAcrossTiedAccounts` seeds
+     three identical rows and proves 30 picks land on at least 2 of
+     them (previously all 30 hit row 0).
 
 ### P3 — new capability
 
-9. **Async job lifecycle in_flight tracking** — pollworker never touches
-   `in_flight_jobs`. For async jobs the counter measures "acquisition
-   through CreateJob" only. Decide whether pollworker should
-   increment/decrement on state transitions, or whether the counter is
-   redefined as "sync-only slot usage".
+9. **Async job lifecycle in_flight tracking** — ✅ **DONE**
+   - `proxy.Service.Generate`'s async branch now sets a `handedOff`
+     flag before returning so the deferred `unlock()` becomes a
+     no-op. The reserved slot stays counted against the account
+     for the whole job lifetime instead of being released the
+     moment CreateJob returns.
+   - `pollworker.Worker.releaseInFlight` calls
+     `AccountStore.UpdateInFlight(-1)` at every terminal path:
+     successful terminal (after `UpdateStatus`), timeout, and any
+     other path that permanently retires the job from
+     `ListPending`. Failures are logged and never block the
+     terminal transition — a stray leak is cleaned up by
+     `ResetAllInFlight` on next boot (P0-2).
+   - Fetch-terminal stall path deliberately does NOT release: if
+     upstream reports terminal but `FetchJob` fails we'll retry
+     next tick, and the slot is still notionally in use.
+   - Group + per-account concurrency caps (P0-3) now enforce
+     across BOTH sync and async work — before this, an async
+     burst could oversubscribe an account because its slots freed
+     at CreateJob time even though upstream jobs were still
+     running.
+   - Tests: `TestPollworker_ReleasesInFlightOnTerminalSuccess`,
+     `TestPollworker_ReleasesInFlightOnTimeout`,
+     `TestPollworker_HoldsInFlightWhileFetchTerminalRetries`.
 10. **Inter-group spillover** — currently one API key = one closed pool.
     If Group A is exhausted, consider trying Group B in the key's binding
     list before returning 429.

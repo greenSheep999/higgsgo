@@ -18,6 +18,7 @@ import (
 	"log/slog"
 	"regexp"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/greensheep999/higgsgo/internal/core/failover"
@@ -204,19 +205,34 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 	// should be present, but we guard against the row missing the field.
 	preBalance := acc.SubscriptionBalance
 	// Unlock is exactly-once and panic-safe: a sync.Once wraps the actual
-	// Unlock call so early manual invocations (async path releases as
-	// soon as CreateJob returns; error path releases before returning
-	// the mapped error) don't race with the top-level defer, which
-	// runs even if any code between here and the return panics.
+	// Unlock call so early manual invocations (error path releases
+	// before returning the mapped error; sync path releases after the
+	// poll finishes) don't race with the top-level defer, which runs
+	// even if any code between here and the return panics.
 	//
-	// Before this refactor, three hand-rolled unlock() sites without a
-	// defer meant a panic between PickAndLock and any of them (or an
+	// Async handoff (ROADMAP P3-11): when the pollworker takes over
+	// lifecycle for an async job, we set handedOff so the once-wrapped
+	// decrement becomes a no-op. The pollworker itself calls
+	// UpdateInFlight(-1) at every terminal transition (poll terminal,
+	// timeout, or Failover-abort), so in_flight now reflects real
+	// concurrent upstream load across BOTH sync and async paths — not
+	// just the sync path as before. If the process crashes mid-async
+	// the slot leaks, but ResetAllInFlight on boot (P0-2) cleans up on
+	// next start.
+	//
+	// Before P0-2, three hand-rolled unlock() sites without a defer
+	// meant a panic between PickAndLock and any of them (or an
 	// unmapped early return added later) would leak the row's
-	// in_flight_jobs counter forever — the process restart wouldn't
-	// clear it either. See docs/ROADMAP.md P0-2.
+	// in_flight_jobs counter forever.
 	var unlockOnce sync.Once
+	var handedOff atomic.Bool
 	unlock := func() {
 		unlockOnce.Do(func() {
+			if handedOff.Load() {
+				// Pollworker owns the release. Nothing to do here — it
+				// will call UpdateInFlight(-1) at the terminal transition.
+				return
+			}
 			// context.Background(): the caller's ctx may already be
 			// cancelled by the time we release the slot; releasing must
 			// always succeed regardless.
@@ -295,7 +311,13 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 	}
 
 	if async {
-		unlock()
+		// Hand off in_flight ownership to the pollworker so the slot
+		// stays reserved for the whole job lifetime — not just until
+		// CreateJob returns. The deferred unlock() becomes a no-op and
+		// the pollworker calls UpdateInFlight(-1) at every terminal
+		// point (poll terminal, timeout, or fetch abort). See
+		// docs/ROADMAP.md P3-11.
+		handedOff.Store(true)
 		return &GenerationResponse{
 			ID:         created.JobID,
 			Object:     objectForOutput(spec.Output),

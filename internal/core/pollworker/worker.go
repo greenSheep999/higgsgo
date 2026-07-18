@@ -183,6 +183,27 @@ func (w *Worker) tick(ctx context.Context) {
 	}
 }
 
+// releaseInFlight decrements the account's in_flight_jobs counter by 1.
+// Called at every terminal path so the group + per-account concurrency
+// caps (P0-3) actually reflect real upstream load across async jobs,
+// not just the sync path (ROADMAP P3-11).
+//
+// UpdateInFlight uses MAX(0, in_flight_jobs + delta) so a stray double
+// call cannot underflow. Failures are logged, not returned — a failed
+// decrement must never block a terminal transition, and
+// ResetAllInFlight on next boot (P0-2) cleans up any residual leak.
+func (w *Worker) releaseInFlight(ctx context.Context, accountID, jobID string) {
+	if accountID == "" {
+		return
+	}
+	if err := w.Accounts.UpdateInFlight(ctx, accountID, -1); err != nil && w.Logger != nil {
+		w.Logger.Warn("pollworker release in_flight",
+			slog.String("account_id", accountID),
+			slog.String("job_id", jobID),
+			slog.String("err", err.Error()))
+	}
+}
+
 // pollOne polls a single job. Handles deadline, per-job cadence, and
 // terminal transitions.
 func (w *Worker) pollOne(ctx context.Context, j *domain.Job, now time.Time) {
@@ -247,6 +268,12 @@ func (w *Worker) pollOne(ctx context.Context, j *domain.Job, now time.Time) {
 		w.Logger.Warn("pollworker fetch terminal job",
 			slog.String("job_id", j.ID),
 			slog.String("err", err.Error()))
+		// Job reached terminal upstream but we couldn't fetch its
+		// details this tick — we'll retry next tick. Don't release
+		// in_flight yet: another pass may still succeed and this slot
+		// is still notionally in-use as far as concurrency accounting
+		// goes. If we consistently fail here the deadline path in
+		// markTimeout eventually releases it.
 		return
 	}
 
@@ -273,6 +300,13 @@ func (w *Worker) pollOne(ctx context.Context, j *domain.Job, now time.Time) {
 			slog.String("err", err.Error()))
 		return
 	}
+	// Release the in_flight slot the proxy reserved when the async
+	// job was created. Runs after UpdateStatus so a job that failed
+	// to persist its terminal state still gets retried by the next
+	// tick (we won't have written to jobs, so ListPending still
+	// returns it). ROADMAP P3-11.
+	w.releaseInFlight(ctx, j.AccountID, j.ID)
+
 	// Failover feedback: a "completed" upstream terminal is a healthy
 	// run and clears the account's fail streak. Any other terminal
 	// (failed / nsfw / terminated) is a content-level outcome and is
@@ -347,6 +381,12 @@ func (w *Worker) markTimeout(ctx context.Context, j *domain.Job) {
 		slog.Duration("age", time.Since(j.RequestTS)))
 	j.Status = domain.JobTimeout
 	j.LatencyMS = time.Since(j.RequestTS).Milliseconds()
+
+	// Release the in_flight slot the proxy reserved when the async
+	// job was created. The upstream job may still be running (upstream
+	// has no way to know we gave up), but from our pool's perspective
+	// this slot is now free. ROADMAP P3-11.
+	w.releaseInFlight(ctx, j.AccountID, j.ID)
 
 	// Metering: emit even for timeouts so operators can attribute credits
 	// that upstream may still charge. Account lookup is best-effort;
