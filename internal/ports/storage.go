@@ -452,6 +452,24 @@ type ModelHealthStore interface {
 	// "ok" when its verdict equals "completed". The table is small
 	// enough for a single aggregate query.
 	UptimeByJST(ctx context.Context, since time.Time) (map[string]float64, error)
+	// SlotsByJST buckets probes for one JST into `count` fixed-width
+	// slots so the WebUI can render a real per-slot uptime bar. slotSec
+	// controls the bucket width; typical values are 3600 (1h) or 86400
+	// (1d) matching the frontend's slot counts (12 or 48). Slots are
+	// returned oldest-first with total=0 for windows that saw no
+	// probes. See docs/ROADMAP.md P3-13.
+	SlotsByJST(ctx context.Context, jst string, count int, slotSec int) ([]HealthSlot, error)
+}
+
+// HealthSlot is one bucket of probe outcomes for a single JST over a
+// fixed time window. Total counts every probe row that landed in
+// [Time, Time+SlotSec); Passed counts those whose verdict was
+// "completed". The frontend renders green when Passed/Total >= 1.0,
+// yellow when >= 0.8, red otherwise; Total == 0 is muted "no data".
+type HealthSlot struct {
+	Time   time.Time
+	Total  int
+	Passed int
 }
 
 // ModelHealthRow is one row from the model_health table.

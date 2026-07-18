@@ -137,6 +137,13 @@ func (h *fakeHealthStore) UptimeByJST(_ context.Context, _ time.Time) (map[strin
 	return map[string]float64{}, nil
 }
 
+// SlotsByJST is a no-op for regression ticker tests — those exercise
+// the write side of the store, not the read side the WebUI consumes
+// via P3-13.
+func (h *fakeHealthStore) SlotsByJST(_ context.Context, _ string, count int, _ int) ([]ports.HealthSlot, error) {
+	return make([]ports.HealthSlot, count), nil
+}
+
 func (h *fakeHealthStore) seedLatest(jst string, checkedAt time.Time) {
 	h.mu.Lock()
 	defer h.mu.Unlock()

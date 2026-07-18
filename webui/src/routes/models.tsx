@@ -900,12 +900,41 @@ function UptimeCell({ pct }: { pct: number | null; jst: string }) {
   );
 }
 
-// UptimeBarDetail renders the larger uptime bar in the detail sheet.
-// When uptimePct is null we still render the bar (empty slots) so the
-// layout doesn't jump, but the badge and caption explicitly say "no
-// data" instead of fabricating a value.
-function UptimeBarDetail({ uptimePct }: { uptimePct: number | null }) {
-  const slots = useMemo(() => generateEmptySlots(48), []);
+// UptimeBarDetail renders the larger uptime bar in the detail sheet
+// with REAL per-slot probe data from GET /admin/model-health/{jst}/slots
+// (ROADMAP P3-13). 48 slots × 1h = 48h view. Empty response falls back
+// to the "no data" placeholder so freshly-added models render cleanly.
+function UptimeBarDetail({
+  jst,
+  uptimePct,
+}: {
+  jst: string;
+  uptimePct: number | null;
+}) {
+  // Detail-only fetch keeps the table view free of N per-row queries
+  // — the aggregate percentage there is enough for scanning. staleTime
+  // = 60s so re-opening the sheet within a minute doesn't re-hit the
+  // backend.
+  const slotsQuery = useQuery({
+    queryKey: ["admin", "model-health-slots", jst],
+    queryFn: () => admin.getModelHealthSlots(jst, { count: 48, slotSec: 3600 }),
+    staleTime: 60_000,
+    // Retry-off: a missing model_health row is a legitimate answer,
+    // not a transient failure. Falling back to empty slots is safer
+    // than looping on 404-shaped conditions.
+    retry: false,
+  });
+
+  const slots = useMemo(() => {
+    const real = slotsQuery.data?.slots;
+    if (!real || real.length === 0) {
+      return generateEmptySlots(48);
+    }
+    // Backend shape (time / total / passed) already matches
+    // UptimeBar's UptimeSlot — direct pass-through.
+    return real;
+  }, [slotsQuery.data]);
+
   return (
     <div className="w-full space-y-2">
       <UptimeBar slots={slots} size="md" />
@@ -1138,7 +1167,7 @@ function ModelDetail({
             {t("models.detail.sectionHealth", { defaultValue: "Health" })}
           </h4>
           {/* MOCK: remove when backend returns time-series health data */}
-          <UptimeBarDetail uptimePct={uptimePct} />
+          <UptimeBarDetail jst={model.jst} uptimePct={uptimePct} />
         </div>
 
         <Separator />

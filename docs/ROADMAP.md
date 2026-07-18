@@ -252,10 +252,9 @@ to accept the fields the SQL WHERE / ORDER BY layer needs.
      in muted gray with "No data" tooltips. The bar stays visible
      to keep column widths stable, but the data it renders is
      honest.
-   - Real time-series probe data (per-slot success/fail counts) is
-     still a P3 backend addition — model-health today gives one
-     aggregate `uptime_pct` per JST, not the per-slot detail the
-     bar was designed for. That's a separate task.
+   - **Update**: real time-series data now available via P3-13 below.
+     Table view keeps the aggregate percentage for scanning; the
+     detail sheet fetches real slots.
 8. **LRU → jittered tiebreaker** — ✅ **DONE**
    - `PickAndLock` ORDER BY tail on every strategy is now
      `, in_flight_jobs ASC, RANDOM() LIMIT 1`. Primary sort keys
@@ -354,6 +353,35 @@ to accept the fields the SQL WHERE / ORDER BY layer needs.
       key's M:N binding table is the source of truth.
 11. **Weighted or lease-based load balancing** — deferred until we have
     QPS data showing LRU hot-spots are a real problem in production.
+12. **Per-slot time-series probe data** — ✅ **DONE (P3-13)**
+    - `ModelHealthStore.SlotsByJST(ctx, jst, count, slotSec)` buckets
+      the existing `model_health` rows (already storing per-check
+      verdicts) into fixed-width slots. No new table required —
+      the regression ticker was already writing what we needed;
+      we just weren't reading it as a time series. Returns oldest
+      -first so the frontend iterates left-to-right without a
+      reverse. Empty windows come back as `total=0` so gap slots
+      render as muted "no data" instead of forcing the frontend to
+      backfill.
+    - `GET /admin/model-health/{jst}/slots?count=N&slot_sec=S`
+      admin endpoint (`internal/api/admin/model_health.go:Slots`).
+      Count capped at 168 to bound the per-slot query fan-out.
+    - WebUI: `admin.getModelHealthSlots()` + the `UptimeBarDetail`
+      component in `webui/src/routes/models.tsx` now consumes the
+      real slot response when the operator opens the model detail
+      sheet. Empty response falls back to
+      `generateEmptySlots(48)` so freshly-added models still
+      render cleanly. Table view (`UptimeCell`) keeps the aggregate
+      percentage — one detail-only fetch is enough, no N+1 query.
+    - Tests: `TestModelHealthStore_SlotsByJST` covers the happy
+      path (probes bucketed correctly, empty jst returns
+      count=count of `total=0` slots) and the guard-rail
+      (`count=0` returns nil).
+    - Coda for P2-7: the "no data" placeholder we introduced when
+      we killed `mockUptime` is now what fills the gap when the
+      regression ticker hasn't run yet — an honest, self-fixing
+      default. Once the ticker fires, real slots overwrite the
+      placeholder on the next refetch.
 
 ---
 

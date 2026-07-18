@@ -248,6 +248,25 @@ export interface ModelHealthRow {
   uptime_pct?: number | null;
 }
 
+// ModelHealthSlotsResponse is the shape of GET
+// /admin/model-health/{jst}/slots. See docs/ROADMAP.md P3-13.
+//
+// slots is oldest-first — the frontend iterates left-to-right without
+// reversing. Buckets with total=0 mean "no probe hit this window";
+// the UptimeBar renders those in muted gray with a "No data" tooltip.
+export interface ModelHealthSlot {
+  time: string; // RFC3339 UTC
+  total: number;
+  passed: number;
+}
+
+export interface ModelHealthSlotsResponse {
+  jst: string;
+  count: number;
+  slot_sec: number;
+  slots: ModelHealthSlot[];
+}
+
 // ---------- Audit --------------------------------------------------------
 
 export interface AuditEvent {
@@ -635,6 +654,30 @@ export const admin = {
     return request<ModelHealthRow[]>(
       `/admin/model-health${q.toString() ? "?" + q.toString() : ""}`,
       { unwrap: true },
+    );
+  },
+
+  // getModelHealthSlots returns the per-slot pass/fail time series
+  // for one model. Backs the WebUI's UptimeBar with real regression
+  // ticker output instead of the empty placeholder that used to
+  // paper over "we haven't probed this yet". See docs/ROADMAP.md
+  // P3-13.
+  //
+  // count defaults to 12 (mini table view); pass 48 for the detail
+  // sheet view. slot_sec picks the bucket width — 3600 for hourly,
+  // 86400 for daily. The backend caps count at 168 to bound the
+  // fan-out.
+  getModelHealthSlots: (
+    jst: string,
+    opts: { count?: number; slotSec?: number } = {},
+  ) => {
+    const q = new URLSearchParams();
+    if (opts.count) q.set("count", String(opts.count));
+    if (opts.slotSec) q.set("slot_sec", String(opts.slotSec));
+    return request<ModelHealthSlotsResponse>(
+      `/admin/model-health/${encodeURIComponent(jst)}/slots${
+        q.toString() ? "?" + q.toString() : ""
+      }`,
     );
   },
 

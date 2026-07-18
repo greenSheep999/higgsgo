@@ -132,6 +132,71 @@ func scanModelHealth(sc scanner) (*ports.ModelHealthRow, error) {
 	return &r, nil
 }
 
+// SlotsByJST buckets probes for one JST into fixed-width time slots
+// so the WebUI's uptime bar can render a per-slot pass/fail history
+// instead of the old fabricated placeholder (ROADMAP P3-13).
+//
+// slotSeconds picks the bucket width (typically 3600 for 1h slots →
+// 24h view, or 86400 for 1d slots → 48d view — matches
+// generateEmptySlots on the frontend). count is the number of most-
+// recent slots to return; missing slots (no probes in that window)
+// are returned as total=0 so the bar keeps a stable width.
+//
+// Returned slots are oldest-first, so the frontend can iterate and
+// place each block left-to-right without an extra reverse.
+func (s *ModelHealthStore) SlotsByJST(ctx context.Context, jst string, count int, slotSeconds int) ([]ports.HealthSlot, error) {
+	if count <= 0 || slotSeconds <= 0 {
+		return nil, nil
+	}
+	// SQLite lacks a native "bucket a timestamp into N-second slots"
+	// primitive, so we do the arithmetic in Go: for each of the count
+	// most-recent slots, compute [floor(now/slotSec) - i] and query
+	// the row aggregate for that window. One round-trip per slot is
+	// acceptable — count is small (12 or 48) and the model_health
+	// index (jst, checked_at DESC) makes each query O(log n) + the
+	// window size.
+	//
+	// An alternative is one big query grouping by
+	// (unixepoch(checked_at) / slotSeconds), then filling gaps in
+	// Go. Both work; the per-slot loop keeps the code readable and
+	// the fill-gaps logic implicit.
+	now := time.Now().UTC()
+	// Align current slot to the top so consecutive requests within the
+	// same slot return an identical last bucket rather than a sliding
+	// window.
+	curSlot := now.Unix() / int64(slotSeconds)
+	out := make([]ports.HealthSlot, 0, count)
+	for i := count - 1; i >= 0; i-- {
+		slotStart := time.Unix((curSlot-int64(i))*int64(slotSeconds), 0).UTC()
+		slotEnd := slotStart.Add(time.Duration(slotSeconds) * time.Second)
+
+		var total, passed int64
+		// COALESCE the SUM because SQLite returns NULL for SUM over an
+		// empty set, and QueryRow.Scan can't unpack NULL into int64.
+		// COUNT is fine (returns 0), but SUM needs the guard.
+		err := s.db.QueryRowContext(ctx, `
+			SELECT COUNT(*) AS total,
+			       COALESCE(SUM(CASE WHEN verdict = 'completed' THEN 1 ELSE 0 END), 0) AS passed
+			FROM model_health
+			WHERE jst = ?
+			  AND checked_at >= ?
+			  AND checked_at <  ?`,
+			jst,
+			fmtTime(slotStart),
+			fmtTime(slotEnd),
+		).Scan(&total, &passed)
+		if err != nil {
+			return nil, fmt.Errorf("slots by jst=%s slot=%s: %w", jst, slotStart.Format(time.RFC3339), err)
+		}
+		out = append(out, ports.HealthSlot{
+			Time:   slotStart,
+			Total:  int(total),
+			Passed: int(passed),
+		})
+	}
+	return out, nil
+}
+
 // UptimeByJST computes per-jst uptime as a percentage over all probes
 // whose checked_at >= since. A verdict of "completed" counts as success.
 func (s *ModelHealthStore) UptimeByJST(ctx context.Context, since time.Time) (map[string]float64, error) {

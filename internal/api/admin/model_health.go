@@ -30,6 +30,10 @@ func NewModelHealthHandler(h ports.ModelHealthStore) *ModelHealthHandler {
 func (h *ModelHealthHandler) Register(r chi.Router) {
 	r.Get("/model-health", h.List)
 	r.Get("/model-health/{jst}", h.Get)
+	// /model-health/{jst}/slots returns a per-slot pass/fail time
+	// series so the WebUI uptime bar can render real history
+	// instead of the "no data" placeholder. See ROADMAP P3-13.
+	r.Get("/model-health/{jst}/slots", h.Slots)
 }
 
 // List serves GET /model-health. Query params:
@@ -128,6 +132,65 @@ func (h *ModelHealthHandler) Get(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, modelHealthView(row))
+}
+
+// Slots serves GET /model-health/{jst}/slots. Query params:
+//
+//	count      number of slots to return (default 12, max 168 = 1 week
+//	           of hourly slots or 168 days of daily).
+//	slot_sec   slot width in seconds (default 3600 = 1h; 86400 = 1d
+//	           for the wide detail view).
+//
+// Slots are returned oldest-first as an array of {time, total, passed}
+// objects — the shape the WebUI's UptimeBar consumes directly. Windows
+// with no probes are returned as total=0 so the bar keeps a stable
+// width. ROADMAP P3-13.
+func (h *ModelHealthHandler) Slots(w http.ResponseWriter, r *http.Request) {
+	jst := chi.URLParam(r, "jst")
+	q := r.URL.Query()
+	count := 12
+	slotSec := 3600
+	if raw := q.Get("count"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n <= 0 {
+			writeErr(w, http.StatusBadRequest, "invalid_query", "count: expected positive integer")
+			return
+		}
+		if n > 168 {
+			// Bound so a mistyped ?count=1000000 doesn't hammer the
+			// DB with a million tiny queries. 168 covers both view
+			// modes (12 hours, 48 days, or a full week of hours).
+			n = 168
+		}
+		count = n
+	}
+	if raw := q.Get("slot_sec"); raw != "" {
+		n, err := strconv.Atoi(raw)
+		if err != nil || n <= 0 {
+			writeErr(w, http.StatusBadRequest, "invalid_query", "slot_sec: expected positive integer")
+			return
+		}
+		slotSec = n
+	}
+	slots, err := h.Health.SlotsByJST(r.Context(), jst, count, slotSec)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+	out := make([]map[string]any, 0, len(slots))
+	for _, s := range slots {
+		out = append(out, map[string]any{
+			"time":   s.Time.UTC().Format(time.RFC3339),
+			"total":  s.Total,
+			"passed": s.Passed,
+		})
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"jst":      jst,
+		"count":    count,
+		"slot_sec": slotSec,
+		"slots":    out,
+	})
 }
 
 // modelHealthView is the JSON representation of a ports.ModelHealthRow.

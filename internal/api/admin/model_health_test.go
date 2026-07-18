@@ -67,6 +67,32 @@ func (f *fakeHealthStore) UptimeByJST(_ context.Context, _ time.Time) (map[strin
 	return m, nil
 }
 
+// SlotsByJST returns a deterministic bucketing derived from listRows
+// so tests can assert on the shape without spinning up sqlite.
+func (f *fakeHealthStore) SlotsByJST(_ context.Context, jst string, count int, _ int) ([]ports.HealthSlot, error) {
+	// Simple approximation for tests: every row goes into slot[0],
+	// remaining slots are total=0. Slots test the handler wiring
+	// (query-param parsing, JSON shape) — the SQL bucketing itself
+	// is exercised by internal/adapters/storage/sqlite tests.
+	out := make([]ports.HealthSlot, count)
+	base := time.Now().UTC().Truncate(time.Hour)
+	for i := 0; i < count; i++ {
+		out[i] = ports.HealthSlot{Time: base.Add(time.Duration(i-count+1) * time.Hour)}
+	}
+	if count > 0 {
+		for _, r := range f.listRows {
+			if r.JST != jst {
+				continue
+			}
+			out[count-1].Total++
+			if r.Verdict == "completed" {
+				out[count-1].Passed++
+			}
+		}
+	}
+	return out, nil
+}
+
 // Compile-time assertion: fakeHealthStore must satisfy ports.ModelHealthStore
 // so a future interface change breaks this file rather than silently making
 // the handler tests exercise a stale surface.
