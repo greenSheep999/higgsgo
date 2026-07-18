@@ -91,3 +91,10 @@ min_level = "info"
 log_level    = "info"
 log_format   = "json"
 metrics_path = "/metrics"
+
+# See higgsgo.example.toml for docs. In dev we leave check_enabled = true so
+# the sidebar badge exercises the real code path; set false for offline work.
+[updates]
+github_owner  = "greenSheep999"
+github_repo   = "higgsgo"
+check_enabled = true

@@ -137,3 +137,14 @@ min_level = "info"
 log_level    = "info"
 log_format   = "json"
 metrics_path = "/metrics"
+
+# Advisory update-checker. /admin/version/check polls this GitHub repo's
+# latest release once per hour (per process, in-memory cache) so the WebUI
+# can render an "update available" badge. The binary is never replaced;
+# operators pull the new image / binary manually. Flip check_enabled = false
+# to disable the outbound request entirely (endpoint still returns the
+# current version).
+[updates]
+github_owner  = "greenSheep999"
+github_repo   = "higgsgo"
+check_enabled = true
