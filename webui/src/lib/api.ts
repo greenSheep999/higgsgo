@@ -78,6 +78,9 @@ export interface Account {
   fail_streak: number;
   bound_proxy_url: string;
   priority: number;
+  max_concurrent: number;
+  note: string;
+  source: string;
   plan_ends_at?: string;
   last_balance_at?: string;
   last_used_at?: string;
@@ -89,6 +92,9 @@ export interface Account {
 export interface PatchAccountRequest {
   priority?: number;
   bound_proxy_url?: string;
+  max_concurrent?: number;
+  note?: string;
+  source?: string;
 }
 
 export interface AccountFilter {
@@ -209,6 +215,7 @@ export interface ModelHealthRow {
   http_status?: number;
   cost?: number;
   poll_time_sec?: number;
+  uptime_pct?: number | null;
 }
 
 // ---------- Audit --------------------------------------------------------
@@ -260,6 +267,95 @@ export interface PlaygroundModelsResponse {
   data: PlaygroundModel[];
   scope: "cheap" | "full" | string;
   total: number;
+}
+
+// Response shape of GET /v1/models — the public catalog. Fewer
+// fields than PlaygroundModel because there's no per-caller
+// eligibility to expose here.
+export interface PublicModel {
+  id: string;
+  output: string;
+  jst: string;
+  // Upstream request routing hints — surfaced so a downstream
+  // aggregator (new-api) or an operator inspecting the detail sheet
+  // can see the exact HTTP path higgsgo will hit + which endpoint
+  // family (v1 hyphenated / v2 snake_case /v2) it belongs to.
+  endpoint: string;
+  version: string;
+  // Present only on models that take a user-supplied image / video.
+  media_role: string;
+  // Populated only for the nano_banana_2 family.
+  app_slug: string;
+  // Serialized JSON of a working request body captured from a
+  // completed job. Empty when the dump script didn't record one.
+  example_body_json: string;
+  est_cost: number;
+  unstable: boolean;
+  requires_paid: boolean;
+  requires_unlim: boolean;
+  requires_ultra: boolean;
+  starter_locked: boolean;
+  required_params: string[];
+  tier_source: string;
+  min_credits_hundredths: number;
+  // Model-override extension surface (migration 015). extra_aliases
+  // is always an array (never null); a downstream aggregator reads
+  // it to register the model under additional public names without
+  // higgsgo running its own reverse proxy. `note` is a free-form
+  // operator memo attached to the override.
+  extra_aliases: string[];
+  note: string;
+  // Derived by the registry loader from the four requires_* /
+  // starter_locked flags — the *minimum plan tier* that satisfies
+  // the model's gate, expressed as a higgsfield plan name (`""` /
+  // `free` / `starter` / `basic` / `pro` / `plus` / `ultimate` /
+  // `team` / `ultra` / `scale` / `creator` / `enterprise`).
+  min_plan: string;
+  // Operational classification labels rendered separately from
+  // min_plan. Stable slugs the UI maps to tone + label — see
+  // `models.tags.*` in webui/src/locales/en.ts.
+  tags: string[];
+  // Highest resolution the model can emit (short form: "1080p",
+  // "4k", "1024x1024", ...). Empty when unknown.
+  max_resolution: string;
+  // Longest duration the model can produce, in seconds. 0 when
+  // unknown or when duration is not applicable (image models).
+  max_duration_sec: number;
+}
+
+// ModelOverride mirrors one row of the model_overrides table. Pointer-
+// style nullability: null = "inherit from spec"; explicit value =
+// override the spec default. The wire uses `null` in place of Go's
+// pointer-nil so branching on presence vs value is unambiguous.
+export interface ModelOverride {
+  alias: string;
+  starter_locked: boolean | null;
+  requires_paid: boolean | null;
+  requires_ultra: boolean | null;
+  requires_unlim: boolean | null;
+  min_credits_hundredths: number | null;
+  extra_aliases: string[];
+  note: string;
+  updated_at?: string;
+}
+
+// ModelOverridePatch is the PUT body — every field is optional; omit
+// to leave unchanged, pass explicit null to clear.
+export interface ModelOverridePatch {
+  starter_locked?: boolean | null;
+  requires_paid?: boolean | null;
+  requires_ultra?: boolean | null;
+  requires_unlim?: boolean | null;
+  min_credits_hundredths?: number | null;
+  extra_aliases?: string[];
+  note?: string;
+}
+export interface PublicModelsResponse {
+  object: string;
+  data: PublicModel[];
+  limit: number;
+  offset: number;
+  total_before_pagination: number;
 }
 
 export interface PlaygroundEstimate {
@@ -499,12 +595,61 @@ export const admin = {
   // scope by the PlaygroundAuth middleware.
   playgroundModels: () =>
     request<PlaygroundModelsResponse>("/v1/playground/models"),
-  playgroundEstimate: (body: { model: string; params?: Record<string, unknown> }) =>
+
+  // /v1/models is the public model catalog, unfiltered by playground
+  // scope. Used by the group / key admin editors to render an
+  // alias picker without leaking playground-scope constraints into
+  // the admin surface.
+  listPublicModels: () =>
+    request<PublicModelsResponse>(
+      "/v1/models?limit=500&include_unstable=1",
+    ),
+  // Force the model registry to reload from disk (verified-models.json).
+  // Used by the Models management page's "reload" button so an operator
+  // can pick up a fresh catalog without restarting the process.
+  reloadModels: () =>
+    request<{
+      ok: boolean;
+      previous_count: number;
+      current_count: number;
+      reloaded_at: string;
+    }>("/admin/models/reload", { method: "POST" }),
+
+  // Model-override admin surface (migration 015).
+  listModelOverrides: () =>
+    request<{ total: number; data: ModelOverride[] }>(
+      "/admin/models/overrides",
+    ),
+  getModelOverride: (alias: string) =>
+    request<ModelOverride>(
+      `/admin/models/${encodeURIComponent(alias)}/override`,
+    ),
+  updateModelOverride: (alias: string, body: ModelOverridePatch) =>
+    request<ModelOverride>(
+      `/admin/models/${encodeURIComponent(alias)}/override`,
+      { method: "PUT", body: JSON.stringify(body) },
+    ),
+  deleteModelOverride: (alias: string) =>
+    request<void>(
+      `/admin/models/${encodeURIComponent(alias)}/override`,
+      { method: "DELETE" },
+    ),
+
+  // as_api_key_id (optional) lets an admin-bearer caller run under a
+  // specific API key's identity: the backend gates by that key's
+  // playground_scope instead of the admin's full scope.
+  playgroundEstimate: (body: {
+    model: string;
+    params?: Record<string, unknown>;
+    as_api_key_id?: string;
+  }) =>
     request<PlaygroundEstimate>("/v1/playground/estimate", {
       method: "POST",
       body: JSON.stringify(body),
     }),
-  playgroundExecute: (body: Record<string, unknown>) =>
+  // as_api_key_id (when present) tells the backend to execute as that
+  // key so usage, markup, group routing and quota all accrue against it.
+  playgroundExecute: (body: Record<string, unknown> & { as_api_key_id?: string }) =>
     request<unknown>("/v1/playground/execute", {
       method: "POST",
       body: JSON.stringify(body),
@@ -528,7 +673,137 @@ export const admin = {
   // storing it. The pool stats endpoint is cheap and requires the bearer,
   // so a 200 confirms both connectivity and auth.
   ping: () => request<PoolStats>("/admin/stats/pool"),
+
+  // ---- Registrations (plugin family) ------------------------------------
+
+  listRegistrations: (filter: RegistrationFilter = {}) => {
+    const q = new URLSearchParams();
+    if (filter.status) q.set("status", filter.status);
+    if (filter.limit != null) q.set("limit", String(filter.limit));
+    if (filter.offset != null) q.set("offset", String(filter.offset));
+    return request<{ data: Registration[]; limit: number; offset: number }>(
+      `/admin/registrations${q.toString() ? "?" + q.toString() : ""}`,
+    );
+  },
+  getRegistration: (id: string) =>
+    request<Registration>(`/admin/registrations/${id}`),
+  enqueueRegistration: (body: EnqueueRegistrationRequest) =>
+    request<{ id: string; status: string }>("/admin/registrations", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  retryRegistration: (id: string) =>
+    request<{ id: string; status: string }>(
+      `/admin/registrations/${id}/retry`,
+      { method: "POST" },
+    ),
+
+  // ---- Settings ---------------------------------------------------------
+
+  // Reads runtime metadata about the currently-active admin bearer.
+  // Never returns the plaintext — only source (toml|db), last_4,
+  // and (for DB-sourced overrides) the last update timestamp.
+  getBearerSettings: () =>
+    request<BearerSettings>("/admin/settings/bearer"),
+
+  // Rotates the admin bearer. When new_bearer is omitted the server
+  // generates a fresh 32-byte hex string. current_bearer is required
+  // and must match the currently active bearer.
+  rotateBearer: (body: RotateBearerRequest) =>
+    request<RotateBearerResponse>("/admin/settings/bearer/rotate", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+
+  // ---- Routing preference (global default) ------------------------------
+
+  // Get returns { strategy: "load_balance" | "priority", source:
+  // "db" | "default" }. Never 404s — a missing row surfaces as
+  // default:load_balance so the sidebar always has something to
+  // render.
+  getRoutingSettings: () =>
+    request<RoutingSettings>("/admin/settings/routing"),
+  updateRoutingSettings: (body: { strategy: "load_balance" | "priority" }) =>
+    request<RoutingSettings>("/admin/settings/routing", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+
+  // ---- Failover --------------------------------------------------------
+
+  getFailoverConfig: () =>
+    request<FailoverConfig>("/admin/failover/config"),
+  updateFailoverConfig: (patch: FailoverConfigPatch) =>
+    request<FailoverConfig>("/admin/failover/config", {
+      method: "PUT",
+      body: JSON.stringify(patch),
+    }),
+  listIsolatedAccounts: () =>
+    request<{ total: number; data: IsolatedAccount[] }>(
+      "/admin/failover/isolated",
+    ),
+  recoverAccount: (id: string) =>
+    request<{ id: string; status: string }>(
+      `/admin/accounts/${encodeURIComponent(id)}/recover`,
+      { method: "POST" },
+    ),
+
+  // ---- Version ----------------------------------------------------------
+
+  // Returns the currently running binary's version metadata. Never
+  // errors on network — the handler always returns a JSON body even
+  // for dev builds ({version: "dev", dev: true}).
+  getVersion: () => request<VersionInfo>("/admin/version"),
+
+  // Compares the running version against the latest GitHub release.
+  // Cached server-side for 1 hour to stay inside GitHub's anonymous
+  // rate limit. On GitHub outage the server returns {error:
+  // "upstream_unavailable"} + 200; never surfaces as a hard error to
+  // the UI.
+  checkVersion: () => request<VersionCheckResult>("/admin/version/check"),
 };
+
+// ---------- Version -------------------------------------------------------
+
+export interface VersionInfo {
+  version: string;
+  commit: string;
+  build_time: string;
+  go_version: string;
+  os_arch: string;
+}
+
+// VersionCheckResult carries both a normal "you're up to date / new
+// release available" result and a degraded "GitHub was unavailable,
+// try later" payload. Callers should render on `error` before
+// interpreting `update_available`.
+export interface VersionCheckResult {
+  current: string;
+  latest?: string;
+  update_available?: boolean;
+  release_url?: string;
+  published_at?: string;
+  dev?: boolean;
+  error?: string;
+}
+
+// ---------- Settings ------------------------------------------------------
+
+export interface BearerSettings {
+  source: "toml" | "db" | string;
+  last_4: string;
+  updated_at: string;
+}
+export interface RotateBearerRequest {
+  current_bearer: string;
+  new_bearer?: string;
+}
+export interface RotateBearerResponse {
+  new_bearer: string;
+  source: string;
+  last_4: string;
+  display_hint: string;
+}
 
 // ---------- Groups --------------------------------------------------------
 
@@ -585,4 +860,88 @@ export interface UsageAggRow {
   total_credits_h: number; // credits × 100
   charged_credits_h: number; // credits × 100
   avg_latency_ms: number;
+}
+
+// ---------- Routing preference -------------------------------------------
+
+export interface RoutingSettings {
+  strategy: "load_balance" | "priority";
+  source: "db" | "default";
+}
+
+// ---------- Failover ------------------------------------------------------
+
+// FailoverConfig mirrors the runtime failover subsystem knobs. Every
+// nested block is optional on the patch surface — the PUT handler
+// merges partial payloads onto the live in-memory config.
+export interface FailoverConfig {
+  enabled: boolean;
+  consecutive: {
+    enabled: boolean;
+    fail_limit: number;
+  };
+  throttle: {
+    enabled: boolean;
+    judge_window_sec: number;
+    judge_count: number;
+    cooldown_sec: number;
+    evict_window_sec: number;
+    evict_count: number;
+    risk_markers: string[];
+  };
+  outage_guard: {
+    window_sec: number;
+    disable_count_limit: number;
+  };
+}
+
+// Patch body — same shape but every field is optional so callers can
+// send only the section they touched.
+export type FailoverConfigPatch = {
+  enabled?: boolean;
+  consecutive?: Partial<FailoverConfig["consecutive"]>;
+  throttle?: Partial<FailoverConfig["throttle"]>;
+  outage_guard?: Partial<FailoverConfig["outage_guard"]>;
+};
+
+// IsolatedAccount is one row of GET /admin/failover/isolated —
+// accounts currently sitting in throttled or disabled status.
+export interface IsolatedAccount {
+  id: string;
+  email: string;
+  status: string;
+  status_reason: string;
+  throttled_until: string;
+  fail_streak: number;
+  last_failed_at: string;
+  recent_events: number;
+}
+
+// ---------- Registrations (plugin family) --------------------------------
+
+// Registration mirrors one row of the registrations table + Registrar
+// runtime state. Slice/string fields are always non-null on the wire.
+export interface Registration {
+  id: string;
+  email: string;
+  oauth_source: string;
+  proxy_url: string;
+  status: "pending" | "running" | "success" | "failed" | string;
+  attempts: number;
+  last_error: string;
+  account_id: string;
+  created_at?: string;
+  finished_at?: string;
+}
+
+export interface RegistrationFilter {
+  status?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface EnqueueRegistrationRequest {
+  email: string;
+  oauth_source?: string;
+  proxy_url?: string;
 }

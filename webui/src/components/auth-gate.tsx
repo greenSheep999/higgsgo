@@ -115,39 +115,62 @@ function LoginScreen({ onSuccess }: { onSuccess: () => void }) {
 
   return (
     <div className="grid min-h-svh place-items-center bg-muted px-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>{t("common.appName")}</CardTitle>
-          <CardDescription>{t("common.signInHint")}</CardDescription>
-        </CardHeader>
-        <form onSubmit={submit}>
-          <CardContent className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="bearer">{t("common.bearerToken")}</Label>
-              <Input
-                id="bearer"
-                type="password"
-                autoComplete="off"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                required
-              />
-            </div>
-            {error ? (
-              <p className="text-sm text-destructive">{error}</p>
-            ) : null}
-          </CardContent>
-          <CardFooter>
-            <Button
-              type="submit"
-              className="w-full"
-              disabled={busy || !token.trim()}
-            >
-              {busy ? t("common.signInVerifying") : t("common.signIn")}
-            </Button>
-          </CardFooter>
-        </form>
-      </Card>
+      <div className="flex w-full max-w-sm flex-col items-center gap-6">
+        {/* Brand lockup above the card. */}
+        <div className="flex flex-col items-center gap-2">
+          <img
+            src="/logo.png"
+            alt="higgsgo"
+            className="size-16 rounded-xl shadow-sm"
+          />
+          <span className="text-lg font-semibold tracking-tight">
+            {t("common.appName")}
+          </span>
+        </div>
+
+        <Card className="w-full">
+          <CardHeader>
+            <CardTitle>{t("common.signIn")}</CardTitle>
+            <CardDescription>{t("common.signInHint")}</CardDescription>
+          </CardHeader>
+          <form onSubmit={submit}>
+            {/* pb-6 on content + pt-2 on footer so the input and button
+                don't collide (Card's gap-6 only spaces its direct
+                children — the form is one child, so its inner sections
+                need their own spacing). */}
+            <CardContent className="space-y-3 pb-6">
+              <div className="space-y-2">
+                <Label htmlFor="bearer">{t("common.bearerToken")}</Label>
+                <Input
+                  id="bearer"
+                  type="password"
+                  autoComplete="off"
+                  value={token}
+                  onChange={(e) => setToken(e.target.value)}
+                  required
+                />
+              </div>
+              {error ? (
+                <p className="text-sm text-destructive">{error}</p>
+              ) : null}
+            </CardContent>
+            <CardFooter>
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={busy || !token.trim()}
+              >
+                {busy ? t("common.signInVerifying") : t("common.signIn")}
+              </Button>
+            </CardFooter>
+          </form>
+        </Card>
+
+        {/* Copyright notice. */}
+        <p className="text-xs text-muted-foreground">
+          {t("common.copyright", { year: new Date().getFullYear() })}
+        </p>
+      </div>
     </div>
   );
 }

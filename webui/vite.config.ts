@@ -37,6 +37,13 @@ export default defineConfig({
     proxy: {
       "/admin": "http://127.0.0.1:18081",
       "/v1/playground": "http://127.0.0.1:18081",
+      // /v1/models is mirrored on the admin listener (behind admin
+      // bearer) so the WebUI's group model picker can enumerate the
+      // catalog through the same base URL as every other admin
+      // request. Without this proxy line the request lands on the
+      // vite dev server and gets the SPA's index.html handed back —
+      // a 200 with HTML, which then explodes JSON parsing downstream.
+      "/v1/models": "http://127.0.0.1:18081",
     },
   },
 });

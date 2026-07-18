@@ -81,6 +81,20 @@ export function keyStatusTone(status: string): StatusTone {
   }
 }
 
+// Convenience: map a Group.status string to a StatusBadge tone. Groups
+// currently support "active" / "paused" — keep parity with keys so
+// the eye reads both tables the same way.
+export function groupStatusTone(status: string): StatusTone {
+  switch (status) {
+    case "active":
+      return "success";
+    case "paused":
+      return "warning";
+    default:
+      return "muted";
+  }
+}
+
 // Convenience: playground_scope tone (none/cheap/full).
 export function playgroundScopeTone(scope: string): StatusTone {
   switch (scope) {

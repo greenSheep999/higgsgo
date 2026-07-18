@@ -8,8 +8,10 @@ import { groupDetailRoute } from "@/routes/group-detail";
 import { playgroundRoute } from "@/routes/playground";
 import { jobsRoute } from "@/routes/jobs";
 import { usageRoute } from "@/routes/usage";
-import { modelHealthRoute } from "@/routes/model-health";
+import { modelsRoute } from "@/routes/models";
 import { auditRoute } from "@/routes/audit";
+import { registrationsRoute } from "@/routes/registrations";
+import { cpaPluginRoute } from "@/routes/cpaplugin";
 
 // We use hash history so the same static bundle works whether it's served
 // out of the Go binary at /, /webui/, or any subpath — no rewrite rules
@@ -23,8 +25,10 @@ const routeTree = rootRoute.addChildren([
   playgroundRoute,
   jobsRoute,
   usageRoute,
-  modelHealthRoute,
+  modelsRoute,
   auditRoute,
+  registrationsRoute,
+  cpaPluginRoute,
 ]);
 
 export const router = createRouter({
