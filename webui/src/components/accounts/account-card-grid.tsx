@@ -210,7 +210,7 @@ function AccountCard({
   return (
     <Card
       data-selected={selected}
-      className="group flex flex-col cursor-pointer shadow-none transition-all hover:shadow-xl hover:border-primary/40 data-[selected=true]:border-primary data-[selected=true]:ring-1 data-[selected=true]:ring-primary/40"
+      className="@container/acccard group flex flex-col cursor-pointer shadow-none transition-all hover:shadow-xl hover:border-primary/40 data-[selected=true]:border-primary data-[selected=true]:ring-1 data-[selected=true]:ring-primary/40"
       onClick={() => onOpen(a.id)}
     >
       <CardHeader>
@@ -379,7 +379,10 @@ function AccountCard({
         </div>
       </CardContent>
 
-      {/* Footer: primary actions inline, "more" tucked into a dropdown */}
+      {/* Footer: primary actions inline, "more" tucked into a dropdown.
+          Button labels are hidden below the @xs container breakpoint
+          (~20rem) so narrow cards degrade to icon-only automatically.
+          Wide cards show icon + text like the pre-P2-6 layout. */}
       <CardFooter
         onClick={(e) => e.stopPropagation()}
         className="mt-auto flex flex-wrap items-center justify-between gap-1 border-t pt-3"
@@ -387,36 +390,48 @@ function AccountCard({
         <div className="flex flex-wrap gap-1">
           <Button
             variant="ghost"
-            size="icon"
-            className="size-8"
+            size="sm"
+            className="h-8 px-2"
             onClick={() => onOpen(a.id)}
             title={t("accounts.card.openDetail")}
           >
             <IconEye className="size-4" />
+            <span className="hidden @xs/acccard:inline">
+              {t("accounts.card.openDetail")}
+            </span>
           </Button>
           <Button
             variant="ghost"
-            size="icon"
-            className="size-8"
+            size="sm"
+            className="h-8 px-2"
             onClick={() => onRefresh(a.id)}
             title={t("accounts.card.refresh")}
           >
             <IconRefresh className="size-4" />
+            <span className="hidden @xs/acccard:inline">
+              {t("accounts.card.refresh")}
+            </span>
           </Button>
           <Button
             variant="ghost"
-            size="icon"
-            className="size-8"
+            size="sm"
+            className="h-8 px-2"
             onClick={() => onProbe(a.id)}
             title={t("accounts.card.probe")}
           >
             <IconActivityHeartbeat className="size-4" />
+            <span className="hidden @xs/acccard:inline">
+              {t("accounts.card.probe")}
+            </span>
           </Button>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="size-8">
+            <Button variant="ghost" size="sm" className="h-8 px-2">
               <IconDotsVertical className="size-4" />
+              <span className="hidden @xs/acccard:inline">
+                {t("accounts.card.more")}
+              </span>
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
