@@ -11,6 +11,69 @@ Commits referenced inline as `[hash]` are reachable from `main`; run
 
 ### Added
 
+#### WebUI (React admin console)
+- **React admin console scaffolding** landed in-tree at `webui/`, embedded
+  in the Go binary via `//go:embed`. Vite 7 + React 19 + TanStack
+  Router/Query + shadcn/ui + i18next. Everything below runs against the
+  admin API surface. Commits [42f2bb2], [939d06a], [d81f07f].
+- **Dashboard** — KPI trends, pool composition (aggregated from
+  `/admin/stats/pool`), usage charts. 30 s refetch. Commit [e0503b5].
+- **Accounts page** — table + card views with sortable columns, group
+  membership pill row (`+N` overflow), inline pause/resume switch, edit
+  dialog with proxy / priority / max_concurrent / note / groups. Card
+  grid scales 1→2→3→4 cols via container queries. Commits [6f2dc09],
+  [3da2a12] (fix: PATCH group members via `/members` endpoint, not
+  `/bindings`), [4104748] (responsive card layout with overflow-safe
+  tags).
+- **Keys page** — create / edit dialog, group bindings, per-key stats.
+  Commit [aec3f54].
+- **Groups page** — edit dialog, model multi-select, stats hook. Commit
+  [b3382f1].
+- **Playground** — credits warning, cost tag, param-form i18n against
+  `/v1/playground/{models,estimate,execute}`. Commit [7d76aaf].
+- **Models page** — uptime bar, code examples, detail sheet. UI still
+  falls back to mock uptime when `/admin/model-health` has no data for a
+  JST; see `docs/ROADMAP.md` P2-7. Commit [2e50353].
+- **Jobs page** — currently seeded with mock data for visual QA (real
+  wire pending). Commit [da3228f].
+- **CPA plugin / registrations / settings pages** shipped for admin
+  surfaces that already exist server-side. Commit [d6e336d].
+- **i18n coverage** — English + Chinese for every page. Commit [4f33f26].
+
+#### Admin API additions
+- **`PATCH /admin/keys/{id}`** and **`GET /admin/keys/{id}/stats`** +
+  **`GET /admin/keys/{id}/groups`**, plus
+  **`GET /admin/accounts/{id}/eligible-models`** to power the WebUI
+  key/account editors without additional round-trips. Commit [305e406].
+- **`Account.Priority`, `APIKey.Kind`, `APIKey.KeyLast4`** landed in
+  domain + storage, backed by migrations `010` (accounts.priority
+  column + index) through `012`. `priority` is the sort key when a
+  group's `route_strategy = priority` (`account_store.go:475`). Commit
+  [91d25b7].
+- **Playground surface** — `api_keys.playground_scope` + three
+  endpoints under `/v1/playground/` gated by a dedicated middleware
+  (`internal/api/middleware/playground.go`). Commit [35bbbc8].
+- **`/admin` prefix mount + PUT/GET group bindings** — normalizes route
+  layout so every admin verb lives under `/admin/*`. Commit [37e0d46].
+
+#### Documentation
+- **`docs/ROADMAP.md`** created — single source of truth for what is
+  actually wired vs stored-only, with `file:line` evidence and a
+  P0/P1/P2 fix list.
+- **`docs/POOL-AND-CPA.md`** — pick-logic SQL, group concurrency, and
+  route strategy sections corrected to match code
+  (`account_store.go:395-503`). Removed the false claim that
+  `least_used` sorts by monthly credits — it's lifetime consumed.
+- **`docs/ARCHITECTURE.md`** — §8 sticky-proxy claim marked as ❌ not
+  wired (all upstream calls still share the process-level
+  `HIGGSGO_UPSTREAM_PROXY_URL`). Added §11a covering failover, bearer,
+  settings, model overrides, version endpoint, resolver, playground.
+  Added §2.0 documenting the monorepo module split.
+- **`docs/PLUGGABLE.md`** — added §0 documenting the monorepo
+  module split (public slim build vs `-tags register` full build) and
+  §10 wiring status. Kept the Provider abstraction body for
+  `internal/adapters/*`.
+
 #### Metering
 - **End-to-end metering pipeline** wiring every terminal job to a
   `usage_events` row, a JWT refresher goroutine that keeps the upstream

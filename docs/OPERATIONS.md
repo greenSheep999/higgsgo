@@ -325,10 +325,96 @@ curl -s -X DELETE $ADMIN_BASE/admin/keys/$KEY_ID \
 Sets `status='revoked'`. The `/v1` auth middleware short-circuits the very
 next request from that key with `403 api_key_revoked`.
 
-### Rotate the admin bearer
+### Rotate the admin bearer (zero-downtime)
 
-Update `configs/higgsgo.prod.toml` (or the env var) and restart. There is
-no zero-downtime rotation today; do it during a maintenance window.
+Since the bearer manager landed (`internal/core/bearer/manager.go`),
+rotation no longer requires a restart. `configs/higgsgo.prod.toml`
+remains the fallback but a runtime override in the settings store wins.
+
+```bash
+# Read the current hash (for confirmation only — no plaintext returned)
+curl -s $ADMIN_BASE/admin/settings/bearer -H "Authorization: Bearer $BEARER"
+
+# Rotate: server mints a fresh token, activates it after a 30 s grace window
+curl -s -X POST $ADMIN_BASE/admin/settings/bearer/rotate \
+  -H "Authorization: Bearer $BEARER"
+```
+
+The response contains the new plaintext once — store it. Both old and
+new tokens accept requests during the 30 s grace so ops runbooks can
+swap secrets without dropping traffic. To pin a specific value instead
+of a rotated one, `POST /admin/settings/bearer` with the desired token
+body.
+
+### Pool health console (failover)
+
+The WebUI sidebar has a **Pool Health** indicator (green / amber / red)
+sourced from `/admin/stats/pool` account status counts. Click it to open
+the failover dialog which shows every `disabled` / `throttled` account
+and lets you flip individual accounts back to `active`.
+
+CLI equivalents:
+
+```bash
+# List all currently isolated accounts (disabled + throttled)
+curl -s $ADMIN_BASE/admin/failover/isolated -H "Authorization: Bearer $BEARER"
+
+# View / update the global controller policy
+curl -s $ADMIN_BASE/admin/failover/config -H "Authorization: Bearer $BEARER"
+
+# Manually recover one account (disabled → active)
+curl -s -X POST $ADMIN_BASE/admin/accounts/$ACCOUNT_ID/recover \
+  -H "Authorization: Bearer $BEARER"
+```
+
+Throttled accounts recover automatically once `throttled_until` passes;
+the Recoverer goroutine polls every 30 s.
+
+### Override a model's spec at runtime (no rebuild)
+
+`data/reference/verified-models.json` is the base registry. Runtime
+overrides live in the `model_overrides` table (migration `015`) and can
+be edited via the admin API. Nil = inherit spec; a set field wins.
+
+```bash
+# Push an override
+curl -s -X PUT $ADMIN_BASE/admin/model_overrides/video_bad \
+  -H "Authorization: Bearer $BEARER" \
+  -d '{"cost_credits": 4200, "enabled": true}'
+
+# Kick the registry to pick up new specs on disk + overrides
+curl -s -X POST $ADMIN_BASE/admin/models/reload \
+  -H "Authorization: Bearer $BEARER"
+```
+
+### Export the audit trail for cold storage
+
+```bash
+# JSONL (best for reload into a warehouse)
+curl -sN "$ADMIN_BASE/admin/audit/export?format=jsonl" \
+  -H "Authorization: Bearer $BEARER" > audit-$(date +%F).jsonl
+
+# CSV (for spreadsheet review)
+curl -sN "$ADMIN_BASE/admin/audit/export?format=csv" \
+  -H "Authorization: Bearer $BEARER" > audit-$(date +%F).csv
+```
+
+The response streams so the server holds only one row in memory at a
+time — safe on multi-million row tables.
+
+### Bulk account import / export
+
+```bash
+# Export the entire pool (JSON with all mutable columns)
+curl -sN "$ADMIN_BASE/admin/accounts/export?format=json" \
+  -H "Authorization: Bearer $BEARER" > accounts-$(date +%F).json
+
+# Import (upsert by id; existing rows are updated, new rows are inserted)
+curl -s -X POST $ADMIN_BASE/admin/accounts \
+  -H "Authorization: Bearer $BEARER" \
+  -H "Content-Type: application/json" \
+  --data @accounts-$(date +%F).json
+```
 
 ---
 
@@ -340,7 +426,7 @@ no zero-downtime rotation today; do it during a maintenance window.
 | `[server]`                     | `admin_listen`                 | `127.0.0.1:8081` | Admin bind (private)                              |
 | `[server]`                     | `internal_listen`              | `127.0.0.1:8082` | CPA `/internal` bind (private, gated by `modes.cpa_plugin`) |
 | `[server.rate_limit]`          | `rps`, `burst`                 | `5`, `10`     | Per-API-key token bucket                             |
-| `[pool]`                       | `max_in_flight_per_account`    | `5`           | Concurrency cap; upstream refuses > 6                |
+| `[pool]`                       | `max_in_flight_per_account`    | `5`           | ⚠️ **Currently unread**; enforced value is hardcoded `5` in `account_store.go:418`. See `docs/ROADMAP.md` P0-3. |
 | `[pool]`                       | `fail_streak_threshold`        | `3`           | Auto-suspend threshold                               |
 | `[pool]`                       | `balance_refresh_interval`     | `10m`         | Refresher cadence                                    |
 | `[pool]`                       | `jwt_refresh_interval`         | `40s`         | Clerk JWT expires in 60s; refresh at 40s             |

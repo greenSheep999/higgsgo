@@ -248,16 +248,150 @@ Query params (list): `status`, `account_id`, `api_key_id`, `group_id`, `model_al
 
 Unlike `/v1/jobs`, this view exposes internal accounting: `account_id`, `group_id`, `pre_balance_h`, `actual_credits_h`, `charged_credits_h`. Timestamps are RFC3339.
 
-### `GET /admin/model-health` — **TBD (handler defined, not wired)**
+### `GET /admin/model-health`, `GET /admin/model-health/{jst}`
 
-The handler (`internal/api/admin/model_health.go`) and store exist, and
-the regression ticker writes into `model_health` when
-`[tickers.a_regression] enabled = true`, but the router does **not**
-currently register it (see `internal/api/server.go` `adminRouter`). To
-activate, add `admin.NewModelHealthHandler(modelHealthStore).Register(r)`
-inside the Bearer group.
+Wired. Backed by `internal/api/admin/model_health.go`; data comes from
+the regression ticker.
 
-Once wired: `GET /admin/model-health?verdict=&stale_before=` (list, newest first) and `GET /admin/model-health/{jst}` (latest probe for one JST).
+- List: `GET /admin/model-health?verdict=&stale_before=` — newest first.
+- Detail: `GET /admin/model-health/{jst}` — latest probe for one model.
+
+WebUI consumer: `webui/src/routes/models.tsx`. Note: the UI currently
+backfills a mock uptime value when no health row exists for a JST — see
+`docs/ROADMAP.md` P2-7.
+
+### `POST /admin/models/reload`
+
+Hot-reload the model registry from disk plus the runtime overrides
+table. Returns the new model count. Used by the WebUI "reload" button
+and by CI post-deploy hooks.
+
+### Account operations (bulk / lifecycle / import-export)
+
+- `PATCH /admin/accounts/{id}` — mutable columns:
+  `bound_proxy_url` (⚠️ stored but not enforced — see ROADMAP §1),
+  `priority` (int, [-1000, 1000]), `max_concurrent`,
+  `note`, `source`.
+- `POST /admin/accounts` (bulk import) — accepts a JSON array; upserts
+  by `id`, skipping duplicates.
+- `GET /admin/accounts/export?format=json|csv` — streaming export of the
+  full pool for backup / migration.
+- `GET /admin/accounts/{id}/eligible-models` — resolves which models the
+  account's plan / cohort is entitled to. Consumed by the WebUI
+  account detail sheet.
+
+### Key operations (write verbs beyond CRUD)
+
+- `PATCH /admin/keys/{id}` — updates `markup_pct`, `monthly_limit`,
+  `note`, `playground_scope`, active flag.
+- `POST /admin/keys/{id}/rotate` — mints a new secret, invalidates the
+  old one, returns the plaintext once.
+- `POST /admin/keys/{id}/pause`, `POST /admin/keys/{id}/resume` —
+  temporary disable / re-enable without deleting.
+- `POST /admin/keys/{id}/reset_usage` — zeros `monthly_used` for a key
+  outside the natural month boundary.
+- `GET /admin/keys/{id}/stats` — call counts, credits used, last-seen.
+- `GET /admin/keys/{id}/groups` — groups this key is bound to.
+
+### Failover console
+
+Wired at `/admin/failover/*` and `/admin/accounts/{id}/failover`
+(`internal/api/admin/failover.go`).
+
+- `GET /admin/failover/config`, `PUT /admin/failover/config` — read /
+  update global controller policy (`fail_limit`, `judge_window`,
+  `evict_window`, `cooldown`, `outage_guard`).
+- `GET /admin/failover/isolated` — accounts currently `disabled` or
+  `throttled`. Backs the sidebar `PoolHealthIndicator` red-dot list.
+- `GET /admin/accounts/{id}/failover`,
+  `PUT /admin/accounts/{id}/failover` — per-account override for
+  `fail_limit` and window sizes.
+- `POST /admin/accounts/{id}/recover` — manually flip
+  `disabled → active` (`throttled` recovers automatically via the
+  Recoverer goroutine).
+
+### Model overrides
+
+- `GET /admin/model_overrides` — list runtime overrides on top of the
+  static registry.
+- `PUT /admin/model_overrides/{alias}` — set / clear per-field overrides
+  (pointer semantics: `null` clears, value overrides). Triggers
+  `Registry.Reload()`.
+- `DELETE /admin/model_overrides/{alias}` — remove all overrides for
+  one alias.
+
+### Routing default
+
+- `GET /admin/routing_settings`, `PUT /admin/routing_settings` — the
+  default `RouteStrategy` used when a new group is created.
+  ⚠️ **Does not** retroactively change existing groups' strategies.
+
+### Admin bearer runtime rotation
+
+- `GET /admin/settings/bearer` — hash-only read (returns SHA-256 of
+  current token for confirmation).
+- `POST /admin/settings/bearer` — set an override.
+- `POST /admin/settings/bearer/rotate` — mint a fresh token, activate
+  after a 30 s grace window.
+
+### Registrations (registrar plugin)
+
+- `GET /admin/registrations` — list rows (paged).
+- `POST /admin/registrations` — enqueue a new registration request.
+- `GET /admin/registrations/{id}` — status detail.
+- `POST /admin/registrations/{id}/retry` — retry a failed registration.
+
+**⚠️ Default builds return `503 registrar_disabled` for every write /
+retry endpoint.** Only the `-tags register` build compiles the bridge to
+`plugins/register/`. See `docs/PLUGGABLE.md` §0.
+
+### Audit trail
+
+- `GET /admin/audit` — paginated audit events. Filters: `action`,
+  `actor`, `since`, `until`.
+- `GET /admin/audit/export?format=csv|jsonl` — streaming export for
+  cold storage.
+
+### Tickers (manual runs)
+
+- `POST /admin/tickers/{name}` — force-run one of the scheduled
+  tickers (`jwt_refresh`, `balance_refresh`, `a_regression`,
+  `monthreset`, `failover_recover`). Used both for admin recovery
+  actions and by the WebUI "run now" buttons on the tickers page.
+
+### Version endpoint
+
+- `GET /admin/version` — build info from ldflags + `runtime/debug`.
+- `GET /admin/version/check` — compares against latest GitHub release
+  (1 h in-memory cache).
+
+### Webhooks
+
+- `GET /admin/webhooks`, `POST /admin/webhooks`, `PATCH
+/admin/webhooks/{id}`, `DELETE /admin/webhooks/{id}` — outbound
+webhook subscriptions for metering events.
+
+---
+
+## Playground — `/v1/playground/*` (WebUI scope keys only)
+
+Requires a key whose `playground_scope = true` (migration `012`). The
+same `X-API-Key` middleware but a separate rate bucket.
+
+### `POST /v1/playground/estimate`
+
+Body: `{ "model": "video_bad", "params": {...} }`. Returns the expected
+credit cost so the WebUI can show a warning before submitting.
+
+### `POST /v1/playground/execute`
+
+Enqueues a job in the playground pool. Identical semantics to
+`POST /v1/videos/generations` but constrained to models with
+`playground = true`.
+
+### `GET /v1/playground/models`
+
+Filtered list of models exposed to playground callers.
 
 ---
 

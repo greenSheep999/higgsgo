@@ -128,6 +128,37 @@ push events (usage / status_change) to the CPA dashboard in real time.
   equivalent and needs no external service.
 - REST + WebSocket for CPA plugin — gRPC is heavier and CPA is Node/TS.
 
+## WebUI stack
+
+- **React 19** + **Vite 7** — Vite 8 shipped a rolldown bundler that
+  loses named exports and breaks `useContext(null)` in mixed CJS/ESM
+  packages; pin `vite@^7` and `@vitejs/plugin-react@^5`.
+- **TanStack Router** + **TanStack Query** — file-based routing without
+  a Next-style meta framework (avoids SSR complexity for a
+  server-embedded admin console).
+- **shadcn/ui** — copy-in components; run `pnpm dlx shadcn init` before
+  adding any component so `components/ui/*` exists — skipping this step
+  produces "wire-frame" unstyled components. `tw-animate-css` must be
+  installed alongside since shadcn's animations depend on it.
+- **i18next** + **react-i18next** — English + Chinese from day one; all
+  strings live in `webui/src/locales/{en,zh}.ts`.
+- **@tabler/icons-react** — chosen for coverage over Lucide; shadcn's
+  own examples use `IconX`-prefixed names throughout.
+
+## Monorepo split (registration plugin)
+
+- **Go workspace** (`go.work` binding main + `plugins/register`) over
+  cross-repo `replace` — keeps developer setup trivial and lets
+  monorepo tooling (bulk lint, refactor across modules) work.
+- **Build tags for slim/full variants** over runtime feature flags —
+  the public binary must not carry the private automation code even as
+  dead pages. Compile-time selection is the only guarantee.
+- Rejected alternatives: `go plugin` (unstable + non-portable), wasm
+  (perf hit + FFI boilerplate), out-of-process RPC (unwarranted
+  complexity for a monorepo).
+
 ## Decision log
 
 - **2026-07-17** — Initial stack locked (this document).
+- **2026-07-18** — WebUI stack section added (React 19 + Vite 7 +
+  TanStack). Monorepo split decision recorded.

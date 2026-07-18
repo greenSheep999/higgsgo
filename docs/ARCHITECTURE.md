@@ -62,6 +62,37 @@ higgsgo is a **single Go binary** that exposes 3 classes of port:
 
 ## 2. Directory Layout
 
+### 2.0 Module Split (monorepo, decided 2026-07-18)
+
+The repository is a **Go workspace** with two modules, so that sensitive
+account-registration automation lives outside the public reverse-proxy
+binary.
+
+```
+higgsgo/
+├── go.work                            # binds main + plugins/register
+├── go.mod                             # main:  github.com/greensheep999/higgsgo
+├── internal/…                         # reverse proxy, admin, WebUI (public)
+└── plugins/
+    └── register/
+        └── go.mod                     # plugin: github.com/greensheep999/higgsgo/plugins/register
+```
+
+**Build variants.**
+- `go build ./cmd/higgsgo` (default) — compiles only the interface + a
+  503-returning stub. Public release binary.
+- `go build -tags register ./cmd/higgsgo` — links the bridge in
+  `internal/adapters/registrar/higgsfield/higgsfield.go` to the plugin.
+  Private / full-featured build.
+
+**Contract point.** `internal/ports/registrar.go` — always compiled.
+Both builds satisfy this interface; only the linkage differs.
+
+Migration status (ROADMAP §5.4): `go.work` and module-path realignment
+are still pending. Today's `-tags register` bridge panics `TODO`.
+
+### 2.1 Public Module Layout
+
 ```
 higgsgo/
 ├── go.mod
@@ -569,13 +600,13 @@ Explicit overrides via `configs/mailbox-routes.toml`.
 
 ## 8. IP Proxy Management (proxy package)
 
-### 8.1 Requirements
+### 8.1 Requirements (design goal)
 
 - Each account uses one IP at registration time and should **stay on the same IP** thereafter (IP changes trigger DataDome challenges + `ip_check_finished` blocking)
 - Reverse-proxy traffic also uses the account's bound IP
 - Failed proxies must swap out automatically (proxy_pool probes)
 
-### 8.2 Strategy
+### 8.2 Strategy (target)
 
 ```
 Type A: sticky per-account
@@ -588,7 +619,34 @@ Type B: rotating (fallback)
   used for ad-hoc verification and registration probes
 ```
 
-### 8.3 Proxy Sources
+### 8.3 Reality (2026-07-18) — ❌ **Sticky proxy is NOT wired**
+
+The `bound_proxy_url` column is written and read by
+`internal/adapters/storage/sqlite/account_store.go:62,175,562` and can
+be edited via `PATCH /admin/accounts/{id}` and the WebUI edit dialog.
+**But at request time it is completely ignored.**
+
+- `cmd/higgsgo/main.go:186-204` constructs a single process-level
+  `utls.Client` from `HIGGSGO_UPSTREAM_PROXY_URL` (env var) once at
+  startup.
+- All upstream calls (`CreateJob` / `FetchStatus` / `FetchJob` /
+  `FetchWallet` / `FetchUser` / JWT mint) route through that one client
+  (`internal/core/upstream/client.go:37,89,448,475`).
+- `internal/core/resolver/resolver.go:56` *does* compute a per-account
+  `ProxyURL` via `firstNonEmpty(account.BoundProxyURL, global.ProxyURL)`,
+  but the resolver package has **zero external importers** — see
+  ROADMAP §3.
+- Registration flow uses `ProxyURL` on a different code path
+  (`internal/api/admin/registrations.go`, `ports/registrar.go`,
+  `ports/captcha.go`, `ports/browser.go`) — that path is unrelated to
+  runtime upstream traffic.
+
+**Blast radius.** Every account shares the same egress IP. Sticky-IP
+semantics claimed to Higgsfield are false. Multi-account correlation
+risk on CF/DataDome is high. See ROADMAP P1-5 for the fix
+(per-`bound_proxy_url` HTTP client cache + resolver integration).
+
+### 8.4 Proxy Sources (used only by registration flow today)
 
 - 711proxy (existing): US / VN regions
 - manual: uploaded via admin API
@@ -677,6 +735,129 @@ Every job writes a full audit record (request + response + used account + cost),
 - Tracing specific user outputs (customer support)
 - Regression testing (build a golden set)
 - Cost accounting
+
+---
+
+## 11a. Post-v0.1 Modules (added after the original design freeze)
+
+These packages were introduced after the base doc was drafted. Documented
+here rather than back-fitted into §§1-11 so history stays readable.
+
+### 11a.1 Failover Controller (`internal/core/failover`)
+
+**Purpose.** Turn account errors into pool-health signals and automated
+state transitions. Two mechanisms, both landing on `accounts.status` +
+`status_reason`:
+
+- **Consecutive-failure circuit breaker** (default on). Attributable
+  failures accumulate; at `fail_limit` the account is marked
+  `disabled`.
+- **Sliding-window throttling** (default off). 429 / anti-abuse signals
+  within `judge_window` mark the account `throttled` for `cooldown`;
+  repeated blacklist hits within `evict_window` promote to `disabled`.
+
+**Pool-level guard.** `outage_guard` (`controller.go:362-375`) refuses
+to disable when the number of accounts already disabled in the current
+window exceeds the threshold — protects against a global upstream
+outage silently draining the pool.
+
+**Recovery.** `Recoverer` runs on its own goroutine (started in
+`main.go:144-153`), ticks every 30 s, calls
+`Accounts.RecoverThrottled` to move `throttled → active` when
+`throttled_until` passes. `disabled → active` requires manual
+`POST /admin/accounts/{id}/recover`.
+
+**Wire points.**
+- `internal/core/proxy/service.go:224,309,335` — CreateJob / sync-poll
+  failure + success paths.
+- `internal/core/pollworker/worker.go:223,282` — async job failure +
+  success paths.
+
+**Admin API.** `internal/api/admin/failover.go:55-62` — six endpoints
+under `/admin/failover/*` and `/admin/accounts/{id}/failover`. WebUI
+consumer: `webui/src/components/settings/failover-dialog.tsx`, opened
+from `PoolHealthIndicator` in the sidebar. **This is the pool-health
+console.**
+
+### 11a.2 Admin Bearer Runtime Rotation (`internal/core/bearer`)
+
+**Purpose.** Rotate the admin bearer token without a process restart.
+Falls back to `config.Server.AdminBearer` when no override is set.
+
+`bearer.Manager` (`manager.go:81`) uses a lock-free `atomic.Pointer` with
+a 30 s grace window during rotation. Consulted from
+`internal/api/server.go:427-431` `adminBearerAccepter()`; when
+`s.Bearer != nil` middleware auth reads from it, otherwise it uses
+`StaticBearer(cfg.Server.AdminBearer)`.
+
+**Persistence.** `internal/adapters/storage/sqlite/settings_store.go`
+(K/V table `system_settings` from migration `014`), shared with routing
+defaults.
+
+**Admin API.** `internal/api/admin/settings.go` — `GET/POST
+/admin/settings/bearer` and `POST /admin/settings/bearer/rotate`
+(hash-only read, plaintext write). WebUI has a settings tab.
+
+### 11a.3 Runtime Settings Store
+
+Migration `014` adds `system_settings(key, value_json)` as a generic
+runtime K/V. Consumed by:
+
+- Bearer manager (see 11a.2).
+- `internal/api/admin/routing_settings.go` — persists a default
+  `RouteStrategy` used when a new group is created via
+  `admin/groups.go:114 ResolveDefaultRouteStrategy`.
+- Not consulted at pick time — it only seeds new-group defaults.
+
+### 11a.4 Model Overrides
+
+**Purpose.** Runtime overrides on the static `verified-models.json`
+registry without a rebuild. Migration `015` adds `model_overrides`
+table; `internal/domain/model_override.go` uses pointer semantics
+(nil = inherit spec, set = override).
+
+**Wire.** `main.go:110` builds the store; `main.go:177-183` calls
+`registry.SetOverrideProvider()` then triggers `Registry.Reload()`.
+`internal/api/admin/model_overrides.go` writes trigger another Reload.
+WebUI: `webui/src/lib/api.ts:631`.
+
+Two separate mechanisms coexist:
+- **Overrides** (this module) — runtime-editable via admin API.
+- **Extras** (`data/reference/model-specs-extra.json`, consumed by
+  `registry.go:202-203`) — static supplement for
+  `max_resolution` / `max_duration_sec`.
+
+### 11a.5 Version Endpoint
+
+`internal/version` + `internal/api/admin/version.go`. Exposes
+`GET /admin/version` and `GET /admin/version/check` (1 h in-memory cache
+of GitHub `releases/latest`). Always mounted regardless of
+`Updates.CheckEnabled`. WebUI consumers:
+`webui/src/lib/api.ts:766,773`.
+
+### 11a.6 Config Resolver (`internal/core/resolver`) — **not wired**
+
+**Purpose.** Cascade layered configuration (Key > Group > Account >
+Global) into a single `ResolvedConfig`. Correctly resolves the
+precedence for concurrency, proxy URL, route strategy, monthly budget,
+model regex, rate limits, and markup.
+
+**Status.** `grep -rn "core/resolver"` returns **zero** external
+importers in production. `PickAndLock` never sees `ResolvedConfig`;
+`proxy/service.go` never calls `Resolve()`. This is the primary reason
+the group / account / apikey fields listed in ROADMAP §1's "silent
+no-op" table have no runtime effect — the engine that reads them exists
+but is not plugged in.
+
+ROADMAP P1-4 wires this into `proxy.Service.Generate` between
+`resolveGroup` and `PickAndLock`.
+
+### 11a.7 Playground
+
+`internal/api/v1/playground.go` + `internal/api/middleware/playground.go`
++ migration `012`. Adds `api_keys.playground_scope` so a key can be
+restricted to `/v1/playground/{models,estimate,execute}` (used by the
+WebUI's playground page). Full endpoint list in `API_REFERENCE.md`.
 
 ---
 

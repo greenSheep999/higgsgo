@@ -1,13 +1,22 @@
-# higgsgo Pool Management + CPA Dual-Mode + Metering (supplement v0.2)
+# higgsgo Pool Management + CPA Dual-Mode + Metering
 
-> Supplements HIGGSGO-ARCHITECTURE.md + HIGGSGO-PLUGGABLE.md
+> Design supplement to ARCHITECTURE.md + PLUGGABLE.md.
 >
-> Three new requirements:
-> 1. **Per-account usage / request count stats** must be clear and queryable
-> 2. **Account pool groups** (isolation across businesses / customers) with per-group concurrency and quota settings
-> 3. **Two consumption modes coexist**: higgsgo self-managed pool vs handing accounts to a CPA plugin so CPA manages them
+> **Status legend used throughout:**
+> - ✅ **wired** — code exists and runs on the request path
+> - ⚠️ **partial** — defined + stored + admin-editable, only partially enforced
+> - ❌ **silent no-op** — accepted by admin API / UI, but the runtime ignores it
 >
-> Long-term plan: higgsgo + higgs-cpa-plugin published separately on GitHub, usable **standalone** (self-hosted WebUI) or **integrated with CPA** (via CPA's existing pool / API key management).
+> When a claim in this file diverges from the code, `docs/ROADMAP.md`
+> §1 is authoritative and lists the exact `file:line` evidence.
+>
+> Three requirements this design covers:
+> 1. **Per-account usage / request count stats** — clear and queryable ✅
+> 2. **Account pool groups** with per-group concurrency and quota — ⚠️ groups exist and route, quota/concurrency fields are stored but not yet enforced (see §7.1, ROADMAP P0/P1)
+> 3. **Two consumption modes coexist**: higgsgo self-managed vs CPA-managed — Mode A ✅, Mode B still in flight
+>
+> Long-term plan: higgsgo + higgs-cpa-plugin published separately, usable
+> **standalone** (self-hosted WebUI) or **integrated with CPA**.
 
 ---
 
@@ -147,27 +156,42 @@ group_id = "video-premium"
 
 ### 2.3 Pool Pick Logic (with groups)
 
-```go
-func (p *Pool) PickInGroup(ctx context.Context, groupID string, params PickParams) (*Account, error)
+> **Reality vs design.** The current `PickAndLock` at
+> `internal/adapters/storage/sqlite/account_store.go:395-503` implements
+> the *design intent* below only partially. Enforced clauses are marked
+> ✅; silent no-ops are marked ❌ with the corresponding ROADMAP item.
 
-// SQL skeleton
+```go
+func (s *accountStore) PickAndLock(ctx context.Context, p PickParams) (*Account, error)
+
+// SQL that runs today (paraphrased from account_store.go):
 SELECT a.* FROM accounts a
-JOIN account_group_members m ON a.id = m.account_id
-WHERE m.group_id = ?
-  AND a.status = 'active'
-  AND a.in_flight_jobs < COALESCE(g.max_concurrent_per_account, 5)
-  AND (aggregated in_flight_jobs across the group) < g.max_concurrent_jobs
-  AND a.subscription_balance >= ?estCost * 1.2
-  AND ...is jst in the group's allow list...
-ORDER BY 
-  m.priority DESC,
-  CASE g.route_strategy
-    WHEN 'least_used' THEN a.last_used_at
-    WHEN 'cheapest_first' THEN a.plan_rank  -- starter first
-    ELSE a.last_used_at                     -- round_robin (fallback)
-  END
+WHERE a.status = 'active'
+  AND a.in_flight_jobs < 5                                    // ❌ hardcoded literal (P0-3 replaces with resolver value)
+  AND a.subscription_balance >= ? * 1.2                       // ✅ per-account balance headroom
+  AND (:GroupID = '' OR a.id IN (SELECT account_id FROM account_group_members WHERE group_id = :GroupID))
+                                                              // ✅ group membership filter
+  AND ...is jst in the group's allowed_models_regex...        // ❌ regex is stored but never applied (P1-4)
+  AND SUM(a.in_flight_jobs) OVER group < g.max_concurrent_jobs
+                                                              // ❌ aggregate cap not enforced (P0-3)
+ORDER BY
+  CASE :RouteStrategy
+    WHEN 'least_used'         THEN (a.total_plan_credits - a.subscription_balance) ASC
+    WHEN 'cheapest_first'     THEN CASE a.plan_type WHEN 'free' 1 WHEN 'starter' 2 ... END ASC
+    WHEN 'most_credits_first' THEN (a.subscription_balance + a.credits_balance) DESC
+    WHEN 'priority'           THEN COALESCE(m.priority, a.priority) DESC
+    ELSE                          a.last_used_at ASC        -- 'round_robin' is actually LRU
+  END,
+  a.last_used_at ASC                                          // tie-breaker
 LIMIT 1
+FOR UPDATE                                                    // BEGIN/COMMIT tx protects SELECT+UPDATE atomicity
 ```
+
+**Group budget enforcement.** `group.monthly_credit_budget` is currently
+❌ — the proxy path never calls `GroupStore.IncrementUsed`
+(`group_store.go:321`), so month-to-date is never charged and never
+checked. ROADMAP P1-4 wires this via `resolver.Resolve()` and
+`Metering.Recorder`.
 
 ### 2.4 Group Default Policy
 
@@ -544,23 +568,59 @@ higgsgo-webui/                      # Web frontend (used with Mode A)
 
 ### 7.1 How to Compute Group-Level Concurrency
 
-`max_concurrent_jobs` is **aggregated across accounts** — the sum of in_flight_jobs across every account in the group.
+**Design.** `max_concurrent_jobs` is **aggregated across accounts** — the
+sum of `in_flight_jobs` across every account in the group; enforced by a
+`SUM()` subquery in `PickAndLock` WHERE.
 
-Implementation: `account_group_members` join + SUM. Or maintain a redundant `current_in_flight` column on `account_groups` and keep it in sync with a DB trigger (SQLite supports this).
+**Reality (2026-07-18).** ❌ Not enforced. `PickAndLock` at
+`account_store.go:418` still uses a hardcoded per-account
+`in_flight_jobs < 5`. `GroupStore.CurrentInFlight`
+(`group_store.go:339`) exists and computes the aggregate, but has no
+production caller. See ROADMAP P0-3.
 
 ### 7.2 Group Routing Strategies
 
-`route_strategy`:
-- `round_robin`: ascending by `last_used_at` (default)
-- `least_used`: ascending by credits used this month (spread consumption evenly)
-- `cheapest_first`: ascending by `plan_rank` (burn low-tier accounts first, preserve high-tier)
-- `most_credits_first`: descending by `subscription_balance` (use the highest-balance accounts first)
+`route_strategy` accepts five values (`internal/domain/group.go:8-29`).
+The `internal/adapters/storage/sqlite/account_store.go:445-479`
+`ORDER BY` implementations are listed as they actually run today:
+
+- `round_robin` — **misnamed; actually LRU.**
+  `ORDER BY last_used_at ASC LIMIT 1`. No round-tracking, no
+  randomization. Under concurrent bursts the same row wins repeatedly
+  until the surrounding tx commits (hot-spot risk).
+- `least_used` — `ORDER BY (total_plan_credits - subscription_balance)
+  ASC, last_used_at ASC`. **Sorts by lifetime consumed credits**, not
+  month-to-date. If you need "spread this month's usage evenly", we still
+  need to wire it up against `monthly_credit_used`.
+- `cheapest_first` — `ORDER BY CASE plan_type ... END ASC, last_used_at
+  ASC`. Hardcoded 11-tier ladder (`free`=1 … `enterprise`=11). Burns
+  low-tier plans first, preserves high-tier.
+- `most_credits_first` — `ORDER BY (subscription_balance +
+  credits_balance) DESC, last_used_at ASC`.
+- `priority` — `ORDER BY m.priority DESC` when a group is set (member
+  priority from `account_group_members.priority`, backend ✅ / WebUI ❌ —
+  ROADMAP P0-1), else `accounts.priority DESC`.
+
+Every strategy uses `last_used_at` as a tie-breaker and returns exactly
+one row (`LIMIT 1`). There is **no** weighted round-robin,
+least-connections, fair-share reservation, or in-memory counter. If you
+need real fair-share, ROADMAP P2-8 sketches the cheapest upgrade
+(jittered in-memory pick counter).
 
 ### 7.3 API Key → Group Mapping
 
-- A key can be bound to multiple groups; tried in `group.priority` order
-- If a group can't pick an account (quota exhausted / concurrency full), auto-fallback to the next group
-- If every group is exhausted, return 402
+**Design.** A key can be bound to multiple groups; tried in some order;
+falls back on exhaustion; every-group-exhausted returns 429/402.
+
+**Reality (2026-07-18).** ⚠️ Partial. `resolveGroup`
+(`internal/api/v1/handler.go:318-352`) picks **exactly one** group via
+this precedence: (1) explicit `group_id` in the request body, (2)
+`api_keys.group_id` direct column, (3) if a key has exactly one entry in
+`apikey_group_bindings` use it, if it has zero fall back to the global
+pool (empty group filter), if it has multiple return
+`400 ambiguous_group`. There is **no inter-group spillover** — an
+exhausted group returns without trying the caller's other bindings. See
+ROADMAP P3-10 if we decide spillover is needed.
 
 ### 7.4 CPA Plugin: REST or gRPC
 

@@ -1,7 +1,89 @@
-# higgsgo Pluggable Architecture Design (supplement to HIGGSGO-ARCHITECTURE.md §2)
+# higgsgo Pluggable Architecture
 
-> Core idea: **proxy / mailbox / captcha solver / model / storage / notifier are all Providers**.
-> The main program depends only on interfaces; concrete implementations are injected via config. Switching vendors = swap the implementation + change config.
+> Two orthogonal pluggability layers:
+>
+> 1. **Provider ports inside the main module** — proxy, mailbox, captcha
+>    solver, browser, storage, notifier, model registry are all
+>    interface-driven. Swap vendors by editing config.
+> 2. **Monorepo module split** for sensitive code — the account
+>    registration flow lives in a separately-versioned Go sub-module
+>    under `plugins/register/`. The public reverse-proxy build compiles
+>    only a 503-returning stub, so private automation logic never ships
+>    in a public binary.
+>
+> §0 covers the module split (the newer decision). §§1-8 cover the
+> in-module Provider abstraction. §9 is out of date and superseded by
+> `docs/ROADMAP.md`; §10 is the current wiring status.
+
+---
+
+## 0. Monorepo Module Split (registration plugin)
+
+### 0.1 Why split
+
+Reverse proxy = commodity infrastructure, safe to open-source. Account
+registration = sensitive automation (captcha solves, browser
+fingerprinting, mailbox cookies) that we don't want in public builds.
+
+Two build variants from one repo:
+
+| Variant | Command | Contents | Registration behaviour |
+|---|---|---|---|
+| Public (slim) | `go build ./cmd/higgsgo` | main module only | `POST /admin/registrations` → `503 registrar_disabled` |
+| Private (full) | `go build -tags register ./cmd/higgsgo` | main + `plugins/register` linked in | Real automation runs |
+
+### 0.2 Layout
+
+```
+higgsgo/
+├── go.work                              # binds both modules for local dev
+├── go.mod                               # main:    github.com/greensheep999/higgsgo
+├── internal/
+│   ├── ports/registrar.go               # interface — always compiled
+│   └── adapters/registrar/higgsfield/
+│       ├── higgsfield_disabled.go       # default: return cpaplugin.StubRegistrar{}
+│       └── higgsfield.go                # -tags register: bridge to plugin
+├── internal/api/admin/registrations.go  # HTTP handlers — always compiled
+└── plugins/
+    └── register/
+        ├── go.mod                       # plugin:  github.com/greensheep999/higgsgo/plugins/register
+        ├── flow.go / worker.go / ports.go / types.go
+        ├── api/                         # if the plugin needs to expose HTTP
+        └── adapters/
+            ├── camoufox/                # browser adapter
+            └── cloak/                   # alt browser adapter
+```
+
+### 0.3 Contract
+
+`internal/ports/registrar.go` is the *only* handshake:
+
+```go
+type Registrar interface {
+    Enqueue(ctx context.Context, req RegistrationRequest) (string, error)
+    GetStatus(ctx context.Context, id string) (*Registration, error)
+    List(ctx context.Context, f RegistrationFilter) ([]RegistrationRow, error)
+    Retry(ctx context.Context, id string) error
+}
+```
+
+- **Default build** (`higgsfield_disabled.go`) returns
+  `cpaplugin.StubRegistrar{}` — every method returns
+  `domain.ErrRegistrarDisabled` which maps to HTTP 503.
+- **`-tags register` build** returns a bridge (`higgsfield.go`) that
+  wraps the plugin's `Registrar` implementation. Today this file is
+  `panic("TODO")` — see ROADMAP §5.
+
+### 0.4 Migration status (ROADMAP §5.3)
+
+- ✅ Interface, admin handlers, stub, table schema (migration `001`).
+- ❌ `go.work`.
+- ❌ Module-path alignment: `plugins/register/go.mod` says
+  `github.com/higgsgo/higgsgo/plugins/register`; needs to match
+  `github.com/greensheep999/higgsgo/plugins/register`.
+- ❌ Bridge implementation under `-tags register`.
+- ❌ SQLite `registration_store` adapter (schema exists, no CRUD).
+- ❌ Real browser adapters (camoufox / cloak are placeholders).
 
 ---
 
@@ -717,15 +799,51 @@ Bought a batch of new-domain disposable mailboxes:
 
 ---
 
-## 9. Open Questions (Need Your Call)
+## 9. Historical Open Questions (superseded)
 
-1. **Model definitions**: TOML shards vs one big JSON? TOML is more readable; JSON already exists (edit sealed.json directly)
-2. **DataDome cookie solving**: the existing Node version clears it by driving a CloakBrowser; should the Go version bring in a third-party captcha API (CapSolver has a DataDome endpoint at $0.5/1000 solves)?
-3. **Scope of config hot reload**: only models, or also proxy / mailbox? (The latter grows complexity exponentially)
-4. **Provider versioning**: when a provider has multiple versions (e.g. CapSolver v1 vs v2 API), how to switch? — Suggest `type = "capsolver"` + `version = "v2"`
-5. **Testing strategy**: does each adapter get a mock version for unit tests, or only integration tests?
-6. **Plugin mechanism**: Go plugin (unstable) / wasm (perf hit) / RPC subprocess (most flexible)? — No plugins to start; compile-time selectable
+The list below reflects questions from the initial design draft. Most
+have been settled in code; the remainder are tracked in
+`docs/ROADMAP.md`.
+
+- Model definitions → shipped as `data/reference/verified-models.json`
+  with runtime override table (see ARCHITECTURE §11a.4).
+- DataDome cookie solving → CapSolver / CloakBrowser both accessible via
+  the Captcha and Browser ports; choice is per-deployment config.
+- Hot reload scope → `POST /admin/models/reload` reloads the model
+  registry (with runtime overrides); providers still require restart.
+- Provider versioning → deferred; no vendor has forced this yet.
+- Adapter testing → each adapter gets in-package unit tests; integration
+  tests are hermetic per-feature (`internal/e2e/`).
+- Plugin mechanism → **decided: monorepo Go sub-module + build tag**,
+  see §0 above. Not `go plugin`, not wasm, not RPC subprocess.
 
 ---
 
-**Read this alongside HIGGSGO-ARCHITECTURE.md**. Once you're happy with the shape of the core provider abstraction, I'll go stand up the higgsgo directory.
+## 10. Wiring Status (2026-07-18)
+
+**Provider ports** (`internal/ports/`) — all defined, wired via
+`config/wire.go`, adapters selected at startup from
+`configs/higgsgo.example.toml`:
+
+| Port | Adapter(s) | Status |
+|---|---|---|
+| `ProxyProvider` | env / static | ✅ built once at startup (see ARCHITECTURE §8.3 for the sticky-proxy gap) |
+| `MailboxProvider` | used by registration only | ⚠️ referenced by `plugins/register`, not on runtime path |
+| `CaptchaSolver` | used by registration only | ⚠️ same |
+| `BrowserAutomator` | camoufox / cloak | ⚠️ placeholders (ROADMAP §5.4) |
+| `UpstreamClient` | utls / stdhttp | ✅ chosen via config |
+| `Storage` | sqlite | ✅ single adapter today |
+| `ModelRegistry` | jsonstatic + overrides | ✅ hot-reloadable |
+| `Notifier` | webhook / slack | ✅ webhook adapter used by metering |
+
+**Registrar port** — see §0.4 above.
+
+**Config resolver** (`internal/core/resolver/`) — implemented but not
+imported anywhere. Meant to sit *between* the raw config layer and the
+pick path; wiring is ROADMAP P1-4.
+
+---
+
+**Cross-reference.** `ARCHITECTURE.md` §11a documents the modules
+added after the initial design freeze. `ROADMAP.md` is the source of
+truth for what actually runs today and what P0/P1/P2 work remains.
