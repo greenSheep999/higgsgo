@@ -416,34 +416,108 @@ higgsgo/
                                          # separately-taggable version
 ```
 
-### 5.3 Current state (2026-07-18)
+### 5.3 State (2026-07-19)
+
+All items below are done unless marked otherwise. See §5.5 for the
+manual bootstrap operators still need to run once at deploy time.
 
 - ✅ Interface defined (`internal/ports/registrar.go`).
 - ✅ Admin API routes mounted (`internal/api/admin/registrations.go`,
   `server.go:386`).
 - ✅ Default stub returns 503 (`higgsfield_disabled.go`).
-- ❌ `higgsfield.go` under `-tags register` is `panic("TODO")` for all
-  four methods. Bridge not wired.
-- ❌ `plugins/register/go.mod` module path is
-  `github.com/higgsgo/higgsgo/plugins/register` — mismatched with main
-  module `github.com/greensheep999/higgsgo`. Needs realignment + a
-  top-level `go.work` file.
-- ❌ `plugins/register/adapters/{camoufox,cloak}` are `not implemented`
-  placeholders.
-- ❌ No sqlite registration store; migration `001` creates the table but
-  no CRUD adapter reads/writes it.
+- ✅ `higgsfield.go` under `-tags register` bridges to `plugins/register`
+  via a `storeAdapter` that translates between the main module's
+  int64-id 4-state model and the plugin's string-id 6-state model
+  (**P4-2** — commit `31ff48c`).
+- ✅ `plugins/register/go.mod` module path realigned to
+  `github.com/greensheep999/higgsgo/plugins/register`; top-level
+  `go.work` binds both modules for local development.
+- ✅ SQLite `RegistrationStore` implements the full
+  `ports.RegistrationStore` interface — Enqueue / NextPending /
+  MarkRunning / MarkCompleted / MarkFailed / Get / List /
+  ResetToPending (**P4-1** commit `a854ef7`; **P4-3a** commit
+  `bb21923`).
+- ✅ `plugins/register/adapters/camoufox` replaced with a `NodeDriver`
+  that spawns the higgsgo-register-driver Node subprocess and speaks
+  to it over 127.0.0.1 HTTP. Follows the klinggo pattern
+  (process-group Setpgid, /ready poll, /shutdown drain).
+  (**P4-3b** commit `b8899ed`.)
+- ✅ `plugins/register/driver-node/` (Node HTTP driver): lazily
+  imports `../../../higgsfield-register/src/register/flow.mjs` so no
+  Playwright / camoufox / DataDome / Graph OTP logic is duplicated
+  into higgsgo. `POST /register` runs one signup end-to-end.
+- ✅ **Successful driver.Register → Account row.** `storeAdapter.
+  MarkCompleted` now upserts a fully-populated `domain.Account` from
+  `CompletedResult` (cookies → JSON, plan_type map, credits →
+  hundredths, session_id / user_agent / datadome_client_id
+  captured) before flipping the registrations row to `success`.
+  Nil AccountStore degrade path logs a warn and skips the upsert.
+  (**P4-3c** commit `b7645f2`.)
 
-### 5.4 Path to working registration
+### 5.4 What still needs a P4-4
 
-1. Add top-level `go.work` binding both modules.
-2. Rewrite `plugins/register/go.mod` module path to
-   `github.com/greensheep999/higgsgo/plugins/register`.
-3. Import `plugins/register` from `higgsfield.go` under `-tags register`
-   and delegate `Enqueue`/`GetStatus`/`List`/`Retry`.
-4. Write `internal/adapters/storage/sqlite/registration_store.go` +
-   inject into `plugin.Deps`.
-5. Fill in one working browser adapter (camoufox first — has existing
-   binary; cloak later).
+Manual, out-of-band, or lower-priority items:
+
+- ⏳ **Retry path across the full flow.** `admin.Retry` re-runs the
+  same registration row (P4-3a landed `ResetToPending` on the store);
+  the Node driver is idempotent on `email + password`, so a retried
+  row lands the same account_id via `AccountStore.Upsert`. Not yet
+  exercised in integration tests.
+- ⏳ **Automatic proxy pool integration.** Today the caller sets
+  `proxy_url` on the admin Enqueue payload. Wiring a pool picker
+  that draws a healthy socks5 automatically would let operators
+  bulk-enqueue by email list.
+- ⏳ **Metrics** on the registration pipeline (rows/hour, latency,
+  failure kind histogram) so operator dashboards can see the queue
+  moving.
+- ⏳ **Config schema section** for
+  `HIGGSGO_REGISTER_DRIVER_*` env vars. Today they're read directly
+  in `cmd/higgsgo/registrar_register.go`; a proper
+  `config.Registrar` block would consolidate them.
+
+### 5.5 Bootstrap for operators (one-time, per deploy)
+
+`-tags register` builds depend on the Node driver being able to
+resolve `../higgsfield-register/src/register/flow.mjs` and having
+Playwright + camoufox installed. Steps:
+
+```bash
+# 1. Sibling checkout so plugins/register/driver-node/index.mjs
+#    can resolve flow.mjs at ../../../../higgsfield-register/.
+#    Alternatively export HIGGSFIELD_REGISTER_ROOT=/path/to/checkout.
+git clone <higgsfield-register-repo> ../higgsfield-register
+
+# 2. Install the driver's Node deps (playwright, camoufox, undici …).
+cd plugins/register/driver-node
+npm install
+
+# 3. Playwright browser binaries (camoufox uses the Firefox base).
+npx playwright install firefox
+
+# 4. Microsoft Graph OAuth2 credentials for OTP retrieval. Wire via
+#    env before starting higgsgo:
+#      HIGGSGO_REGISTER_MAILBOX_CLIENT=<app_client_id>
+#      HIGGSGO_REGISTER_MAILBOX_TOKEN=<refresh_token>
+#    Absence = flow times out at OTP wait; a distinct, honest failure
+#    mode rather than a silent hang.
+
+# 5. Build and run.
+go build -tags register ./cmd/higgsgo
+./higgsgo -config /etc/higgsgo/config.toml
+```
+
+Env-var reference:
+
+| Env | Purpose |
+|---|---|
+| `HIGGSGO_REGISTER_DRIVER_URL` | Connect to an already-running driver instead of spawning. Empty = spawn locally. |
+| `HIGGSGO_REGISTER_DRIVER_PORT` | Port for the spawned driver. Default 8801. |
+| `HIGGSGO_REGISTER_HEADED` | Set to `1` for a visible browser (debug only). |
+| `HIGGSGO_REGISTER_MAILBOX_CLIENT` | Microsoft Graph OAuth2 `client_id`. |
+| `HIGGSGO_REGISTER_MAILBOX_TOKEN` | Microsoft Graph `refresh_token`. |
+| `HIGGSGO_NODE_BIN` | Node interpreter path. Default `node` on PATH. |
+| `HIGGSGO_REGISTER_DRIVER_SCRIPT` | Absolute path to `index.mjs`. Default: resolves relative to the higgsfield.go source file. |
+| `HIGGSFIELD_REGISTER_ROOT` | Absolute path to the higgsfield-register checkout (only if not a sibling of higgsgo). |
 
 ---
 

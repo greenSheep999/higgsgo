@@ -874,6 +874,97 @@ ROADMAP P1-4 wires this into `proxy.Service.Generate` between
 restricted to `/v1/playground/{models,estimate,execute}` (used by the
 WebUI's playground page). Full endpoint list in `API_REFERENCE.md`.
 
+### 11a.8 Registration Plugin (`-tags register`)
+
+Full end-to-end signup pipeline: WebUI Enqueue → SQLite queue →
+Go worker → Node subprocess → higgsfield.ai → harvested cookies →
+new `domain.Account` in the pool. Only linked under `-tags register`
+so public / reverse-proxy binaries ship none of the automation
+code. See `docs/PLUGGABLE.md` §0 for the monorepo split and
+`docs/ROADMAP.md` §5 for the delivery history.
+
+**Layers:**
+
+- `internal/ports/registrar.go` — `Registrar` interface (Enqueue,
+  GetStatus, List, Retry). Always compiled.
+- `internal/adapters/registrar/higgsfield/higgsfield_disabled.go` —
+  default build: `NewRegistrar` returns a stub that answers 503
+  `registrar_disabled` on every method.
+- `internal/adapters/registrar/higgsfield/higgsfield.go`
+  (`//go:build register`) — the bridge. Owns:
+    - `storeAdapter` — translates between the main module's int64-id
+      4-state schema and the plugin's string-id 6-state model.
+      `MarkCompleted` runs a two-step transition (Account upsert
+      then registrations flip) so a `success` row never dangles.
+    - `registrar` — the `ports.Registrar` facade. Enqueue → store,
+      GetStatus → store, List → store (via
+      `ports.RegistrationStore.List` which supports status /
+      since / limit / offset), Retry → `ResetToPending` + worker
+      trigger.
+    - Optional `Start(ctx)` starts a `plugins/register.Worker`
+      goroutine when a Driver is wired.
+- `plugins/register/` — separately-versioned Go sub-module.
+  Defines its own `RegistrationStore` + `Driver` interfaces plus
+  the queue state machine. Under `-tags register`
+  `internal/adapters/registrar/higgsfield/` implements the
+  storeAdapter that satisfies the plugin's `RegistrationStore` by
+  delegating to `ports.RegistrationStore`.
+- `plugins/register/adapters/camoufox/driver_node.go` — `NodeDriver`
+  spawns and talks to the Node subprocess. Klinggo pattern: process
+  group via `Setpgid` so `Close()` reaps the whole
+  node→chromium/firefox tree.
+- `plugins/register/adapters/mock/driver.go` — in-process fake
+  Driver used by unit tests to prove the flow-driver plumbing
+  without a subprocess.
+- `plugins/register/driver-node/index.mjs` — Node HTTP driver.
+  Lazily imports `../../../higgsfield-register/src/register/flow.mjs`
+  (or `HIGGSFIELD_REGISTER_ROOT`) so no Playwright / camoufox /
+  DataDome / Graph OTP logic is duplicated into higgsgo. `POST
+  /register` runs one signup end-to-end; `GET /ready` reports the
+  driver's health; `POST /shutdown` exits cleanly.
+- `internal/adapters/storage/sqlite/registration_store.go` — full
+  CRUD over the `registrations` table (built by migration 001).
+
+**Data flow (`-tags register` build):**
+
+```
+WebUI Register form
+    ↓  POST /admin/registrations {email, oauth_source?, proxy_url?}
+Admin handler (internal/api/admin/registrations.go)
+    ↓  Registrar.Enqueue
+higgsfield.registrar.Enqueue (register-tag bridge)
+    ↓  storeAdapter.Enqueue → RegistrationStore.Enqueue
+sqlite.RegistrationStore
+    ↓  INSERT INTO registrations (…, status='pending')
+    ← worker.Trigger fires an out-of-cycle poll
+
+register.Worker.poll (plugins/register/worker.go)
+    ↓  RegistrationStore.NextPending → sqlite row
+    ↓  flow.Execute(reg)
+register.Flow (driver path)
+    ↓  RegistrationStore.MarkRunning
+    ↓  Driver.Register({email, password, proxy, mailbox_config})
+camoufox.NodeDriver (plugins/register/adapters/camoufox/driver_node.go)
+    ↓  HTTP POST http://127.0.0.1:8801/register
+Node driver (plugins/register/driver-node/index.mjs)
+    ↓  registerAccount(opts) from higgsfield-register
+Playwright + Camoufox
+    ↓  signup + OTP + DataDome
+    ↑  { account_id, session_id, cookies, ua, ... }
+Node driver responds
+    ↑  { ok: true, result }
+NodeDriver.Register → CompletedResult
+    ↑
+register.Flow
+    ↓  RegistrationStore.MarkCompleted(id, result)
+storeAdapter.MarkCompleted
+    ↓  AccountStore.Upsert (cookies → JSON, plan map,
+                             credits → hundredths)
+    ↓  RegistrationStore.MarkCompleted (status='success')
+```
+
+Bootstrap and env-var reference are in `docs/ROADMAP.md` §5.5.
+
 ---
 
 ## 12. Deployment

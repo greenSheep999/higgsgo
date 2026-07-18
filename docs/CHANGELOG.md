@@ -9,6 +9,105 @@ Commits referenced inline as `[hash]` are reachable from `main`; run
 
 ## [Unreleased]
 
+### Registration Plugin Lands (2026-07-19, post-v0.2)
+
+The registration pipeline moves from "storage-only queue with a
+503 admin endpoint" to a full end-to-end signup path under
+`-tags register`. All five ROADMAP §5.4 items closed. Public /
+reverse-proxy builds are unchanged: default `go build` still
+answers 503 `registrar_disabled` and ships none of the automation
+code.
+
+#### Plumbing (P4-1, P4-2, P4-3a)
+
+- **SQLite `RegistrationStore`** implementing the full
+  `ports.RegistrationStore` interface: Enqueue / NextPending /
+  MarkRunning / MarkCompleted / MarkFailed / Get + admin-shaped
+  List (newest-first with status/since/limit/offset SQL filters)
+  and ResetToPending (for Retry). The `registrations` table has
+  been in migration 001 since day one — this commit finally
+  reads/writes it. Commits `a854ef7`, `bb21923`.
+- **`higgsfield.go` bridge** (under `//go:build register`)
+  translates between the main module's int64-id 4-state schema
+  and the plugin's string-id 6-state model via a `storeAdapter`.
+  The `registrar` facade satisfies `ports.Registrar` by
+  delegating each admin call to the store; the optional
+  `Start(ctx)` starts a background worker goroutine. Commit
+  `31ff48c`.
+
+#### Node subprocess driver (P4-3b)
+
+- **`plugins/register/driver-node/index.mjs`** — a minimal
+  Node HTTP server that spawns as a subprocess of higgsgo and
+  wraps the higgsfield-register project's `registerAccount()`.
+  Endpoints: `GET /ready`, `POST /register`, `POST /shutdown`.
+  Lazily imports `../../../higgsfield-register/src/register/
+  flow.mjs` so no Playwright / camoufox / DataDome / Graph OTP
+  logic is duplicated into higgsgo. Commit `b8899ed`.
+- **`plugins/register/adapters/camoufox/driver_node.go`** —
+  `NodeDriver` implements `register.Driver` by spawning the
+  Node subprocess and talking to it over 127.0.0.1 HTTP. Follows
+  the klinggo `browser_client.go` pattern: `Setpgid` process
+  group so `Close()` reaps the whole `node → chromium/firefox`
+  tree; free-port probe before spawn to fail fast; 30s `/ready`
+  poll on startup. Commit `b8899ed`.
+- **Higher-level `Driver` interface** on
+  `plugins/register/ports.go` — a single `Register(req)` call
+  replaces the session-level `Launch → Goto → Fill → Click`
+  sequence. `NewFlowWithDriver` wires Flow to delegate one
+  round-trip per registration instead of chaining subprocess
+  calls per DOM action. Commit `df62cbd`.
+
+#### Account upsert on success (P4-3c)
+
+- **`storeAdapter.MarkCompleted` two-step transition.** When the
+  driver returns a `CompletedResult`, the adapter first upserts
+  a fully-populated `domain.Account` (cookies marshalled to
+  JSON, `PlanType` mapped from string, credits converted to the
+  int64-hundredths unit, `Source = "registered"`, `Status =
+  active`) and only then flips the `registrations` row to
+  `success`. Failure at the upsert bubbles out; the
+  `registrations` row stays `running` and Retry re-runs the
+  flow idempotently. Nil `AccountStore` degrades cleanly (warn
+  + skip upsert). Commit `b7645f2`.
+
+#### Manual bootstrap (documented, not shipped)
+
+`-tags register` builds still need three one-time operator
+steps at deploy: (a) sibling `../higgsfield-register` checkout
+or `HIGGSFIELD_REGISTER_ROOT`, (b) `npm install` inside
+`plugins/register/driver-node/`, (c) `npx playwright install
+firefox` for camoufox. Env-var reference for the seven
+runtime knobs is in `docs/ROADMAP.md` §5.5. Automating this
+into a `scripts/bootstrap-register-driver.sh` is P4-4.
+
+#### Testing
+
+50+ new test cases across the pipeline:
+
+- `internal/adapters/storage/sqlite/registration_store_test.go` —
+  6 cases covering lifecycle, fail-path, unknown-id, empty queue,
+  list filters + pagination, reset-to-pending.
+- `plugins/register/flow_driver_test.go` — 3 cases proving Flow
+  delegates to a Driver correctly (happy / fail / ctx-cancel).
+- `plugins/register/adapters/camoufox/driver_node_test.go` — 3
+  cases: real spawn + `/ready` handshake, missing-script fast
+  fail, register smoke test (skipped-by-default because real
+  signup is slow/flaky in CI).
+- `internal/adapters/registrar/higgsfield/upsert_test.go` — 5
+  cases covering the P4-3c mapping matrix (happy path with 12
+  field assertions + cookie round-trip, unknown-plan fallback,
+  nil-AccountStore degrade, missing-account_id error, upsert-
+  failure bubbles without flipping the reg row).
+
+#### Also in this window
+
+- **Card footer button labels restored** on wide accounts cards
+  (P2-6's icon-only regression). Uses a `@xs/acccard` container
+  query so narrow cards keep icons only. Commit `9f4b83c`.
+
+---
+
 ### Audit → Delivery Cycle (July 2026)
 
 A ground-up audit of the pool + admin surface found that many
