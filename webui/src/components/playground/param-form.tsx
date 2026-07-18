@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -99,6 +100,7 @@ function classify(name: string): Widget {
 }
 
 export function ParamForm({ params, values, onChange }: Props) {
+  const { t } = useTranslation();
   const rows = useMemo(
     () => params.map((p) => ({ name: p, widget: classify(p) })),
     [params],
@@ -107,7 +109,7 @@ export function ParamForm({ params, values, onChange }: Props) {
   if (rows.length === 0) {
     return (
       <p className="text-xs text-muted-foreground">
-        This model has no required params — hit Execute directly.
+        {t("playground.noRequiredParams")}
       </p>
     );
   }
