@@ -40,6 +40,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge, type StatusTone } from "@/components/ui/status-badge";
 import { presetWindow, type WindowPreset } from "@/lib/time-window";
+import { UsageTrend } from "@/components/usage/usage-trend";
 
 // Usage page — two tabs. "Events" is the raw /admin/usage stream so an
 // operator can zoom into a specific request. "Aggregate" reuses the
@@ -128,6 +129,7 @@ function Usage() {
         </CardAction>
       </CardHeader>
       <CardContent>
+        <UsageTrend window={window} />
         <Tabs defaultValue="events">
           <TabsList>
             <TabsTrigger value="events">{t("usage.tabs.events")}</TabsTrigger>

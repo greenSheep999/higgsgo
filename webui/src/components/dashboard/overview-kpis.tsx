@@ -7,6 +7,8 @@ import {
   IconCoin,
   IconInfinity,
   IconKey,
+  IconTrendingDown,
+  IconTrendingUp,
   IconUsers,
   IconWallet,
 } from "@tabler/icons-react";
@@ -43,9 +45,37 @@ interface Props {
   window: TimeWindow;
 }
 
+// Compute the previous equivalent period for trend comparison. If the current
+// window spans 7 days (since..until), the previous window is 7 days before
+// that (since-7d .. since).
+function previousWindow(w: TimeWindow): { since: string; until: string } {
+  const sinceMs = new Date(w.since).getTime();
+  const untilMs = new Date(w.until).getTime();
+  const spanMs = untilMs - sinceMs;
+  return {
+    since: new Date(sinceMs - spanMs).toISOString(),
+    until: w.since,
+  };
+}
+
+interface Trend {
+  value: number; // percentage change
+  direction: "up" | "down" | "neutral";
+}
+
+function computeTrend(current: number, previous: number): Trend {
+  if (previous === 0 && current === 0) return { value: 0, direction: "neutral" };
+  if (previous === 0) return { value: 100, direction: "up" };
+  const pct = Math.round(((current - previous) / previous) * 1000) / 10;
+  if (pct === 0) return { value: 0, direction: "neutral" };
+  return { value: Math.abs(pct), direction: pct > 0 ? "up" : "down" };
+}
+
 export function OverviewKPIs({ window }: Props) {
   const { t } = useTranslation();
   const windowLabel = t(window.label);
+  const prev = previousWindow(window);
+
   const pool = useQuery({
     queryKey: ["admin", "stats", "pool"],
     queryFn: admin.poolStats,
@@ -75,10 +105,37 @@ export function OverviewKPIs({ window }: Props) {
     refetchInterval: 30_000,
   });
 
+  const prevUsage = useQuery({
+    queryKey: [
+      "admin",
+      "usage",
+      "aggregate",
+      "kpi-prev",
+      prev.since,
+      prev.until,
+    ],
+    queryFn: () =>
+      admin.aggregateUsage({
+        since: prev.since,
+        until: prev.until,
+      }),
+    refetchInterval: 30_000,
+  });
+
   const totals = summariseUsage(usage.data);
+  const prevTotals = summariseUsage(prevUsage.data);
   const keyCounts = summariseKeys(keys.data);
   const failureRate =
     totals.requests > 0 ? (totals.failed / totals.requests) * 100 : 0;
+  const prevFailureRate =
+    prevTotals.requests > 0
+      ? (prevTotals.failed / prevTotals.requests) * 100
+      : 0;
+
+  const requestsTrend = computeTrend(totals.requests, prevTotals.requests);
+  const creditsTrend = computeTrend(totals.chargedCredits, prevTotals.chargedCredits);
+  const failureTrend = computeTrend(failureRate, prevFailureRate);
+  const latencyTrend = computeTrend(totals.avgLatencyMs, prevTotals.avgLatencyMs);
 
   const error = pool.error ?? keys.error ?? usage.error;
   if (error) return <ErrorPanel err={error} what={t("dashboard.errors.overviewStats")} />;
@@ -157,6 +214,7 @@ export function OverviewKPIs({ window }: Props) {
           icon={<IconBolt className="size-4" />}
           loading={loading}
           badge={windowLabel}
+          trend={requestsTrend}
         />
         <Tile
           title={t("dashboard.kpi.chargedCredits")}
@@ -170,6 +228,7 @@ export function OverviewKPIs({ window }: Props) {
           icon={<IconCoin className="size-4" />}
           loading={loading}
           badge={windowLabel}
+          trend={creditsTrend}
         />
         <Tile
           title={t("dashboard.kpi.failureRate")}
@@ -186,6 +245,8 @@ export function OverviewKPIs({ window }: Props) {
           icon={<IconAlertTriangle className="size-4" />}
           loading={loading}
           badge={windowLabel}
+          trend={failureTrend}
+          invertTrend
         />
         <Tile
           title={t("dashboard.kpi.avgLatency")}
@@ -195,6 +256,8 @@ export function OverviewKPIs({ window }: Props) {
           icon={<IconClockHour4 className="size-4" />}
           loading={loading}
           badge={windowLabel}
+          trend={latencyTrend}
+          invertTrend
         />
       </div>
     </div>
@@ -261,6 +324,10 @@ interface TileProps {
   format?: "plain" | "credits" | "credits-flat" | "percent" | "ms";
   badge?: string;
   large?: boolean;
+  trend?: Trend;
+  // When true, "down" is good (green) and "up" is bad (red).
+  // Use for metrics where lower is better (failure rate, latency).
+  invertTrend?: boolean;
 }
 
 function Tile({
@@ -272,7 +339,10 @@ function Tile({
   format = "plain",
   badge,
   large = false,
+  trend,
+  invertTrend = false,
 }: TileProps) {
+  const { t } = useTranslation();
   const rendered =
     value === undefined || value === null
       ? "—"
@@ -285,6 +355,35 @@ function Tile({
             : format === "ms"
               ? `${Math.round(value)} ms`
               : value.toLocaleString();
+
+  // Determine trend color: for inverted metrics (failure rate, latency),
+  // "down" is good and "up" is bad.
+  let trendElement: React.ReactNode = null;
+  if (trend) {
+    if (trend.direction === "neutral") {
+      trendElement = (
+        <span className="inline-flex items-center gap-0.5 text-xs text-muted-foreground">
+          —
+        </span>
+      );
+    } else {
+      const isGood = invertTrend
+        ? trend.direction === "down"
+        : trend.direction === "up";
+      const colorCls = isGood
+        ? "text-green-600 dark:text-green-400"
+        : "text-red-600 dark:text-red-400";
+      const TrendIcon = trend.direction === "up" ? IconTrendingUp : IconTrendingDown;
+      const sign = trend.direction === "up" ? "+" : "-";
+      trendElement = (
+        <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${colorCls}`}>
+          <TrendIcon className="size-3.5" />
+          {sign}{trend.value.toFixed(1)}%
+        </span>
+      );
+    }
+  }
+
   return (
     <Card className="@container/card">
       <CardHeader>
@@ -307,8 +406,11 @@ function Tile({
           <Badge variant="outline">{icon}</Badge>
         </CardAction>
       </CardHeader>
-      {hint ? (
-        <CardFooter className="text-xs text-muted-foreground">{hint}</CardFooter>
+      {(hint || trendElement) ? (
+        <CardFooter className="flex items-center justify-between text-xs text-muted-foreground">
+          {hint ? <span>{hint}</span> : <span />}
+          {!loading && trendElement}
+        </CardFooter>
       ) : null}
     </Card>
   );

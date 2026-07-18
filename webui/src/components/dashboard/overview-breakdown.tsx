@@ -1,8 +1,21 @@
 import { useMemo } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
-import { IconArrowRight } from "@tabler/icons-react";
+import {
+  IconArrowRight,
+  IconBox,
+  IconKey,
+} from "@tabler/icons-react";
 import { Link } from "@tanstack/react-router";
+import {
+  Bar,
+  BarChart,
+  Cell,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   Card,
   CardAction,
@@ -80,6 +93,7 @@ export function OverviewBreakdown({ window }: Props) {
       <BreakdownCard
         title={t("dashboard.breakdown.topKeys")}
         description={t("dashboard.breakdown.creditsInWindow")}
+        icon={<IconKey className="size-4" />}
         loading={byKey.isLoading}
         rows={topRows(byKey.data, "api_key_id", (id) => ({
           label: keyLookup[id]?.name || id.slice(0, 12),
@@ -100,6 +114,7 @@ export function OverviewBreakdown({ window }: Props) {
       <BreakdownCard
         title={t("dashboard.breakdown.topModels")}
         description={t("dashboard.breakdown.requestsInWindow")}
+        icon={<IconBox className="size-4" />}
         loading={byModel.isLoading}
         metric="requests"
         rows={topRows(
@@ -144,26 +159,55 @@ function topRows(
 interface CardProps {
   title: string;
   description: string;
+  icon?: React.ReactNode;
   loading: boolean;
   rows: Row[];
   moreHref: string;
   metric?: "credits" | "requests";
 }
 
+// Palette cycles through the 5 chart tokens so the bars pick up the
+// theme accent (light + dark) without hard-coding hex values.
+const BAR_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
+
 function BreakdownCard({
   title,
   description,
+  icon,
   loading,
   rows,
   moreHref,
   metric = "credits",
 }: CardProps) {
   const { t } = useTranslation();
-  const max = rows[0]?.value ?? 1;
+
+  // Recharts wants a stable-shaped array; give each row a display label
+  // (used for the y-axis tick + tooltip) and its raw value. Height per
+  // row keeps the chart size deterministic regardless of row count so
+  // the card doesn't jump when data changes.
+  const rowHeight = 28;
+  const chartHeight = Math.max(rowHeight * rows.length + 20, 60);
+
+  const formatValue = (v: number) =>
+    metric === "requests"
+      ? v.toLocaleString()
+      : v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
+        <CardTitle className="flex items-center gap-2 text-base">
+          {icon ? (
+            <span className="text-muted-foreground">{icon}</span>
+          ) : null}
+          {title}
+        </CardTitle>
         <CardDescription>{description}</CardDescription>
         <CardAction>
           <Button variant="ghost" size="sm" asChild>
@@ -184,31 +228,51 @@ function BreakdownCard({
         ) : rows.length === 0 ? (
           <p className="text-sm text-muted-foreground">{t("common.nothing")}</p>
         ) : (
-          <ul className="space-y-3">
-            {rows.map((r) => (
-              <li key={r.key} className="space-y-1">
-                <div className="flex items-baseline justify-between gap-2 text-sm">
-                  <div className="min-w-0 truncate font-medium">{r.label}</div>
-                  <div className="tabular-nums text-muted-foreground">
-                    {metric === "requests"
-                      ? r.value.toLocaleString()
-                      : r.value.toLocaleString(undefined, {
-                          maximumFractionDigits: 2,
-                        })}
-                  </div>
-                </div>
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full bg-primary"
-                    style={{ width: `${(r.value / max) * 100}%` }}
-                  />
-                </div>
-                {r.sub ? (
-                  <div className="text-xs text-muted-foreground">{r.sub}</div>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          <div style={{ height: chartHeight }} className="w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={rows}
+                layout="vertical"
+                margin={{ top: 4, right: 12, bottom: 4, left: 8 }}
+                barCategoryGap={6}
+              >
+                <XAxis type="number" hide domain={[0, "dataMax"]} />
+                <YAxis
+                  type="category"
+                  dataKey="label"
+                  width={110}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{
+                    fill: "var(--muted-foreground)",
+                    fontSize: 12,
+                  }}
+                />
+                <Tooltip
+                  cursor={{ fill: "var(--muted)" }}
+                  contentStyle={{
+                    background: "var(--popover)",
+                    border: "1px solid var(--border)",
+                    borderRadius: "calc(var(--radius) - 4px)",
+                    color: "var(--popover-foreground)",
+                    fontSize: 12,
+                  }}
+                  formatter={(v: unknown) => [
+                    typeof v === "number" ? formatValue(v) : String(v),
+                    metric === "requests"
+                      ? t("dashboard.trend.metric.requests")
+                      : t("dashboard.trend.metric.charged"),
+                  ]}
+                  labelStyle={{ color: "var(--foreground)" }}
+                />
+                <Bar dataKey="value" radius={[4, 4, 4, 4]}>
+                  {rows.map((_, i) => (
+                    <Cell key={i} fill={BAR_COLORS[i % BAR_COLORS.length]} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
         )}
       </CardContent>
     </Card>
