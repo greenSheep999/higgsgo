@@ -33,7 +33,7 @@
 
 | Feature | State | Missing |
 |---|---|---|
-| `account_group_members.priority` | Backend reads it; WebUI `addGroupMember` in `webui/src/lib/api.ts:537-541` does not pass `priority`; edit UI has no control | Add param + UI slider/input |
+| `account_group_members.priority` | Backend reads it; WebUI now exposes per-group priority in the account edit dialog (P0-1 landed). `addGroupMember` on the backend is an upsert (ON CONFLICT DO UPDATE), so the same call updates existing priorities. | — |
 | `internal/core/resolver/` (config cascade) | Correct implementation of Key > Group > Account > Global precedence for concurrency / proxy / route / budget / regex / rate limit / markup | **Zero external importers** — never called from proxy path; see §3 |
 
 ### ❌ Stored but never enforced (silent no-op fields)
@@ -43,8 +43,8 @@ Fields you can set in the DB / admin API / WebUI that **have no runtime effect**
 | Field | Storage | Actual runtime behavior |
 |---|---|---|
 | `account.bound_proxy_url` | `account_store.go:62,175,562` | **Ignored.** Every request uses the process-level `HIGGSGO_UPSTREAM_PROXY_URL` (`cmd/higgsgo/main.go:186-204`). |
-| `group.max_concurrent_jobs` | `group_store.go` | **Ignored.** `PickAndLock` never consults it. |
-| `group.max_concurrent_per_account` | `group_store.go` | **Ignored.** Hardcoded `in_flight_jobs < 5` at `account_store.go:418`. |
+| `group.max_concurrent_jobs` | `group_store.go` | ✅ **Enforced** (P0-3 landed). `proxy.Service.resolveGroupPolicy` reads it and passes `MaxGroupInFlight` to `PickAndLock`, which runs a `SUM(in_flight_jobs)` subquery inside the tx and returns `ErrGroupConcurrencyMax` when tripped. 429 `pool_saturated` at the HTTP layer. |
+| `group.max_concurrent_per_account` | `group_store.go` | ✅ **Enforced** (P0-3 landed). Same policy hop feeds `MaxConcurrentPerAccount` into `PickAndLock` WHERE. Falls back to the historical `5` when the group hasn't set a value. |
 | `group.allowed_models_regex` | `group_store.go` | **Ignored.** Only read by dead `resolver` code. |
 | `group.blocked_models_regex` | `group_store.go` | **Ignored.** Same. |
 | `group.monthly_credit_budget` / `monthly_credit_used` | `group_store.go` | **Ignored.** `IncrementUsed` (`group_store.go:321`) has no caller. `PickAndLock` does not check group budget. |
@@ -111,25 +111,42 @@ to accept the fields the SQL WHERE / ORDER BY layer needs.
 
 ### P0 — visible quick wins (backend already there)
 
-1. **Group-member priority in WebUI** (~1-2h)
-   - `webui/src/lib/api.ts:537-541` — add `priority?: number` to
-     `addGroupMember` payload.
-   - Add slider / numeric input in `webui/src/components/accounts/edit-dialog.tsx`
-     group multi-select and in the group members admin page.
-   - Backend `POST /admin/groups/{id}/members` already accepts it
-     (`internal/api/admin/groups.go:279,301,308`).
+1. **Group-member priority in WebUI** — ✅ **DONE**
+   - `webui/src/lib/api.ts:537` — `addGroupMember(groupId, accountId, priority?)`.
+   - `webui/src/components/accounts/edit-dialog.tsx` — per-group priority
+     editor beside the multi-select chips, seeded from the new
+     `members_detail` array on `/admin/groups/{id}/members`.
+   - Backend: `ports.GroupStore.ListMembersWithPriority` + the enriched
+     handler response; `AddMember` upsert semantics let the same call
+     update priorities on rebind.
 
-2. **`in_flight_jobs` leak fix** (~1h)
-   - Replace three hand-rolled `unlock()` sites in
-     `internal/core/proxy/service.go:225,265,292` with `defer unlock()`.
-   - On startup, run a one-shot `UPDATE accounts SET in_flight_jobs = 0`
-     (or reconcile against active jobs table).
+2. **`in_flight_jobs` leak fix** — ✅ **DONE**
+   - `proxy/service.go` unlock is now `sync.Once`-wrapped with a top-level
+     `defer unlock()`. Manual `unlock()` calls at the three original
+     sites still fire eagerly (async release, error release, sync-poll
+     release) but a panic between PickAndLock and any of them can no
+     longer leak the counter.
+   - `AccountStore.ResetAllInFlight` clears any leaked counters at boot
+     (`cmd/higgsgo/main.go` reconciliation hop). Logged with a WARN so
+     an operator sees "cleared N leaked in_flight counters on boot" if
+     the previous process died mid-request.
 
-3. **Enforce `group.max_concurrent_jobs`** (~half-day)
-   - Extend `PickParams` with group caps read from GroupStore.
-   - Add a `SUM(in_flight_jobs)` subquery in `PickAndLock` WHERE.
-   - Return `ErrPoolExhausted` (per-group variant) when the aggregate hits
-     the cap; caller (v1/handler.go) turns it into `429 pool_saturated`.
+3. **Enforce `group.max_concurrent_jobs`** — ✅ **DONE**
+   - `ports.PickParams` now carries `MaxGroupInFlight` and
+     `MaxConcurrentPerAccount`.
+   - `PickAndLock` runs a `SUM(in_flight_jobs)` subquery inside the same
+     tx as the account SELECT+UPDATE and returns
+     `domain.ErrGroupConcurrencyMax` when the group cap has already been
+     reached — atomic under SQLite's serialized writers.
+   - `proxy.Service.resolveGroupPolicy` reads both caps from the Group
+     row once per request and hands them to `PickAndLock`, replacing the
+     hardcoded literal `5`.
+   - HTTP layer (`internal/api/v1/videos.go:writeGenerationError`) maps
+     the error to `429 pool_saturated` (retryable), distinct from `503
+     no_account_available` (pool is dry).
+   - Tests: `TestAccountStore_PickAndLock_GroupConcurrencyCap`,
+     `TestAccountStore_PickAndLock_PerAccountCap`,
+     `TestAccountStore_ResetAllInFlight`.
 
 ### P1 — correctness (drop silent no-ops)
 
