@@ -196,26 +196,39 @@ func run() error {
 		}
 	}
 
-	// Upstream HTTP client (utls Chrome fingerprint).
-	proxyURL := os.Getenv("HIGGSGO_UPSTREAM_PROXY_URL")
-	httpClient, err := utls.New(utls.Config{
+	// Upstream HTTP client (utls Chrome fingerprint). The default
+	// client uses HIGGSGO_UPSTREAM_PROXY_URL (or direct if unset); the
+	// Pool built alongside caches one utls.Client per unique
+	// account.bound_proxy_url so per-account requests egress through
+	// their own sticky proxy. See ROADMAP P1-5 for why: sharing one
+	// egress IP across many accounts is exactly the correlation
+	// signal Cloudflare / DataDome use to link and ban.
+	baseUtlsCfg := utls.Config{
 		Profile:  cfg.HTTPClient.UTLS.Profile,
-		ProxyURL: proxyURL,
+		ProxyURL: os.Getenv("HIGGSGO_UPSTREAM_PROXY_URL"),
 		Timeout:  60 * time.Second,
-	})
-	if err != nil {
-		return fmt.Errorf("build utls client: %w", err)
 	}
+	defaultHTTPClient, err := utls.New(baseUtlsCfg)
+	if err != nil {
+		return fmt.Errorf("build default utls client: %w", err)
+	}
+	httpClientPool := utls.NewPool(baseUtlsCfg, defaultHTTPClient)
 	logger.Info("upstream http client ready",
-		slog.String("fingerprint", httpClient.Fingerprint()),
-		slog.String("proxy", proxyURL))
+		slog.String("fingerprint", defaultHTTPClient.Fingerprint()),
+		slog.String("proxy", baseUtlsCfg.ProxyURL),
+		slog.Bool("per_account_proxy_enabled", true))
 
 	// Core services.
-	minter := jwt.New(httpClient, ports.RealClock{}, jwt.Config{})
+	minter := jwt.New(defaultHTTPClient, ports.RealClock{}, jwt.Config{})
 	upstreamTimeouts := buildUpstreamTimeouts(cfg, logger)
-	upstreamClient := upstream.New(httpClient, minter, upstream.Config{
+	upstreamClient := upstream.New(defaultHTTPClient, minter, upstream.Config{
 		Timeouts: upstreamTimeouts,
 	})
+	// Wire the pool as the account-aware resolver. When an account has
+	// a non-empty bound_proxy_url, upstream.Client dials through that
+	// proxy instead of the shared default.
+	upstreamClient.Resolver = httpClientPool
+	upstreamClient.Logger = logger
 	for endpoint, d := range upstreamTimeouts {
 		logger.Info("upstream timeout configured",
 			slog.String("endpoint", endpoint),

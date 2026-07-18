@@ -619,32 +619,47 @@ Type B: rotating (fallback)
   used for ad-hoc verification and registration probes
 ```
 
-### 8.3 Reality (2026-07-18) — ❌ **Sticky proxy is NOT wired**
+### 8.3 Runtime wiring (2026-07-19) — ✅ **Sticky per-account proxy is live**
 
-The `bound_proxy_url` column is written and read by
-`internal/adapters/storage/sqlite/account_store.go:62,175,562` and can
-be edited via `PATCH /admin/accounts/{id}` and the WebUI edit dialog.
-**But at request time it is completely ignored.**
+`account.bound_proxy_url` now drives outbound traffic per request.
+Implementation:
 
-- `cmd/higgsgo/main.go:186-204` constructs a single process-level
-  `utls.Client` from `HIGGSGO_UPSTREAM_PROXY_URL` (env var) once at
-  startup.
-- All upstream calls (`CreateJob` / `FetchStatus` / `FetchJob` /
-  `FetchWallet` / `FetchUser` / JWT mint) route through that one client
-  (`internal/core/upstream/client.go:37,89,448,475`).
-- `internal/core/resolver/resolver.go:56` *does* compute a per-account
-  `ProxyURL` via `firstNonEmpty(account.BoundProxyURL, global.ProxyURL)`,
-  but the resolver package has **zero external importers** — see
-  ROADMAP §3.
-- Registration flow uses `ProxyURL` on a different code path
-  (`internal/api/admin/registrations.go`, `ports/registrar.go`,
-  `ports/captcha.go`, `ports/browser.go`) — that path is unrelated to
-  runtime upstream traffic.
+- `internal/adapters/httpclient/utls/pool.go` — `utls.Pool` caches one
+  `*utls.Client` per unique proxy URL. `Resolve(ctx, account)` returns
+  the account's client, or nil (fallback) when `BoundProxyURL == ""`
+  or the URL previously failed to build.
+- `internal/core/upstream/client.go` — `Client.Resolver` field
+  (`AccountClientResolver` interface). `doWithRetry` consults the
+  resolver on every call; nil-return / error → falls back to the
+  shared default client so a misconfigured proxy degrades gracefully
+  instead of failing the request.
+- `cmd/higgsgo/main.go` — builds one default `utls.Client` from
+  `HIGGSGO_UPSTREAM_PROXY_URL`, wraps it in a Pool, assigns the pool
+  to `upstreamClient.Resolver`. JWT mint (Clerk) still uses the
+  default client — Higgsfield's JWT endpoint is not account-egress
+  bound.
+- Registration flow (`internal/api/admin/registrations.go`,
+  `ports/registrar.go`, `ports/captcha.go`, `ports/browser.go`) is
+  the other consumer of proxy config, wired independently on the
+  registration side.
 
-**Blast radius.** Every account shares the same egress IP. Sticky-IP
-semantics claimed to Higgsfield are false. Multi-account correlation
-risk on CF/DataDome is high. See ROADMAP P1-5 for the fix
-(per-`bound_proxy_url` HTTP client cache + resolver integration).
+Failure modes:
+
+- Empty `BoundProxyURL` → default client, expected path for freshly
+  imported accounts.
+- Malformed URL → resolver returns error, cached so repeat calls
+  don't hammer the build path. Upstream client logs a WARN and uses
+  the default. Operators fix the URL then call
+  `pool.Invalidate(url)` (or restart) to force a rebuild.
+- Live proxy failure (auth timeout, SOCKS handshake reject) → surfaces
+  as a normal network_error at the upstream layer, which the failover
+  controller counts as attributable and can eventually throttle /
+  disable the account.
+
+Previously (pre-2026-07-19): `bound_proxy_url` was stored but ignored.
+All accounts shared a single process-level client from
+`HIGGSGO_UPSTREAM_PROXY_URL`, defeating the sticky-IP promise made at
+registration time. See ROADMAP P1-5 for the audit that surfaced this.
 
 ### 8.4 Proxy Sources (used only by registration flow today)
 

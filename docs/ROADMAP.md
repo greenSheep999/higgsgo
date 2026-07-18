@@ -42,7 +42,7 @@ Fields you can set in the DB / admin API / WebUI that **have no runtime effect**
 
 | Field | Storage | Actual runtime behavior |
 |---|---|---|
-| `account.bound_proxy_url` | `account_store.go:62,175,562` | **Ignored.** Every request uses the process-level `HIGGSGO_UPSTREAM_PROXY_URL` (`cmd/higgsgo/main.go:186-204`). |
+| `account.bound_proxy_url` | `account_store.go:62,175,562` | ✅ **Enforced** (P1-5 landed). `utls.Pool` (`internal/adapters/httpclient/utls/pool.go`) caches one `*Client` per unique proxy URL and is wired as `upstream.Client.Resolver` in `main.go`. Empty `bound_proxy_url` falls back to the process-level `HIGGSGO_UPSTREAM_PROXY_URL`. |
 | `group.max_concurrent_jobs` | `group_store.go` | ✅ **Enforced** (P0-3 landed). `proxy.Service.resolveGroupPolicy` reads it and passes `MaxGroupInFlight` to `PickAndLock`, which runs a `SUM(in_flight_jobs)` subquery inside the tx and returns `ErrGroupConcurrencyMax` when tripped. 429 `pool_saturated` at the HTTP layer. |
 | `group.max_concurrent_per_account` | `group_store.go` | ✅ **Enforced** (P0-3 landed). Same policy hop feeds `MaxConcurrentPerAccount` into `PickAndLock` WHERE. Falls back to the historical `5` when the group hasn't set a value. |
 | `group.allowed_models_regex` | `group_store.go` | **Ignored.** Only read by dead `resolver` code. |
@@ -162,14 +162,32 @@ to accept the fields the SQL WHERE / ORDER BY layer needs.
      `GroupStore.IncrementUsed` in `Metering.Recorder` on terminal-cost
      events (respect existing markup logic).
 
-5. **Per-account HTTP client honoring `bound_proxy_url`** (~half-day-1d)
-   - Move `upstream.Client` from process-level singleton to a
-     per-`bound_proxy_url` cache (LRU or plain `map[string]*Client` guarded
-     by `sync.RWMutex`).
-   - Rebuild transport when `bound_proxy_url` changes for a given account.
-   - Fall back to global proxy when the field is empty.
-   - Reject accounts whose proxy URL fails a preflight `CONNECT` when the
-     failover controller runs its recovery pass (optional stretch).
+5. **Per-account HTTP client honoring `bound_proxy_url`** — ✅ **DONE**
+   - `internal/adapters/httpclient/utls/pool.go` (`utls.Pool`) caches
+     one `*utls.Client` per unique bound_proxy_url. `sync.Mutex`-guarded
+     map keyed by URL; malformed URLs are remembered so we don't retry
+     the build on every request. `Invalidate(url)` drops one entry so
+     the failover controller (or an operator) can force a rebuild
+     after fixing a broken proxy.
+   - `upstream.Client.Resolver` (new field, `AccountClientResolver`
+     interface) is consulted in `doWithRetry` before every request. A
+     `nil` return falls back to the default client (empty bound URL
+     path). Errors are logged as warnings and fall back too — a broken
+     per-account proxy degrades to shared egress rather than failing
+     the request outright.
+   - Wired in `cmd/higgsgo/main.go`: build the default client from
+     `HIGGSGO_UPSTREAM_PROXY_URL` as before, then wrap it in
+     `utls.NewPool(cfg, defaultClient)` and assign the pool to
+     `upstreamClient.Resolver`. Boot log now includes
+     `per_account_proxy_enabled=true`.
+   - Tests: `TestPool_ResolveByBoundProxy` (empty URL → fallback;
+     distinct URLs → distinct cached clients),
+     `TestPool_MalformedURLReturnsErrorAndCaches` (bad URL doesn't
+     flood the build path),
+     `TestClient_Resolver_RoutesPerAccountClient` (proves the
+     resolver's client actually receives the request instead of the
+     shared default), `TestClient_Resolver_FallsBackOnResolverError`
+     (resolver error → default client, request still succeeds).
 
 ### P2 — user-facing honesty
 

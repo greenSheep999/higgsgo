@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -34,7 +35,23 @@ type MetricsSink interface {
 
 // Client submits jobs to fnf.higgsfield.ai and polls their status.
 type Client struct {
-	http    ports.UpstreamClient
+	// http is the default UpstreamClient — used when no per-account
+	// resolver is wired, or when the resolver returns nil for an
+	// account (e.g. bound_proxy_url is empty).
+	http ports.UpstreamClient
+
+	// Resolver, when non-nil, is consulted before every request to pick
+	// the UpstreamClient appropriate for the given account. This is how
+	// account.bound_proxy_url gets honored per request (ROADMAP P1-5):
+	// the resolver returns a client whose Transport dials via that
+	// proxy, so the account's egress IP is the one Higgsfield sees —
+	// preserving the sticky-IP promise it makes at registration time.
+	//
+	// Returning nil signals "use the default client" (empty proxy URL,
+	// or a fallback the resolver decided is safer than a broken one).
+	// Errors returned by the resolver are logged and treated as nil.
+	Resolver AccountClientResolver
+
 	jwt     *jwt.Minter
 	baseURL string
 
@@ -53,6 +70,21 @@ type Client struct {
 	// per terminal doWithRetry outcome. Wiring is optional: callers that
 	// do not care about metrics leave this nil.
 	Metrics MetricsSink
+
+	// Logger, when non-nil, is used for resolver-failure warnings so a
+	// broken per-account proxy degrades to the shared default instead
+	// of silently redirecting every account to the shared egress IP.
+	Logger *slog.Logger
+}
+
+// AccountClientResolver returns the UpstreamClient to use for one
+// account's request. Return nil to fall back to Client.http. Errors are
+// logged and treated identically to a nil return (the caller does not
+// see the error; upstream traffic just falls back to default). See
+// internal/adapters/httpclient/utls.Pool for the production
+// implementation.
+type AccountClientResolver interface {
+	Resolve(ctx context.Context, account *domain.Account) (ports.UpstreamClient, error)
 }
 
 // Config controls Client construction.
@@ -435,6 +467,27 @@ func (c *Client) doWithRetry(ctx context.Context, endpoint string, account *doma
 		defer cancel()
 	}
 
+	// Per-account HTTP client selection (ROADMAP P1-5). When a resolver
+	// is wired and returns a non-nil client, requests for this account
+	// egress through the account's bound proxy so Higgsfield sees the
+	// sticky IP promised at registration time. A nil return or resolver
+	// error falls back to the default shared client — safer than
+	// failing the request, but logged so operators can spot broken
+	// per-account proxies.
+	httpClient := c.http
+	if c.Resolver != nil {
+		alt, err := c.Resolver.Resolve(ctx, account)
+		if err != nil {
+			if c.Logger != nil {
+				c.Logger.Warn("upstream client resolver failed; using default",
+					slog.String("account_id", account.ID),
+					slog.String("err", err.Error()))
+			}
+		} else if alt != nil {
+			httpClient = alt
+		}
+	}
+
 	tok, err := c.jwt.Get(ctx, account)
 	if err != nil {
 		finalStatus = "network_error"
@@ -445,7 +498,7 @@ func (c *Client) doWithRetry(ctx context.Context, endpoint string, account *doma
 		finalStatus = "network_error"
 		return nil, err
 	}
-	resp, err := c.http.Do(ctx, req)
+	resp, err := httpClient.Do(ctx, req)
 	if err != nil {
 		finalStatus = "network_error"
 		return nil, err
@@ -472,7 +525,7 @@ func (c *Client) doWithRetry(ctx context.Context, endpoint string, account *doma
 		finalStatus = "network_error"
 		return nil, err
 	}
-	resp2, err := c.http.Do(ctx, req2)
+	resp2, err := httpClient.Do(ctx, req2)
 	if err != nil {
 		finalStatus = "network_error"
 		return nil, err
