@@ -4,7 +4,14 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
+        # Override at build-time to embed real metadata:
+        #   docker compose build \
+        #     --build-arg VERSION=v0.2.0 \
+        #     --build-arg COMMIT=$(git rev-parse --short HEAD) \
+        #     --build-arg BUILD_TIME=$(date -u +%FT%TZ)
         VERSION: dev
+        COMMIT: none
+        BUILD_TIME: unknown
     image: higgsgo:dev
     ports:
       - "18080:18080"

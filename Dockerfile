@@ -11,18 +11,30 @@ RUN go mod download
 
 COPY . .
 
+# Build-time metadata. VERSION is the semver tag (from the CI ref name or a
+# manual --build-arg); COMMIT is the short git sha; BUILD_TIME is ISO-8601 UTC.
+# All three are injected into internal/version at link time so /admin/version
+# and the sidebar footer can display a real build ID.
 ARG VERSION=dev
+ARG COMMIT=none
+ARG BUILD_TIME=unknown
 ARG TARGETOS
 ARG TARGETARCH
 ENV CGO_ENABLED=0
 
 RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build \
       -trimpath \
-      -ldflags "-s -w -X main.version=${VERSION}" \
+      -ldflags "-s -w \
+        -X github.com/greensheep999/higgsgo/internal/version.Version=${VERSION} \
+        -X github.com/greensheep999/higgsgo/internal/version.Commit=${COMMIT} \
+        -X github.com/greensheep999/higgsgo/internal/version.BuildTime=${BUILD_TIME}" \
       -o /out/higgsgo ./cmd/higgsgo \
  && GOOS=$TARGETOS GOARCH=$TARGETARCH go build \
       -trimpath \
-      -ldflags "-s -w -X main.version=${VERSION}" \
+      -ldflags "-s -w \
+        -X github.com/greensheep999/higgsgo/internal/version.Version=${VERSION} \
+        -X github.com/greensheep999/higgsgo/internal/version.Commit=${COMMIT} \
+        -X github.com/greensheep999/higgsgo/internal/version.BuildTime=${BUILD_TIME}" \
       -o /out/higgsgo-cli ./cmd/higgsgo-cli
 
 # ---- runtime stage ----

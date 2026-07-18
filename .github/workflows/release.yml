@@ -46,12 +46,18 @@ jobs:
         run: |
           mkdir -p dist
           VERSION="${GITHUB_REF_NAME:-dev}"
+          COMMIT="$(git rev-parse --short HEAD)"
+          BUILD_TIME="$(date -u +%FT%TZ)"
+          LDFLAGS="-s -w \
+            -X github.com/greensheep999/higgsgo/internal/version.Version=$VERSION \
+            -X github.com/greensheep999/higgsgo/internal/version.Commit=$COMMIT \
+            -X github.com/greensheep999/higgsgo/internal/version.BuildTime=$BUILD_TIME"
           go build -trimpath \
-            -ldflags "-s -w -X main.version=$VERSION" \
+            -ldflags "$LDFLAGS" \
             -o dist/higgsgo-${GOOS}-${GOARCH} \
             ./cmd/higgsgo
           go build -trimpath \
-            -ldflags "-s -w -X main.version=$VERSION" \
+            -ldflags "$LDFLAGS" \
             -o dist/higgsgo-cli-${GOOS}-${GOARCH} \
             ./cmd/higgsgo-cli
 
@@ -78,6 +84,12 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Compute build metadata
+        id: meta
+        run: |
+          echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "build_time=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
+
       - name: Build & push
         uses: docker/build-push-action@v6
         with:
@@ -85,6 +97,10 @@ jobs:
           file: Dockerfile
           push: true
           platforms: linux/amd64,linux/arm64
+          build-args: |
+            VERSION=${{ github.ref_name }}
+            COMMIT=${{ steps.meta.outputs.commit }}
+            BUILD_TIME=${{ steps.meta.outputs.build_time }}
           tags: |
             ghcr.io/${{ github.repository_owner }}/higgsgo:${{ github.ref_name }}
             ghcr.io/${{ github.repository_owner }}/higgsgo:latest
