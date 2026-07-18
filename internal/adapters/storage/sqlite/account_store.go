@@ -488,14 +488,31 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 	}
 
 	// Ordering: determined by RouteStrategy.
+	//
+	// Every strategy appends a common `in_flight_jobs ASC, RANDOM()`
+	// tail (ROADMAP P2-8). Rationale: the primary sort key ties often
+	// under real load — several accounts share the same LRU stamp
+	// (identical last_used_at truncated to seconds), the same
+	// plan_type, or the same priority. Without a tiebreaker SQLite's
+	// natural row order made the same row win repeatedly for a burst
+	// of concurrent picks, producing a hot-spot until last_used_at
+	// finally advanced. The tail:
+	//   1. `in_flight_jobs ASC` — prefer the least-loaded account
+	//      first, so concurrent picks spread rather than pile up. This
+	//      is the cheap fair-share primitive the audit called for.
+	//   2. `RANDOM()` — final tiebreaker; two picks with identical
+	//      metadata land on different rows probabilistically.
+	// Runs under LIMIT 1 so RANDOM()'s per-row eval is O(N) at pool
+	// size — hundreds of rows at most, sub-millisecond in practice.
 	strategy := params.RouteStrategy
 	if strategy == "" {
 		strategy = domain.RouteRoundRobin
 	}
+	const jitterTail = `, in_flight_jobs ASC, RANDOM() LIMIT 1`
 	switch strategy {
 	case domain.RouteLeastUsed:
 		// Account with the highest remaining balance has consumed the fewest credits.
-		q.WriteString(` ORDER BY (COALESCE(total_plan_credits, 0) - COALESCE(subscription_balance, 0)) ASC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC LIMIT 1`)
+		q.WriteString(` ORDER BY (COALESCE(total_plan_credits, 0) - COALESCE(subscription_balance, 0)) ASC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC` + jitterTail)
 	case domain.RouteCheapestFirst:
 		// Prefer lower-tier plans so expensive plan budgets are reserved for
 		// models that require them. Numeric tier: lower = cheaper.
@@ -511,21 +528,21 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 		q.WriteString(` WHEN 'ultimate' THEN 9`)
 		q.WriteString(` WHEN 'ultra' THEN 10`)
 		q.WriteString(` WHEN 'enterprise' THEN 11`)
-		q.WriteString(` ELSE 99 END ASC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC LIMIT 1`)
+		q.WriteString(` ELSE 99 END ASC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC` + jitterTail)
 	case domain.RouteMostCreditsFirst:
 		// Prefer the account with the largest remaining balance.
-		q.WriteString(` ORDER BY (COALESCE(subscription_balance, 0) + COALESCE(credits_balance, 0)) DESC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC LIMIT 1`)
+		q.WriteString(` ORDER BY (COALESCE(subscription_balance, 0) + COALESCE(credits_balance, 0)) DESC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC` + jitterTail)
 	case domain.RoutePriority:
 		// Use group-level priority from account_group_members when scoped to a group,
 		// otherwise fall back to accounts.priority.
 		if params.GroupID != "" {
-			q.WriteString(` ORDER BY COALESCE((SELECT m.priority FROM account_group_members m WHERE m.account_id = accounts.id AND m.group_id = ?), 0) DESC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC LIMIT 1`)
+			q.WriteString(` ORDER BY COALESCE((SELECT m.priority FROM account_group_members m WHERE m.account_id = accounts.id AND m.group_id = ?), 0) DESC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC` + jitterTail)
 			args = append(args, params.GroupID)
 		} else {
-			q.WriteString(` ORDER BY COALESCE(priority, 0) DESC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC LIMIT 1`)
+			q.WriteString(` ORDER BY COALESCE(priority, 0) DESC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC` + jitterTail)
 		}
-	default: // RouteRoundRobin
-		q.WriteString(` ORDER BY COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC LIMIT 1`)
+	default: // RouteRoundRobin (== jittered LRU)
+		q.WriteString(` ORDER BY COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC` + jitterTail)
 	}
 
 	row := tx.QueryRowContext(ctx, q.String(), args...)
