@@ -122,7 +122,9 @@ print(f"Generated {len(response.generated_images)} image(s)")`;
 
 function generateNodeJS(
   alias: string,
-  path: string,
+  // path unused — the OpenAI SDK abstracts the URL path; kept in the
+  // signature so all generateXxx() share the same shape.
+  _path: string,
   isImage: boolean,
 ): string {
   const prompt = isImage

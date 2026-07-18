@@ -403,7 +403,7 @@ function Playground() {
           {/* 4. Cost tag + Actions. */}
           {selectedModel ? (
             <div className="flex items-center gap-2 rounded-md border bg-muted/50 px-3 py-2 text-sm">
-              <span className="font-medium text-foreground">{selectedModel.model_alias}</span>
+              <span className="font-medium text-foreground">{selectedModel.id}</span>
               <span className="text-muted-foreground">·</span>
               <span className="text-muted-foreground">{selectedModel.output}</span>
               <span className="text-muted-foreground">·</span>

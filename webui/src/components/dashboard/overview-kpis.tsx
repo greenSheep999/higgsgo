@@ -342,7 +342,6 @@ function Tile({
   trend,
   invertTrend = false,
 }: TileProps) {
-  const { t } = useTranslation();
   const rendered =
     value === undefined || value === null
       ? "—"
