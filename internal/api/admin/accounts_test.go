@@ -94,6 +94,8 @@ func (f *fakeAccountStore) UpdateInFlight(context.Context, string, int) error {
 	panic("not implemented")
 }
 
+func (f *fakeAccountStore) ResetAllInFlight(context.Context) (int, error) { return 0, nil }
+
 func (f *fakeAccountStore) MarkThrottled(context.Context, string, time.Time, string) error {
 	return nil
 }

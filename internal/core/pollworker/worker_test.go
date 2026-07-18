@@ -104,6 +104,7 @@ func (s *fakeAccountStore) UpdateEntitlements(context.Context, string, ports.Ent
 func (s *fakeAccountStore) UpdateInFlight(context.Context, string, int) error {
 	panic("not implemented")
 }
+func (s *fakeAccountStore) ResetAllInFlight(context.Context) (int, error) { return 0, nil }
 func (s *fakeAccountStore) MarkStatus(context.Context, string, domain.AccountStatus, string) error {
 	return nil
 }

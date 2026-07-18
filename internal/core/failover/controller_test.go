@@ -65,6 +65,7 @@ func (m *mockAccountStore) UpdateEntitlements(context.Context, string, ports.Ent
 	return nil
 }
 func (m *mockAccountStore) UpdateInFlight(context.Context, string, int) error { return nil }
+func (m *mockAccountStore) ResetAllInFlight(context.Context) (int, error)     { return 0, nil }
 
 func (m *mockAccountStore) MarkStatus(_ context.Context, id string, s domain.AccountStatus, reason string) error {
 	m.mu.Lock()

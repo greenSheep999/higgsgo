@@ -47,6 +47,7 @@ func (s *stubAccountStore) UpdateEntitlements(context.Context, string, ports.Ent
 	return nil
 }
 func (s *stubAccountStore) UpdateInFlight(context.Context, string, int) error { return nil }
+func (s *stubAccountStore) ResetAllInFlight(context.Context) (int, error)     { return 0, nil }
 func (s *stubAccountStore) MarkStatus(context.Context, string, domain.AccountStatus, string) error {
 	return nil
 }

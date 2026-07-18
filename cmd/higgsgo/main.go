@@ -121,6 +121,20 @@ func run() error {
 		return errors.New("postgres storage adapter not implemented yet")
 	}
 
+	// Reconcile in_flight_jobs on boot. If the previous process
+	// crashed or was killed between PickAndLock and Unlock, some
+	// rows will have leaked slots that would silently deny picks
+	// forever (the hardcoded < 5 cap in PickAndLock stays true).
+	// Any real in-flight upstream jobs from before the crash are
+	// dead — no goroutine is polling them — so a full reset is
+	// safe. See docs/ROADMAP.md P0-2.
+	if reset, err := accountStore.ResetAllInFlight(ctx); err != nil {
+		logger.Warn("reset in_flight on boot", slog.String("err", err.Error()))
+	} else if reset > 0 {
+		logger.Warn("cleared leaked in_flight counters on boot",
+			slog.Int("accounts_reset", reset))
+	}
+
 	// Runtime-mutable admin bearer manager. Loads any DB override on
 	// boot and falls back to the TOML value. All /admin/* traffic
 	// authenticates via BearerAuth(mgr), so a POST to

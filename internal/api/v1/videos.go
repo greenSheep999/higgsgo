@@ -120,6 +120,12 @@ func writeGenerationError(w http.ResponseWriter, err error) {
 		writeError(w, http.StatusNotFound, "model_not_found", err.Error())
 	case errors.Is(err, domain.ErrNoEligibleAccount):
 		writeError(w, http.StatusServiceUnavailable, "no_account_available", err.Error())
+	case errors.Is(err, domain.ErrGroupConcurrencyMax):
+		// Group-aggregate concurrency cap tripped — the group has
+		// otherwise-eligible accounts, they're just fully loaded right
+		// now. Retryable; 429 is the right signal (unlike 503, which
+		// implies "pool is dry").
+		writeError(w, http.StatusTooManyRequests, "pool_saturated", err.Error())
 	case errors.Is(err, domain.ErrUpstreamForbidden):
 		writeError(w, http.StatusPaymentRequired, "plan_gate", err.Error())
 	case errors.Is(err, domain.ErrUpstreamRateLimit):

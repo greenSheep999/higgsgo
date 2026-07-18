@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/greensheep999/higgsgo/internal/core/failover"
@@ -167,14 +168,21 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 		async = true
 	}
 
+	// Resolve the group policy once so route strategy and concurrency
+	// caps stay consistent across the pick — a second Get during
+	// PickAndLock could see a mid-request PUT of the group config.
+	policy := s.resolveGroupPolicy(ctx, req.GroupID)
+
 	// Pick an account from the pool.
 	pickParams := ports.PickParams{
-		JST:               spec.JST,
-		EstCostHundredths: spec.EstCostHundredths,
-		RequiresPaid:      s.Registry.StarterLocked(spec.JST) || spec.RequiresPaid,
-		RequiresUltra:     spec.RequiresUltra,
-		GroupID:           req.GroupID,
-		RouteStrategy:     s.resolveRouteStrategy(ctx, req.GroupID),
+		JST:                     spec.JST,
+		EstCostHundredths:       spec.EstCostHundredths,
+		RequiresPaid:            s.Registry.StarterLocked(spec.JST) || spec.RequiresPaid,
+		RequiresUltra:           spec.RequiresUltra,
+		GroupID:                 req.GroupID,
+		RouteStrategy:           policy.RouteStrategy,
+		MaxGroupInFlight:        policy.MaxGroupInFlight,
+		MaxConcurrentPerAccount: policy.MaxConcurrentPerAccount,
 	}
 	acc, lockToken, err := s.Store.PickAndLock(ctx, pickParams)
 	if err != nil {
@@ -185,16 +193,31 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 	// "unknown" downstream; the account was just picked so a real balance
 	// should be present, but we guard against the row missing the field.
 	preBalance := acc.SubscriptionBalance
-	// Unlock happens once the job leaves in_flight. In async mode that's
-	// immediately after create (the pollworker owns the lifecycle from
-	// there). In sync mode we unlock after the sync poll finishes.
+	// Unlock is exactly-once and panic-safe: a sync.Once wraps the actual
+	// Unlock call so early manual invocations (async path releases as
+	// soon as CreateJob returns; error path releases before returning
+	// the mapped error) don't race with the top-level defer, which
+	// runs even if any code between here and the return panics.
+	//
+	// Before this refactor, three hand-rolled unlock() sites without a
+	// defer meant a panic between PickAndLock and any of them (or an
+	// unmapped early return added later) would leak the row's
+	// in_flight_jobs counter forever — the process restart wouldn't
+	// clear it either. See docs/ROADMAP.md P0-2.
+	var unlockOnce sync.Once
 	unlock := func() {
-		if unlockErr := s.Store.Unlock(context.Background(), acc.ID, lockToken); unlockErr != nil && s.Logger != nil {
-			s.Logger.Warn("pool unlock failed",
-				slog.String("account_id", acc.ID),
-				slog.String("err", unlockErr.Error()))
-		}
+		unlockOnce.Do(func() {
+			// context.Background(): the caller's ctx may already be
+			// cancelled by the time we release the slot; releasing must
+			// always succeed regardless.
+			if unlockErr := s.Store.Unlock(context.Background(), acc.ID, lockToken); unlockErr != nil && s.Logger != nil {
+				s.Logger.Warn("pool unlock failed",
+					slog.String("account_id", acc.ID),
+					slog.String("err", unlockErr.Error()))
+			}
+		})
 	}
+	defer unlock()
 
 	if s.Logger != nil {
 		s.Logger.Info("picked account",
@@ -519,21 +542,36 @@ func (s *Service) now() time.Time {
 	return time.Now()
 }
 
-// resolveRouteStrategy looks up the group's configured RouteStrategy.
-// Returns RouteRoundRobin when no group store is wired, the group id is
-// empty, the group row is missing, or the persisted strategy is blank.
-func (s *Service) resolveRouteStrategy(ctx context.Context, groupID string) domain.RouteStrategy {
+// groupPolicy is the subset of Group config that PickAndLock consumes.
+// Fetching it once in resolveGroupPolicy keeps route strategy and
+// concurrency caps consistent for a single pick — a second Get during
+// the tx could see a mid-request PUT of the group.
+type groupPolicy struct {
+	RouteStrategy           domain.RouteStrategy
+	MaxGroupInFlight        int // 0 = uncapped
+	MaxConcurrentPerAccount int // 0 = fall back to store default (5)
+}
+
+// resolveGroupPolicy looks up the group's runtime policy. Returns zero
+// values when no group store is wired, the group id is empty, or the
+// group row is missing — semantically "no group constraints".
+func (s *Service) resolveGroupPolicy(ctx context.Context, groupID string) groupPolicy {
 	if s.Groups == nil || groupID == "" {
-		return domain.RouteRoundRobin
+		return groupPolicy{RouteStrategy: domain.RouteRoundRobin}
 	}
 	g, err := s.Groups.Get(ctx, groupID)
 	if err != nil || g == nil {
-		return domain.RouteRoundRobin
+		return groupPolicy{RouteStrategy: domain.RouteRoundRobin}
 	}
-	if g.RouteStrategy == "" {
-		return domain.RouteRoundRobin
+	strat := g.RouteStrategy
+	if strat == "" {
+		strat = domain.RouteRoundRobin
 	}
-	return g.RouteStrategy
+	return groupPolicy{
+		RouteStrategy:           strat,
+		MaxGroupInFlight:        g.MaxConcurrentJobs,
+		MaxConcurrentPerAccount: g.MaxConcurrentPerAccount,
+	}
 }
 
 // EnsureJSON returns the body as a json.RawMessage for logging.

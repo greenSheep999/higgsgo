@@ -254,6 +254,25 @@ func (s *AccountStore) UpdateInFlight(ctx context.Context, id string, delta int)
 	return nil
 }
 
+// ResetAllInFlight zeroes in_flight_jobs across the whole accounts table
+// and returns the count of rows that were previously > 0. Called from
+// main.go once at boot as a safety net against counter leaks from a
+// prior crash between PickAndLock and Unlock — without it, a killed
+// process leaves the row's slot permanently consumed until an operator
+// manually intervenes. Safe: any real in-flight jobs from before the
+// crash are dead upstream anyway (no goroutine is polling them).
+func (s *AccountStore) ResetAllInFlight(ctx context.Context) (int, error) {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE accounts
+		SET in_flight_jobs = 0
+		WHERE in_flight_jobs > 0`)
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return int(n), nil
+}
+
 // MarkStatus updates the lifecycle status field and persists the reason
 // opcode. When status is StatusActive, the transition also clears the
 // throttled_until column and the status_reason string so the row starts
@@ -399,6 +418,36 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 	}
 	defer func() { _ = tx.Rollback() }()
 
+	// Group-aggregate concurrency check runs first: if the group's
+	// MaxConcurrentJobs is set and the current SUM(in_flight_jobs) has
+	// already reached it, return ErrGroupConcurrencyMax without scanning
+	// candidate rows. Runs inside the same transaction as the account
+	// SELECT+UPDATE so two concurrent Pick calls cannot both slip past
+	// the check (SQLite serializes writers). See docs/ROADMAP.md P0-3.
+	if params.GroupID != "" && params.MaxGroupInFlight > 0 {
+		var inFlight int
+		err := tx.QueryRowContext(ctx, `
+			SELECT COALESCE(SUM(a.in_flight_jobs), 0)
+			FROM accounts a
+			JOIN account_group_members m ON m.account_id = a.id
+			WHERE m.group_id = ?`, params.GroupID).Scan(&inFlight)
+		if err != nil {
+			return nil, "", err
+		}
+		if inFlight >= params.MaxGroupInFlight {
+			return nil, "", domain.ErrGroupConcurrencyMax
+		}
+	}
+
+	// Per-account cap: fall back to the historical hardcoded 5 when the
+	// caller doesn't pass an explicit MaxConcurrentPerAccount. Non-zero
+	// values from ports.PickParams override so groups can lower or raise
+	// the cap for their members.
+	perAccountCap := params.MaxConcurrentPerAccount
+	if perAccountCap <= 0 {
+		perAccountCap = 5
+	}
+
 	// Baseline eligibility: active, has room for another job, has budget.
 	// Plan tier gates are enforced in the WHERE clause when the caller
 	// asks for a paid tier (RequiresPaid / RequiresUltra).
@@ -415,9 +464,10 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 		        status = 'active'
 		        OR (status = 'throttled' AND throttled_until IS NOT NULL AND throttled_until <= ?)
 		      )
-		  AND in_flight_jobs < 5
+		  AND in_flight_jobs < ?
 		  AND subscription_balance >= ?`)
 	args = append(args, fmtTime(time.Now()))
+	args = append(args, perAccountCap)
 	minBalance := params.EstCostHundredths + params.EstCostHundredths/5
 	args = append(args, minBalance)
 

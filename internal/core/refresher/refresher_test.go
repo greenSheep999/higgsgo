@@ -77,6 +77,7 @@ func (f *fakeAccountStore) Upsert(ctx context.Context, a *domain.Account) error 
 func (f *fakeAccountStore) UpdateInFlight(ctx context.Context, id string, delta int) error {
 	panic("fakeAccountStore.UpdateInFlight not implemented")
 }
+func (f *fakeAccountStore) ResetAllInFlight(ctx context.Context) (int, error) { return 0, nil }
 func (f *fakeAccountStore) MarkStatus(ctx context.Context, id string, s domain.AccountStatus, reason string) error {
 	panic("fakeAccountStore.MarkStatus not implemented")
 }

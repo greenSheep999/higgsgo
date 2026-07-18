@@ -56,6 +56,7 @@ func (f *failoverFakeAccts) UpdateEntitlements(context.Context, string, ports.En
 	return nil
 }
 func (f *failoverFakeAccts) UpdateInFlight(context.Context, string, int) error { return nil }
+func (f *failoverFakeAccts) ResetAllInFlight(context.Context) (int, error)     { return 0, nil }
 func (f *failoverFakeAccts) MarkStatus(_ context.Context, id string, s domain.AccountStatus, reason string) error {
 	f.lastMarkID = id
 	f.lastMarkStatus = s
