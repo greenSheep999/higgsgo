@@ -64,6 +64,15 @@ type Deps struct {
 	// with a captcha_unavailable error.
 	Captcha register.CaptchaSolver
 
+	// Driver, when non-nil, takes precedence over Browser/Mailbox/
+	// Captcha: Flow.Execute delegates the whole signup to a single
+	// Driver.Register call. This is the ROADMAP §5.4 P4-3b path —
+	// production wires the camoufox.NodeDriver here (Node subprocess
+	// bridge to higgsfield-register). Tests wire the mock.Driver
+	// instead. Nil falls back to the legacy Browser+Mailbox+Captcha
+	// orchestration.
+	Driver register.Driver
+
 	// Config controls concurrency, retry counts, poll cadence, and
 	// browser pool. Zero-value falls back to
 	// register.DefaultConfig().
@@ -100,13 +109,19 @@ func NewRegistrar(deps Deps) (ports.Registrar, error) {
 		log:  deps.Logger,
 	}
 
-	// Flow may be nil if no browser/mailbox/captcha are wired — the
-	// admin surface (Enqueue/List/Get/Retry) still works, only the
-	// worker's Execute step is a no-op. Guarded so an operator can
-	// stage the persistence side while adapters are still under
-	// development.
+	// Worker wiring: prefer Driver (P4-3b path) when provided; fall
+	// back to the legacy Browser+Mailbox+Captcha orchestration
+	// otherwise. When neither is wired the admin surface still works
+	// (Enqueue/List/Get/Retry) but the worker is not started —
+	// operators can stage persistence + admin UI while adapters land.
 	var worker *register.Worker
-	if deps.Browser != nil && deps.Mailbox != nil {
+	switch {
+	case deps.Driver != nil:
+		flow := register.NewFlowWithDriver(deps.Driver, adapter, deps.Config, deps.Logger)
+		worker = register.NewWorker(flow, adapter, deps.Config, deps.Logger)
+		deps.Logger.Info("register worker wired via Driver",
+			slog.String("driver", deps.Driver.Name()))
+	case deps.Browser != nil && deps.Mailbox != nil:
 		flow := register.NewFlow(
 			deps.Browser,
 			deps.Mailbox,
@@ -116,8 +131,9 @@ func NewRegistrar(deps Deps) (ports.Registrar, error) {
 			deps.Logger,
 		)
 		worker = register.NewWorker(flow, adapter, deps.Config, deps.Logger)
-	} else {
-		deps.Logger.Warn("register worker skipped: browser or mailbox adapter missing",
+	default:
+		deps.Logger.Warn("register worker skipped: no Driver and no browser/mailbox pair",
+			slog.Bool("has_driver", deps.Driver != nil),
 			slog.Bool("has_browser", deps.Browser != nil),
 			slog.Bool("has_mailbox", deps.Mailbox != nil))
 	}

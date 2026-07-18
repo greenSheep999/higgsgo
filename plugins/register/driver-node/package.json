@@ -1,0 +1,19 @@
+{
+  "name": "higgsgo-register-driver",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "description": "Node HTTP driver subprocess: exposes POST /register to the Go registrar bridge. Wraps higgsfield-register's registerAccount() so Go doesn't reimplement Playwright + camoufox + DataDome + Graph OTP.",
+  "scripts": {
+    "start": "node index.mjs",
+    "test": "node --test test/*.mjs"
+  },
+  "dependencies": {
+    "camoufox": "^0.1.19",
+    "playwright": "^1.49.0",
+    "playwright-extra": "^4.3.6",
+    "puppeteer-extra-plugin-stealth": "^2.11.2",
+    "undici": "^7.1.0",
+    "socks-proxy-agent": "^8.0.4"
+  }
+}

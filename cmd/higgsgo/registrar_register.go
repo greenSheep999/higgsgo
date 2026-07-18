@@ -4,50 +4,82 @@
 package main
 
 // buildRegistrar wires the `-tags register` full-featured variant:
-// the higgsfield.NewRegistrar bridge to plugins/register. Populates
-// the Deps struct with:
-//   - Store: the SQLite RegistrationStore built in main.go.
-//   - Browser / Mailbox / Captcha: nil for now — real adapters land
-//     as they're implemented (ROADMAP §5.4 next steps). The bridge
-//     tolerates missing browser/mailbox by starting no worker so the
-//     admin surface still works for queue inspection.
-//   - Config: register.DefaultConfig() (2 concurrent, 5s poll, 120s
-//     OTP timeout, retry limit 3).
-//   - Logger: main.go's slog handle.
-//   - StartWorker: true — main.go calls .Start(ctx) on the returned
-//     registrar so the background poller runs.
+// spawns the plugins/register/driver-node subprocess (Node bridge
+// to the higgsfield-register project's registerAccount()) and hands
+// it to the plugins/register bridge via Deps.Driver.
 //
-// See docs/PLUGGABLE.md §0 and internal/adapters/registrar/higgsfield/
-// higgsfield.go for the bridge implementation.
+// Why Driver (not Browser+Mailbox+Captcha) at this wiring step:
+// ROADMAP §5.4 P4-3b chose the "one-shot subprocess call per
+// registration" model. Node owns the whole flow (Playwright, camoufox,
+// DataDome, Graph OTP); Go just enqueues a request and reads the
+// harvested result. Browser/Mailbox/Captcha stay reserved for a
+// hypothetical future in-Go flow — the field is nil here.
+//
+// Failure to spawn the Node driver is NOT fatal. The registrar still
+// answers Enqueue/List/Get/Retry over the SQLite store; the background
+// worker just doesn't process rows. Operators see the "register worker
+// skipped" warning and can fix the deployment (missing node, missing
+// higgsfield-register sibling, wrong port) without downtime on the
+// admin surface. This mirrors the way missing browser+mailbox
+// gracefully degrades in the legacy path.
 
 import (
 	"context"
 	"log/slog"
+	"os"
+	"strconv"
 
 	"github.com/greensheep999/higgsgo/internal/adapters/registrar/higgsfield"
 	"github.com/greensheep999/higgsgo/internal/config"
 	"github.com/greensheep999/higgsgo/internal/ports"
 	register "github.com/greensheep999/higgsgo/plugins/register"
+	"github.com/greensheep999/higgsgo/plugins/register/adapters/camoufox"
 )
 
 func buildRegistrar(
-	_ context.Context,
+	ctx context.Context,
 	logger *slog.Logger,
 	_ *config.Config,
 	regStore ports.RegistrationStore,
 ) (ports.Registrar, error) {
 	logger.Info("registrar: full build (-tags register) — plugins/register bridge active")
 
-	// Browser / Mailbox / Captcha are intentionally nil at this
-	// wiring step. plugins/register/adapters/{camoufox,cloak} are
-	// still placeholders (see docs/ROADMAP.md §5.3). Filling one in
-	// is the next task; until then the bridge starts the admin
-	// surface only, no worker.
+	// Try to spawn the Node driver. Read config via env vars for now
+	// so operators can experiment without a schema change; a proper
+	// config.Registrar section can consolidate these later.
+	//   HIGGSGO_REGISTER_DRIVER_URL     — connect to an already-running driver
+	//   HIGGSGO_REGISTER_DRIVER_PORT    — port for a locally-spawned driver
+	//   HIGGSGO_REGISTER_MAILBOX_CLIENT — Microsoft Graph client_id
+	//   HIGGSGO_REGISTER_MAILBOX_TOKEN  — Microsoft Graph refresh_token
+	//   HIGGSGO_REGISTER_HEADED         — set to "1" for a visible browser
+	opts := camoufox.NodeDriverOptions{
+		DriverURL: os.Getenv("HIGGSGO_REGISTER_DRIVER_URL"),
+		NodeBin:   os.Getenv("HIGGSGO_NODE_BIN"),
+		Headless:  os.Getenv("HIGGSGO_REGISTER_HEADED") != "1",
+		Logger:    logger,
+		MailboxConfig: camoufox.MailboxConfig{
+			ClientID:     os.Getenv("HIGGSGO_REGISTER_MAILBOX_CLIENT"),
+			RefreshToken: os.Getenv("HIGGSGO_REGISTER_MAILBOX_TOKEN"),
+		},
+	}
+	if raw := os.Getenv("HIGGSGO_REGISTER_DRIVER_PORT"); raw != "" {
+		if n, err := strconv.Atoi(raw); err == nil {
+			opts.Port = n
+		}
+	}
+	var driver register.Driver
+	if nd, err := camoufox.New(ctx, opts); err != nil {
+		// Non-fatal: log and let the registrar boot without a
+		// worker. Admin surface stays live.
+		logger.Warn("registrar: node driver spawn failed; worker disabled",
+			slog.String("err", err.Error()))
+	} else {
+		driver = nd
+	}
+
 	deps := higgsfield.Deps{
 		Store:       regStore,
-		Browser:     nil,
-		Mailbox:     nil,
-		Captcha:     nil,
+		Driver:      driver,
 		Config:      register.DefaultConfig(),
 		Logger:      logger,
 		StartWorker: true,
