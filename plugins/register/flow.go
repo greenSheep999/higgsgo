@@ -10,10 +10,23 @@ import (
 const higgsFieldURL = "https://higgsfield.ai"
 
 // Flow drives a single registration through the state machine.
+//
+// Two execution paths:
+//   - When Driver is non-nil, Flow.Execute delegates one Register()
+//     call to it and lets the driver own the whole flow (browser,
+//     mailbox, captcha are the driver's problem). This is the
+//     production path against the higgsfield-register Node
+//     subprocess, and the path used by the in-process mock for
+//     tests.
+//   - When Driver is nil, Flow.Execute walks the session-level path
+//     (Launch → Goto → Fill → …) directly. Kept for backwards
+//     compatibility with the original design; requires a working
+//     BrowserAutomator + MailboxProvider.
 type Flow struct {
 	browser BrowserAutomator
 	mailbox MailboxProvider
 	captcha CaptchaSolver
+	driver  Driver
 	store   RegistrationStore
 	cfg     Config
 	log     *slog.Logger
@@ -30,13 +43,46 @@ func NewFlow(browser BrowserAutomator, mailbox MailboxProvider, captcha CaptchaS
 	}
 }
 
+// NewFlowWithDriver wires a Flow that delegates registration to a
+// higher-level Driver (typically camoufox/driver_node — Node
+// subprocess bridge — or a test mock). See ROADMAP §5.4 P4-3b.
+//
+// When invoked, Flow.Execute skips the in-Go session-level
+// orchestration and calls driver.Register once. The driver is
+// responsible for browser launch, DOM navigation, OTP retrieval, and
+// harvest.
+func NewFlowWithDriver(driver Driver, store RegistrationStore, cfg Config, log *slog.Logger) *Flow {
+	return &Flow{
+		driver: driver,
+		store:  store,
+		cfg:    cfg,
+		log:    log,
+	}
+}
+
 // Execute runs the full registration flow for a single registration.
 func (f *Flow) Execute(ctx context.Context, reg *Registration) error {
 	if err := f.store.MarkRunning(ctx, reg.ID); err != nil {
 		return fmt.Errorf("mark running: %w", err)
 	}
 
-	result, err := f.run(ctx, reg)
+	var (
+		result CompletedResult
+		err    error
+	)
+	if f.driver != nil {
+		// Driver path — one round trip to the subprocess covers the
+		// whole flow. Mailbox/captcha are driven inside the driver.
+		result, err = f.driver.Register(ctx, RegisterRequest{
+			Email:       reg.Email,
+			Password:    reg.Password,
+			OAuthSource: reg.OAuthSource,
+			ProxyURL:    reg.ProxyURL,
+		})
+	} else {
+		// Legacy in-Go path.
+		result, err = f.run(ctx, reg)
+	}
 	if err != nil {
 		_ = f.store.MarkFailed(ctx, reg.ID, err.Error())
 		return err
