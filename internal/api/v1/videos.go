@@ -100,6 +100,15 @@ func (h *Handler) HandleVideoGeneration(w http.ResponseWriter, r *http.Request) 
 		GroupID:       groupID,
 		APIKeyID:      apiKeyID,
 	}
+	// Forward quota state so proxy.Service.enforceKeyGates can
+	// reject over-limit requests pre-pick (ROADMAP P2-9). Nil-safe:
+	// no key in context means both fields stay zero, and zero
+	// quota is the historical "unlimited" default so the gate
+	// no-ops.
+	if apiKey != nil {
+		greq.APIKeyMonthlyQuota = apiKey.MonthlyQuota
+		greq.APIKeyMonthlyUsed = apiKey.MonthlyUsed
+	}
 	if vr.MediaID != "" {
 		greq.Media = &proxy.MediaInput{PreUploadedID: vr.MediaID, Type: "image", URL: vr.ImageURL}
 	}
@@ -139,6 +148,15 @@ func writeGenerationError(w http.ResponseWriter, err error) {
 		// Group's monthly_credit_budget is exhausted. 402 matches how
 		// individual account balance exhaustion maps.
 		writeError(w, http.StatusPaymentRequired, "group_budget_exhausted", err.Error())
+	case errors.Is(err, domain.ErrAPIKeyQuotaExceed):
+		// Per-key monthly limit tripped pre-pick (ROADMAP P2-9).
+		// Distinct from the middleware's same-code post-hoc check —
+		// this one prevents the pool slot from being consumed at all.
+		// Same HTTP shape (402 quota_exhausted) so downstream callers
+		// don't need to distinguish "you were rejected before the
+		// pool touched you" from "you drained the last credit
+		// after".
+		writeError(w, http.StatusPaymentRequired, "quota_exhausted", err.Error())
 	case errors.Is(err, domain.ErrUpstreamForbidden):
 		writeError(w, http.StatusPaymentRequired, "plan_gate", err.Error())
 	case errors.Is(err, domain.ErrUpstreamRateLimit):

@@ -170,18 +170,18 @@ to accept the fields the SQL WHERE / ORDER BY layer needs.
    - Tests: `TestEnforceGroupGates_MatrixOfDenyAndAllow` (9 cases
      covering nil-safety, block wins over allow, exact-limit passes,
      zero-budget disables), `TestCompileGroupRegex_InvalidPatternDegrades`.
-   - **Deferred** (still stored-but-not-enforced):
-     `APIKey.MonthlyLimit` at pre-pick (currently checked at
-     recorder-time only; monthly quota exhaustion returns after the
-     job is already charged), per-key model regex, per-key rate
-     limit fields. Wiring these requires threading the resolved
-     APIKey into `GenerationRequest` — mechanical but out of P0/P1
-     scope. Tracked as P2.
-   - `internal/core/resolver/` remains uncalled: its Key layer is
-     what would enable those deferred gates, but the group-level
-     enforcement above delivers the immediate P1 outcome without
-     restructuring the request path. The resolver package will get
-     wired when we bring the Key gates online.
+   - **Deferred** (still stored-but-not-enforced): per-key model
+     regex, per-key rate limit fields (`KeyConfig.RateLimitRPS`,
+     `RateLimitBurst`). Those live on `internal/core/resolver/` but
+     the domain.APIKey struct doesn't carry them yet — adding them
+     requires a migration + admin/keys UI, tracked outside the P0/P1
+     scope.
+   - `APIKey.MonthlyLimit` is now handled by P2-9 (below).
+   - `internal/core/resolver/` remains uncalled: the P1-4 group
+     gates + P2-9 key gate replicate the resolver's precedence for
+     the fields that matter today. The resolver package stays for
+     when we add per-key rate limits and model regex — same reason
+     as before, just narrower scope.
 
 5. **Per-account HTTP client honoring `bound_proxy_url`** — ✅ **DONE**
    - `internal/adapters/httpclient/utls/pool.go` (`utls.Pool`) caches
@@ -267,6 +267,32 @@ to accept the fields the SQL WHERE / ORDER BY layer needs.
    - Test: `TestPickAndLock_JitterSpreadsAcrossTiedAccounts` seeds
      three identical rows and proves 30 picks land on at least 2 of
      them (previously all 30 hit row 0).
+
+9. **Per-Key monthly quota pre-pick gate** — ✅ **DONE (P2-9)**
+   - `GenerationRequest` grew `APIKeyMonthlyQuota` and
+     `APIKeyMonthlyUsed` fields. `/v1` handlers (`videos.go`,
+     `images.go`) forward them from
+     `middleware.APIKeyFromContext()`; `internal/api/cpaplugin/*`
+     keeps recorder-time accounting since its plane has its own
+     upstream quota model.
+   - `proxy.Service.Generate` now calls `enforceKeyGates` right
+     after `enforceGroupGates`. Overrun returns
+     `domain.ErrAPIKeyQuotaExceed` before `PickAndLock` runs — so
+     a downstream integration that hit its cap gets a fast, honest
+     402 `quota_exhausted` instead of consuming a pool slot and
+     only failing when metering reconciles credits after the job.
+   - Same "reserve headroom" semantics as the group budget gate:
+     the last credit of the month is spendable, the recorder-side
+     IncrementUsage is what actually retires it. Zero quota =
+     unlimited (unchanged historical default).
+   - HTTP mapping in `v1/videos.writeGenerationError`:
+     `ErrAPIKeyQuotaExceed` → 402 `quota_exhausted` — same shape
+     as the middleware's post-hoc check so callers don't need to
+     tell "rejected before pool touched you" from "drained last
+     credit after".
+   - Test: `TestEnforceKeyGates_QuotaMatrix` covers 6 cases
+     (unlimited via 0 quota, defensive negative, well-under,
+     exactly-at, one-over, already-over).
 
 ### P3 — new capability
 

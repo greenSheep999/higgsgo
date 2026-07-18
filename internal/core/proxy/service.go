@@ -110,6 +110,21 @@ type GenerationRequest struct {
 	APIKeyID     string
 	CPAPartnerID string
 
+	// APIKeyMonthlyQuota / APIKeyMonthlyUsed carry the caller key's
+	// quota state so enforceKeyGates can reject a request that would
+	// exceed the monthly limit BEFORE the pool pick spends the slot.
+	// Zero quota means unlimited (the historical default; the
+	// recorder-time check in metering.Recorder still catches drift
+	// against actual charged credits, but pre-pick rejection is the
+	// only place a 402 quota_exhausted can be returned before the
+	// job actually runs). See docs/ROADMAP.md P2-9.
+	//
+	// Populated by the /v1 handlers from
+	// middleware.APIKeyFromContext(); left zero for internal / CPA
+	// paths that carry their own accounting.
+	APIKeyMonthlyQuota int64
+	APIKeyMonthlyUsed  int64
+
 	// CallbackURL, when non-empty, is a caller-supplied HTTP endpoint that
 	// receives a signed webhook once the job reaches a terminal state.
 	// Persisted on the jobs row so the async pollworker path can fire it
@@ -181,6 +196,15 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 	// PickAndLock so we don't consume an in_flight slot on a doomed
 	// request. Nil-safe when Groups is unwired.
 	if err := s.enforceGroupGates(policy, spec.Alias, spec.EstCostHundredths); err != nil {
+		return nil, err
+	}
+	// Pre-pick per-Key gates (ROADMAP P2-9): reject a request whose
+	// caller key has already exhausted its monthly quota. Runs
+	// alongside the group gate so a downstream integration hitting
+	// its cap gets a fast, honest 402 instead of consuming a pool
+	// slot and only failing when the recorder reconciles credits
+	// after the job. Nil-safe: zero quota (== unlimited) is a no-op.
+	if err := enforceKeyGates(req, spec.EstCostHundredths); err != nil {
 		return nil, err
 	}
 
@@ -665,6 +689,28 @@ func (s *Service) enforceGroupGates(policy groupPolicy, alias string, estCost in
 		if policy.MonthlyCreditUsed+estCost > policy.MonthlyCreditBudget {
 			return domain.ErrGroupQuotaExhausted
 		}
+	}
+	return nil
+}
+
+// enforceKeyGates rejects a request whose caller key has already used
+// its monthly quota. Enforced pre-pick so a doomed request never
+// consumes an in-flight slot on an account. See docs/ROADMAP.md P2-9.
+//
+// Uses the same "reserve headroom" rule as enforceGroupGates so a call
+// that would exactly hit the quota still passes — the last credit of
+// the month is spendable and the recorder's IncrementUsage side is
+// what actually retires it. Overrun returns
+// domain.ErrAPIKeyQuotaExceed which maps to HTTP 402 quota_exhausted.
+//
+// Zero quota means unlimited (the historical default for freshly
+// minted keys) — the gate is a no-op in that case.
+func enforceKeyGates(req GenerationRequest, estCostHundredths int64) error {
+	if req.APIKeyMonthlyQuota <= 0 {
+		return nil
+	}
+	if req.APIKeyMonthlyUsed+estCostHundredths > req.APIKeyMonthlyQuota {
+		return domain.ErrAPIKeyQuotaExceed
 	}
 	return nil
 }

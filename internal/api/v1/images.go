@@ -96,6 +96,12 @@ func (h *Handler) HandleImageGeneration(w http.ResponseWriter, r *http.Request) 
 		GroupID:       groupID,
 		APIKeyID:      apiKeyID,
 	}
+	// Forward quota state so proxy.Service.enforceKeyGates can
+	// reject over-limit requests pre-pick (ROADMAP P2-9).
+	if apiKey != nil {
+		greq.APIKeyMonthlyQuota = apiKey.MonthlyQuota
+		greq.APIKeyMonthlyUsed = apiKey.MonthlyUsed
+	}
 	if ir.ImageID != "" {
 		greq.Media = &proxy.MediaInput{PreUploadedID: ir.ImageID, Type: "image"}
 	}
