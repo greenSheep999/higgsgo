@@ -9,6 +9,8 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCredits, formatDateTime } from "@/lib/format";
 
@@ -18,9 +20,8 @@ interface Props {
 }
 
 // AccountDetailSheet is a right-side drawer that pulls one account through
-// /admin/accounts/{id} and shows every non-secret field. The list already
-// carries most of these values, but the sheet centralises the "everything I
-// need to triage this row" view so we don't have to expand every table cell.
+// /admin/accounts/{id} and shows every non-secret field grouped into logical
+// sections with separators for scanability.
 export function AccountDetailSheet({ id, onOpenChange }: Props) {
   const { t } = useTranslation();
   const q = useQuery({
@@ -59,7 +60,9 @@ export function AccountDetailSheet({ id, onOpenChange }: Props) {
           ) : q.data && id ? (
             <>
               <DetailBody account={q.data} />
+              <Separator />
               <EligibleModelsPanel accountId={id} />
+              <Separator />
               <RecentJobsPanel accountId={id} />
             </>
           ) : null}
@@ -69,64 +72,164 @@ export function AccountDetailSheet({ id, onOpenChange }: Props) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// DetailBody — structured into logical sections
+// ---------------------------------------------------------------------------
+
 function DetailBody({ account }: { account: Account }) {
   const { t } = useTranslation();
+
+  const totalAvailable = account.subscription_balance + account.credits_balance;
+  const balancePercent =
+    account.total_plan_credits > 0
+      ? Math.round(
+          (account.subscription_balance / account.total_plan_credits) * 100,
+        )
+      : 0;
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
+      {/* Section 1: Identity */}
       <section>
-        <div className="text-sm font-semibold">{account.email}</div>
-        <div className="text-xs text-muted-foreground">{account.id}</div>
-        <div className="mt-2 flex flex-wrap gap-1">
-          <Badge>{account.status}</Badge>
-          <Badge variant="outline">{account.plan_type || "no plan"}</Badge>
-          {account.has_unlim ? <Badge variant="secondary">unlim</Badge> : null}
-          {account.has_flex_unlim ? (
-            <Badge variant="secondary">flex-unlim</Badge>
-          ) : null}
-          {account.is_pro_veo3 ? (
-            <Badge variant="secondary">pro-veo3</Badge>
-          ) : null}
-        </div>
+        <SectionHeading>{t("accounts.detail.sectionIdentity")}</SectionHeading>
+        <Grid>
+          <Field label={t("accounts.detail.email")} value={account.email} />
+          <Field label={t("accounts.detail.accountId")} value={account.id} mono />
+          <Field
+            label={t("accounts.detail.status")}
+            value={<Badge>{account.status}</Badge>}
+          />
+          <Field
+            label={t("accounts.detail.source")}
+            value={account.source || "—"}
+          />
+          <Field
+            label={t("accounts.detail.note")}
+            value={account.note || "—"}
+          />
+        </Grid>
       </section>
 
-      <Grid>
-        <Field
-          label={t("accounts.detail.workspace")}
-          value={account.workspace_id || "—"}
-          mono
-        />
-        <Field label={t("accounts.detail.cohort")} value={account.cohort || "—"} />
-        <Field
-          label={t("accounts.detail.subCredits")}
-          value={formatCredits(account.subscription_balance)}
-        />
-        <Field
-          label={t("accounts.detail.creditsBalance")}
-          value={formatCredits(account.credits_balance)}
-        />
-        <Field
-          label={t("accounts.detail.totalPlanCredits")}
-          value={formatCredits(account.total_plan_credits)}
-        />
-        <Field
-          label={t("accounts.detail.inFlightJobs")}
-          value={String(account.in_flight_jobs)}
-        />
-        <Field
-          label={t("accounts.detail.failStreak")}
-          value={String(account.fail_streak)}
-        />
-        <Field
-          label={t("accounts.detail.boundProxy")}
-          value={account.bound_proxy_url || "—"}
-          mono
-        />
-      </Grid>
+      <Separator />
 
+      {/* Section 2: Plan & Entitlements */}
       <section>
-        <div className="mb-2 text-xs font-semibold uppercase text-muted-foreground">
-          {t("accounts.detail.timeline")}
-        </div>
+        <SectionHeading>{t("accounts.detail.sectionPlan")}</SectionHeading>
+        <Grid>
+          <Field
+            label={t("accounts.detail.planType")}
+            value={account.plan_type || "—"}
+          />
+          <Field
+            label={t("accounts.detail.cohort")}
+            value={account.cohort || "—"}
+          />
+          <Field
+            label={t("accounts.detail.hasUnlim")}
+            value={<BoolBadge value={account.has_unlim} />}
+          />
+          <Field
+            label={t("accounts.detail.hasFlexUnlim")}
+            value={<BoolBadge value={account.has_flex_unlim} />}
+          />
+          <Field
+            label={t("accounts.detail.proVeo3")}
+            value={<BoolBadge value={account.is_pro_veo3} />}
+          />
+          <Field
+            label={t("accounts.detail.planEnds")}
+            value={formatDateTime(account.plan_ends_at)}
+          />
+        </Grid>
+      </section>
+
+      <Separator />
+
+      {/* Section 3: Balance */}
+      <section>
+        <SectionHeading>{t("accounts.detail.sectionBalance")}</SectionHeading>
+        <Grid>
+          <Field
+            label={t("accounts.detail.subCredits")}
+            value={formatCredits(account.subscription_balance)}
+          />
+          <Field
+            label={t("accounts.detail.totalPlanCredits")}
+            value={formatCredits(account.total_plan_credits)}
+          />
+          <Field
+            label={t("accounts.detail.creditsBalance")}
+            value={formatCredits(account.credits_balance)}
+          />
+          <Field
+            label={t("accounts.detail.totalAvailable")}
+            value={formatCredits(totalAvailable)}
+          />
+        </Grid>
+        {account.total_plan_credits > 0 && (
+          <div className="mt-3 space-y-1">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>{t("accounts.detail.subCredits")}</span>
+              <span>{balancePercent}%</span>
+            </div>
+            <Progress value={balancePercent} className="h-1.5" />
+          </div>
+        )}
+      </section>
+
+      <Separator />
+
+      {/* Section 4: Runtime */}
+      <section>
+        <SectionHeading>{t("accounts.detail.sectionRuntime")}</SectionHeading>
+        <Grid>
+          <Field
+            label={t("accounts.detail.priority")}
+            value={String(account.priority)}
+          />
+          <Field
+            label={t("accounts.detail.inFlightJobs")}
+            value={`${account.in_flight_jobs} / ${account.max_concurrent || "∞"}`}
+          />
+          <Field
+            label={t("accounts.detail.failStreak")}
+            value={String(account.fail_streak)}
+          />
+          <Field
+            label={t("accounts.detail.lastFailed")}
+            value={formatDateTime(account.last_failed_at)}
+          />
+          <Field
+            label={t("accounts.detail.lastUsed")}
+            value={formatDateTime(account.last_used_at)}
+          />
+        </Grid>
+      </section>
+
+      <Separator />
+
+      {/* Section 5: Network & Session */}
+      <section>
+        <SectionHeading>{t("accounts.detail.sectionNetwork")}</SectionHeading>
+        <Grid>
+          <Field
+            label={t("accounts.detail.boundProxy")}
+            value={account.bound_proxy_url || "—"}
+            mono
+          />
+          <Field
+            label={t("accounts.detail.workspace")}
+            value={account.workspace_id || "—"}
+            mono
+          />
+        </Grid>
+      </section>
+
+      <Separator />
+
+      {/* Section 6: Timestamps */}
+      <section>
+        <SectionHeading>{t("accounts.detail.sectionTimestamps")}</SectionHeading>
         <Grid>
           <Field
             label={t("accounts.detail.imported")}
@@ -137,20 +240,8 @@ function DetailBody({ account }: { account: Account }) {
             value={formatDateTime(account.registered_at)}
           />
           <Field
-            label={t("accounts.detail.lastUsed")}
-            value={formatDateTime(account.last_used_at)}
-          />
-          <Field
             label={t("accounts.detail.lastBalance")}
             value={formatDateTime(account.last_balance_at)}
-          />
-          <Field
-            label={t("accounts.detail.lastFailed")}
-            value={formatDateTime(account.last_failed_at)}
-          />
-          <Field
-            label={t("accounts.detail.planEnds")}
-            value={formatDateTime(account.plan_ends_at)}
           />
         </Grid>
       </section>
@@ -158,9 +249,19 @@ function DetailBody({ account }: { account: Account }) {
   );
 }
 
+// ---------------------------------------------------------------------------
+// Shared layout components
+// ---------------------------------------------------------------------------
+
+function SectionHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h4 className="mb-2 text-sm font-semibold">{children}</h4>
+  );
+}
+
 function Grid({ children }: { children: React.ReactNode }) {
   return (
-    <div className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">{children}</div>
+    <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">{children}</div>
   );
 }
 
@@ -170,16 +271,30 @@ function Field({
   mono,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   mono?: boolean;
 }) {
   return (
     <div className="space-y-0.5">
       <div className="text-xs text-muted-foreground">{label}</div>
-      <div className={mono ? "font-mono text-xs break-all" : ""}>{value}</div>
+      <div className={mono ? "font-mono text-xs break-all" : "text-sm"}>
+        {value}
+      </div>
     </div>
   );
 }
+
+function BoolBadge({ value }: { value: boolean }) {
+  return value ? (
+    <Badge variant="secondary">Yes</Badge>
+  ) : (
+    <span className="text-sm text-muted-foreground">No</span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sub-panels
+// ---------------------------------------------------------------------------
 
 // EligibleModelsPanel calls /admin/accounts/{id}/eligible-models — an
 // account-level derivative of the model registry that folds in the
@@ -194,9 +309,7 @@ function EligibleModelsPanel({ accountId }: { accountId: string }) {
   });
   return (
     <section className="space-y-2">
-      <div className="text-xs font-semibold uppercase text-muted-foreground">
-        Eligible models
-      </div>
+      <h4 className="text-sm font-semibold">Eligible models</h4>
       {q.isLoading ? (
         <Skeleton className="h-8 w-full" />
       ) : q.isError || !q.data ? (
@@ -226,8 +339,6 @@ function EligibleModelsPanel({ accountId }: { accountId: string }) {
 
 // RecentJobsPanel hits /admin/jobs?account_id=… with a tight limit so
 // the operator can see if this account has been busy / erroring.
-// Clicking a row would jump to the job detail; deferred until the Job
-// detail supports linking here.
 function RecentJobsPanel({ accountId }: { accountId: string }) {
   const q = useQuery({
     queryKey: ["admin", "accounts", accountId, "jobs"],
@@ -237,9 +348,7 @@ function RecentJobsPanel({ accountId }: { accountId: string }) {
   const rows = q.data?.data ?? [];
   return (
     <section className="space-y-2">
-      <div className="text-xs font-semibold uppercase text-muted-foreground">
-        Recent jobs (10)
-      </div>
+      <h4 className="text-sm font-semibold">Recent jobs (10)</h4>
       {q.isLoading ? (
         <Skeleton className="h-16 w-full" />
       ) : rows.length === 0 ? (

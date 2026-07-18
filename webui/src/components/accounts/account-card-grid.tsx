@@ -1,11 +1,16 @@
 import { useTranslation } from "react-i18next";
 import {
+  IconActivityHeartbeat,
   IconClipboardCopy,
   IconDotsVertical,
+  IconEdit,
   IconEye,
+  IconPlayerPause,
+  IconPlayerPlay,
   IconRefresh,
   IconTrash,
 } from "@tabler/icons-react";
+import logoBrand from "@/assets/logo-brand.svg";
 import {
   Card,
   CardContent,
@@ -68,11 +73,13 @@ interface Props {
   counters: Map<string, { successes: number; failures: number }>;
   onToggleSelect: (id: string, next: boolean) => void;
   onOpen: (id: string) => void;
+  onEdit: (account: Account) => void;
   onRefresh: (id: string) => void;
   onCopyId: (id: string) => void;
   onPause: (id: string) => void;
   onResume: (id: string) => void;
   onBan: (account: Account) => void;
+  onProbe: (id: string) => void;
 }
 
 export function AccountCardGrid(props: Props) {
@@ -108,11 +115,13 @@ export function AccountCardGrid(props: Props) {
           counters={props.counters.get(a.id)}
           onToggleSelect={props.onToggleSelect}
           onOpen={props.onOpen}
+          onEdit={props.onEdit}
           onRefresh={props.onRefresh}
           onCopyId={props.onCopyId}
           onPause={props.onPause}
           onResume={props.onResume}
           onBan={props.onBan}
+          onProbe={props.onProbe}
           t={t}
         />
       ))}
@@ -127,11 +136,13 @@ interface CardProps {
   counters: { successes: number; failures: number } | undefined;
   onToggleSelect: (id: string, next: boolean) => void;
   onOpen: (id: string) => void;
+  onEdit: (a: Account) => void;
   onRefresh: (id: string) => void;
   onCopyId: (id: string) => void;
   onPause: (id: string) => void;
   onResume: (id: string) => void;
   onBan: (a: Account) => void;
+  onProbe: (id: string) => void;
   t: ReturnType<typeof useTranslation>["t"];
 }
 
@@ -142,11 +153,13 @@ function AccountCard({
   counters,
   onToggleSelect,
   onOpen,
+  onEdit,
   onRefresh,
   onCopyId,
   onPause,
   onResume,
   onBan,
+  onProbe,
   t,
 }: CardProps) {
   // Subscription progress counts DOWN — bar fill = remaining balance
@@ -187,7 +200,7 @@ function AccountCard({
   return (
     <Card
       data-selected={selected}
-      className="group cursor-pointer transition-colors hover:border-primary/40 data-[selected=true]:border-primary data-[selected=true]:ring-1 data-[selected=true]:ring-primary/40"
+      className="group flex flex-col overflow-hidden cursor-pointer shadow-none transition-all hover:shadow-xl hover:border-primary/40 data-[selected=true]:border-primary data-[selected=true]:ring-1 data-[selected=true]:ring-primary/40"
       onClick={() => onOpen(a.id)}
     >
       <CardHeader>
@@ -197,7 +210,7 @@ function AccountCard({
         <div className="flex items-start gap-2">
           <div
             onClick={(e) => e.stopPropagation()}
-            className="flex h-6 items-center"
+            className="flex h-9 items-center"
           >
             <Checkbox
               checked={selected}
@@ -205,9 +218,9 @@ function AccountCard({
               aria-label={t("accounts.card.selectAccount")}
             />
           </div>
-          {/* Everything from the email onward lives in this flex-1 column
-              so the pill row below aligns to the email's left edge —
-              past the checkbox, not flush with it. */}
+          <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-[#D1FE16]/30 p-1.5">
+            <img src={logoBrand} alt="" className="size-full" />
+          </div>
           <div className="min-w-0 flex-1">
             <div className="truncate text-base font-semibold">{a.email}</div>
             <div className="truncate font-mono text-xs text-muted-foreground">
@@ -251,23 +264,19 @@ function AccountCard({
           </div>
           <div
             onClick={(e) => e.stopPropagation()}
-            className="flex items-center gap-1.5 text-xs"
+            className="flex h-9 items-center"
           >
-            <span className="text-muted-foreground">
-              {switchOn
-                ? t("accounts.status.active")
-                : t("accounts.status.suspended")}
-            </span>
             <Switch
               checked={switchOn}
               disabled={switchDisabled}
+              className="data-[state=checked]:bg-[#D1FE16]"
               onCheckedChange={(v) => (v ? onResume(a.id) : onPause(a.id))}
             />
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4">
+      <CardContent className="flex-1 space-y-4">
         {/* Credits block — progress bar + subscription/extra/free
             triplet all live inside one rounded card so the operator
             reads them as parts of one "how much can this account
@@ -329,7 +338,7 @@ function AccountCard({
             longer value (e.g. "3 / 6 (3 free)") without truncating.
             Order top-left→bottom-right: priority, failures on the
             first row; concurrency, success on the second. */}
-        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 px-3 text-xs">
           <Metric
             label={t("accounts.card.priorityLabel")}
             value={String(a.priority ?? 0)}
@@ -375,18 +384,14 @@ function AccountCard({
         {/* Meta — static / rarely-changing context. Vertical list so
             the values line up on the right edge for a fast scan; each
             row is `label ....... value`. */}
-        <div className="space-y-1 border-t pt-3 text-[11px]">
+        <div className="space-y-1 border-t px-3 pt-3 text-[11px]">
           <MetaRow
             label={t("accounts.card.lastUsedShort")}
             value={a.last_used_at ? formatDateTime(a.last_used_at) : "—"}
           />
           <MetaRow
             label={t("accounts.card.proxyShort")}
-            value={
-              a.bound_proxy_url
-                ? t("accounts.card.proxyBound")
-                : t("accounts.card.proxyNone")
-            }
+            value={a.bound_proxy_url || "—"}
           />
           <MetaRow
             label={t("accounts.card.planEndsShort")}
@@ -398,7 +403,7 @@ function AccountCard({
       {/* Footer: primary actions inline, "more" tucked into a dropdown */}
       <CardFooter
         onClick={(e) => e.stopPropagation()}
-        className="flex items-center justify-between gap-2 border-t pt-3"
+        className="mt-auto flex items-center justify-between gap-2 border-t pt-3"
       >
         <div className="flex gap-1">
           <Button
@@ -415,6 +420,13 @@ function AccountCard({
           >
             <IconRefresh /> {t("accounts.card.refresh")}
           </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onProbe(a.id)}
+          >
+            <IconActivityHeartbeat /> {t("accounts.card.probe")}
+          </Button>
         </div>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -423,9 +435,25 @@ function AccountCard({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onEdit(a)}>
+              <IconEdit /> {t("accounts.actions.edit")}
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onCopyId(a.id)}>
               <IconClipboardCopy /> {t("accounts.card.copyId")}
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            {a.status === "suspended" ? (
+              <DropdownMenuItem onClick={() => onResume(a.id)}>
+                <IconPlayerPlay /> {t("accounts.actions.resume")}
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                onClick={() => onPause(a.id)}
+                disabled={a.status === "banned"}
+              >
+                <IconPlayerPause /> {t("accounts.actions.pause")}
+              </DropdownMenuItem>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
@@ -443,9 +471,9 @@ function AccountCard({
 
 function MetaRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-baseline justify-between gap-2">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-foreground/80">{value}</span>
+    <div className="flex items-baseline justify-between gap-2 overflow-hidden">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className="truncate text-foreground/80">{value}</span>
     </div>
   );
 }

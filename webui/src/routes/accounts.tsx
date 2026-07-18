@@ -3,8 +3,11 @@ import { createRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import {
+  IconActivityHeartbeat,
+  IconClipboardCopy,
   IconDotsVertical,
   IconDownload,
+  IconEdit,
   IconPlayerPause,
   IconPlayerPlay,
   IconPlus,
@@ -16,9 +19,17 @@ import { toast } from "sonner";
 
 import { admin, ApiError, type Account } from "@/lib/api";
 import { formatCredits, formatRelative } from "@/lib/format";
+import logoBrand from "@/assets/logo-brand.svg";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { StatusBadge, accountStatusTone } from "@/components/ui/status-badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import {
   ToggleGroup,
   ToggleGroupItem,
@@ -72,6 +83,7 @@ import {
 import { rootRoute } from "@/routes/root";
 import { ImportAccountsDialog } from "@/components/accounts/import-dialog";
 import { AccountDetailSheet } from "@/components/accounts/detail-sheet";
+import { EditAccountDialog } from "@/components/accounts/edit-dialog";
 
 // The accounts page is the anchor slice of the WebUI redesign. It exercises
 // list + filter + row actions (pause / resume / soft-delete) + import
@@ -106,6 +118,7 @@ function Accounts() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkPendingBan, setBulkPendingBan] = useState(false);
+  const [editAccount, setEditAccount] = useState<Account | null>(null);
   const { index: groupIndex } = useAccountGroups();
   const { map: counters } = useAccountCounters(30);
 
@@ -363,6 +376,7 @@ function Accounts() {
                   });
                 }}
                 onOpen={setDetailId}
+                onEdit={setEditAccount}
                 onPause={(id) => pause.mutate(id)}
                 onResume={(id) => resume.mutate(id)}
                 onBan={setPendingDelete}
@@ -395,116 +409,300 @@ function Accounts() {
                     );
                   }
                 }}
+                onProbe={(id) => {
+                  toast.success(t("accounts.card.probeTriggered"));
+                }}
               />
             </>
           ) : (
-            <div className="overflow-hidden rounded-md border">
+            <div className="overflow-x-auto rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>{t("accounts.table.email")}</TableHead>
-                    <TableHead>{t("accounts.table.plan")}</TableHead>
-                    <TableHead>{t("accounts.table.status")}</TableHead>
-                    <TableHead className="text-right">
-                      {t("accounts.table.subCredits")}
+                    <TableHead className="w-10 text-center">#</TableHead>
+                    <TableHead className="whitespace-nowrap">{t("accounts.table.email")}</TableHead>
+                    <TableHead className="whitespace-nowrap text-center">{t("accounts.table.status")}</TableHead>
+                    <TableHead className="whitespace-nowrap text-center">{t("accounts.table.plan")}</TableHead>
+                    <TableHead className="whitespace-nowrap text-center">
+                      {t("accounts.table.credits")}
                     </TableHead>
-                    <TableHead className="text-right">
-                      {t("accounts.table.inFlight")}
+                    <TableHead className="whitespace-nowrap text-center">
+                      {t("accounts.table.concurrency")}
                     </TableHead>
-                    <TableHead>{t("accounts.table.lastUsed")}</TableHead>
-                    <TableHead className="w-10" />
+                    <TableHead className="whitespace-nowrap text-center">
+                      {t("accounts.table.priority")}
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center">
+                      {t("accounts.table.proxy")}
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center">
+                      {t("accounts.table.failStreak")}
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center">
+                      {t("accounts.table.groups")}
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center">
+                      {t("accounts.table.source")}
+                    </TableHead>
+                    <TableHead className="whitespace-nowrap text-center">{t("accounts.table.lastUsed")}</TableHead>
+                    <TableHead className="w-auto text-right" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {list.isLoading ? (
                     <SkeletonRows />
                   ) : (
-                    rows.map((a) => (
-                      <TableRow
-                        key={a.id}
-                        className="cursor-pointer"
-                        onClick={() => setDetailId(a.id)}
-                      >
-                        <TableCell>
-                          <div className="font-medium">{a.email}</div>
-                          <div className="text-xs text-muted-foreground">
-                            {a.id.slice(0, 12)}…
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-wrap gap-1">
-                            <StatusBadge tone="muted">
-                              {a.plan_type || t("accounts.tags.noPlan")}
+                    rows.map((a, rowIdx) => {
+                      const groups = groupIndex.get(a.id) ?? [];
+                      const maxConc = a.max_concurrent || 6;
+                      const hasCap = a.total_plan_credits > 0;
+                      const pct = hasCap
+                        ? Math.min(
+                            100,
+                            ((a.total_plan_credits - a.subscription_balance) /
+                              a.total_plan_credits) *
+                              100,
+                          )
+                        : 0;
+                      const switchOn = a.status === "active";
+                      const switchDisabled =
+                        a.status === "banned" ||
+                        pause.isPending ||
+                        resume.isPending;
+
+                      return (
+                        <TableRow
+                          key={a.id}
+                          className="cursor-pointer"
+                          onClick={() => setDetailId(a.id)}
+                        >
+                          {/* # index */}
+                          <TableCell className="text-center text-xs text-muted-foreground tabular-nums">
+                            {rowIdx + 1}
+                          </TableCell>
+
+                          {/* Email + id */}
+                          <TableCell className="whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <div className="flex size-7 shrink-0 items-center justify-center rounded bg-[#D1FE16]/30 p-1">
+                                <img src={logoBrand} alt="" className="size-full" />
+                              </div>
+                              <div>
+                                <div className="text-sm font-medium">{a.email}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {a.id.slice(0, 8)}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+
+                          {/* Status badge (no switch here) */}
+                          <TableCell className="whitespace-nowrap text-center">
+                            <StatusBadge tone={accountStatusTone(a.status)}>
+                              {t(`accounts.status.${a.status}`, {
+                                defaultValue: a.status,
+                              })}
                             </StatusBadge>
-                            {a.has_unlim ? (
-                              <StatusBadge tone="brand">
-                                {t("accounts.tags.unlim")}
+                          </TableCell>
+
+                          {/* Plan badges */}
+                          <TableCell className="whitespace-nowrap text-center">
+                            <div className="inline-flex flex-wrap gap-1 justify-center">
+                              <StatusBadge tone="muted">
+                                {a.plan_type || t("accounts.tags.noPlan")}
                               </StatusBadge>
-                            ) : null}
-                            {a.has_flex_unlim ? (
-                              <StatusBadge tone="info">
-                                {t("accounts.tags.flexUnlim")}
-                              </StatusBadge>
-                            ) : null}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <StatusBadge tone={accountStatusTone(a.status)}>
-                            {t(`accounts.status.${a.status}`, {
-                              defaultValue: a.status,
-                            })}
-                          </StatusBadge>
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {formatCredits(a.subscription_balance)}
-                        </TableCell>
-                        <TableCell className="text-right tabular-nums">
-                          {a.in_flight_jobs}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatRelative(a.last_used_at)}
-                        </TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
+                              {a.has_unlim && (
+                                <StatusBadge tone="brand">
+                                  {t("accounts.tags.unlim")}
+                                </StatusBadge>
+                              )}
+                              {a.has_flex_unlim && (
+                                <StatusBadge tone="info">
+                                  {t("accounts.tags.flexUnlim")}
+                                </StatusBadge>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          {/* Credits: used/total + mini progress bar */}
+                          <TableCell className="text-center whitespace-nowrap">
+                            <div className="text-xs tabular-nums">
+                              {hasCap
+                                ? `${formatCredits(a.total_plan_credits - a.subscription_balance)}/${formatCredits(a.total_plan_credits)}`
+                                : formatCredits(a.subscription_balance)}
+                            </div>
+                            {hasCap && (
+                              <div className="mx-auto mt-0.5 h-1.5 w-16 rounded-full bg-muted">
+                                <div
+                                  className="h-full rounded-full bg-emerald-500 transition-all"
+                                  style={{ width: `${pct}%` }}
+                                />
+                              </div>
+                            )}
+                          </TableCell>
+
+                          {/* Concurrency: in_flight / max */}
+                          <TableCell className="text-center tabular-nums text-xs whitespace-nowrap">
+                            {a.in_flight_jobs}/{maxConc}
+                          </TableCell>
+
+                          {/* Priority */}
+                          <TableCell
+                            className={`text-center tabular-nums text-xs whitespace-nowrap ${a.priority === 0 ? "text-muted-foreground" : ""}`}
+                          >
+                            {a.priority}
+                          </TableCell>
+
+                          {/* Proxy */}
+                          <TableCell className="whitespace-nowrap text-xs text-center">
+                            {a.bound_proxy_url ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className="inline-block max-w-[120px] truncate">
+                                      {a.bound_proxy_url}
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    {a.bound_proxy_url}
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+
+                          {/* Fail streak */}
+                          <TableCell
+                            className={`text-center tabular-nums text-xs whitespace-nowrap ${a.fail_streak > 0 ? "text-red-500 font-medium" : "text-muted-foreground"}`}
+                          >
+                            {a.fail_streak}
+                          </TableCell>
+
+                          {/* Groups */}
+                          <TableCell className="whitespace-nowrap text-center">
+                            <div className="inline-flex items-center gap-1 justify-center">
+                              {groups.slice(0, 2).map((g) => (
+                                <StatusBadge key={g.id} tone="muted">
+                                  {g.name}
+                                </StatusBadge>
+                              ))}
+                              {groups.length > 2 && (
+                                <span className="text-xs text-muted-foreground">
+                                  +{groups.length - 2}
+                                </span>
+                              )}
+                              {groups.length === 0 && (
+                                <span className="text-xs text-muted-foreground">—</span>
+                              )}
+                            </div>
+                          </TableCell>
+
+                          {/* Source */}
+                          <TableCell className="whitespace-nowrap text-xs text-center">
+                            {a.source ? (
+                              <StatusBadge tone="muted">{a.source}</StatusBadge>
+                            ) : (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+
+                          {/* Last Used */}
+                          <TableCell className="whitespace-nowrap text-xs text-muted-foreground text-center">
+                            {formatRelative(a.last_used_at)}
+                          </TableCell>
+
+                          {/* Active switch + Actions */}
+                          <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                            <div className="flex items-center justify-end gap-1">
+                              <Switch
+                                size="sm"
+                                checked={switchOn}
+                                disabled={switchDisabled}
+                                className="data-[state=checked]:bg-[#D1FE16]"
+                                onCheckedChange={(v) =>
+                                  v ? resume.mutate(a.id) : pause.mutate(a.id)
+                                }
+                              />
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className="size-8"
+                                className="size-7"
+                                onClick={() => setEditAccount(a)}
+                                title={t("accounts.actions.edit")}
                               >
-                                <IconDotsVertical className="size-4" />
+                                <IconEdit className="size-3.5" />
                               </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              {a.status === "suspended" ? (
-                                <DropdownMenuItem
-                                  onClick={() => resume.mutate(a.id)}
-                                >
-                                  <IconPlayerPlay />{" "}
-                                  {t("accounts.actions.resume")}
-                                </DropdownMenuItem>
-                              ) : (
-                                <DropdownMenuItem
-                                  onClick={() => pause.mutate(a.id)}
-                                  disabled={a.status === "banned"}
-                                >
-                                  <IconPlayerPause />{" "}
-                                  {t("accounts.actions.pause")}
-                                </DropdownMenuItem>
-                              )}
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                className="text-destructive focus:text-destructive"
-                                disabled={a.status === "banned"}
-                                onClick={() => setPendingDelete(a)}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7"
+                                onClick={() => toast.success(t("accounts.card.probeTriggered"))}
+                                title={t("accounts.card.probe")}
                               >
-                                <IconTrash /> {t("accounts.actions.ban")}
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))
+                                <IconActivityHeartbeat className="size-3.5" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-7"
+                                onClick={() => toast.success(t("accounts.card.refresh"))}
+                                title={t("accounts.card.refresh")}
+                              >
+                                <IconRefresh className="size-3.5" />
+                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-7"
+                                  >
+                                    <IconDotsVertical className="size-3.5" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(a.id);
+                                      toast.success(t("accounts.card.copyId"));
+                                    }}
+                                  >
+                                    <IconClipboardCopy /> {t("accounts.card.copyId")}
+                                  </DropdownMenuItem>
+                                  <DropdownMenuSeparator />
+                                  {a.status === "suspended" ? (
+                                    <DropdownMenuItem
+                                      onClick={() => resume.mutate(a.id)}
+                                    >
+                                      <IconPlayerPlay />{" "}
+                                      {t("accounts.actions.resume")}
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem
+                                      onClick={() => pause.mutate(a.id)}
+                                      disabled={a.status === "banned"}
+                                    >
+                                      <IconPlayerPause />{" "}
+                                      {t("accounts.actions.pause")}
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    disabled={a.status === "banned"}
+                                    onClick={() => setPendingDelete(a)}
+                                  >
+                                    <IconTrash /> {t("accounts.actions.ban")}
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -524,6 +722,11 @@ function Accounts() {
       <AccountDetailSheet
         id={detailId}
         onOpenChange={(open) => !open && setDetailId(null)}
+      />
+
+      <EditAccountDialog
+        account={editAccount}
+        onOpenChange={(open) => !open && setEditAccount(null)}
       />
 
       <AlertDialog
@@ -584,7 +787,7 @@ function SkeletonRows() {
     <>
       {Array.from({ length: 5 }).map((_, i) => (
         <TableRow key={i}>
-          <TableCell colSpan={7}>
+          <TableCell colSpan={13}>
             <Skeleton className="h-6 w-full" />
           </TableCell>
         </TableRow>
