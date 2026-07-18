@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-07-17T12:03:36.931Z",
+  "generatedAt": "2026-07-18T10:36:41.051Z",
   "source": "/Users/danlio/Repositories/daniel/higgsfield-register/server/src/mapping/verified_models.mjs",
   "models": [
     {
@@ -28,7 +28,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "mapping:image_models.mjs",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "autosprite",
@@ -58,7 +64,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "B"
+      "classification": "B",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "bd-studio-kling",
@@ -99,7 +111,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "bd-studio-sora2",
@@ -126,7 +144,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "bd-studio-soul-location",
@@ -152,7 +176,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "B"
+      "classification": "B",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "brain-activity",
@@ -178,7 +208,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "bytedance-image-upscale",
@@ -202,7 +238,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "B"
+      "classification": "B",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "canvas",
@@ -232,7 +274,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "canvas-soul",
@@ -261,7 +309,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "B"
+      "classification": "B",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "character-sheet",
@@ -283,7 +337,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "cinematic-soul-location",
@@ -309,7 +369,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "cinematic-studio-2-5",
@@ -340,7 +406,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "B"
+      "classification": "B",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "cinematic-studio-2-5-edit",
@@ -365,7 +437,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "cinematic-studio-3-0",
@@ -400,7 +478,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "cinematic-studio-3-0-image-edit",
@@ -425,7 +509,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "cinematic-studio-image",
@@ -453,7 +543,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "cinematic-studio-image-grid",
@@ -492,7 +588,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "cinematic-studio-video",
@@ -532,7 +634,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "cinematic-studio-video-3-5",
@@ -562,7 +670,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "credits_shortfall",
+      "min_credits_hundredths": 2000
     },
     {
       "alias": "clipify",
@@ -590,7 +704,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "X"
+      "classification": "X",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "color-grading-lut",
@@ -611,7 +731,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "X"
+      "classification": "X",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "flux-2",
@@ -642,7 +768,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "mapping:image_models.mjs",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "flux-kontext",
@@ -675,7 +807,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "credits_shortfall",
+      "min_credits_hundredths": 500
     },
     {
       "alias": "gpt-image",
@@ -701,10 +839,16 @@
       "needs_medias": true,
       "needs_outfit": false,
       "app_slug": "",
-      "supports_unlim": false,
-      "unlim_jst": "",
+      "supports_unlim": true,
+      "unlim_jst": "gpt_image_2_unlimited",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "grok-image",
@@ -732,7 +876,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "grok-video",
@@ -759,7 +909,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "grok-video-edit",
@@ -784,7 +940,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "B"
+      "classification": "B",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "grok-video-v15",
@@ -811,7 +973,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "happy-horse-video",
@@ -839,7 +1007,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "headshot",
@@ -861,7 +1035,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "hf-fnf-video",
@@ -890,7 +1070,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "credits_shortfall",
+      "min_credits_hundredths": 2000
     },
     {
       "alias": "image-auto",
@@ -917,7 +1103,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "image-background-remover",
@@ -938,7 +1130,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "image-decompose",
@@ -961,7 +1159,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "image2video",
@@ -1003,7 +1207,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "B"
+      "classification": "B",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "image2video-mix",
@@ -1039,7 +1249,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "imagegen-2",
@@ -1068,7 +1284,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "inworld-text-to-speech",
@@ -1090,7 +1312,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "B"
+      "classification": "B",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "ip-detection",
@@ -1113,7 +1341,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "kling",
@@ -1132,7 +1366,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "B"
+      "classification": "B",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "kling-2.6",
@@ -1162,7 +1402,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "kling-3",
@@ -1195,10 +1441,16 @@
       "needs_medias": true,
       "needs_outfit": false,
       "app_slug": "",
-      "supports_unlim": false,
-      "unlim_jst": "",
+      "supports_unlim": true,
+      "unlim_jst": "kling_3_unlimited",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "kling-3-turbo",
@@ -1225,7 +1477,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "kling-o3-flf",
@@ -1255,7 +1513,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "kling-o3-image-reference",
@@ -1282,7 +1546,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "kling-omni-flf",
@@ -1310,7 +1580,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "sealed:kling_advanced_pro",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "kling-omni-image",
@@ -1337,7 +1613,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "mapping:image_models.mjs",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "kling-omni-image-reference",
@@ -1356,7 +1638,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "kling-transition",
@@ -1390,7 +1678,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "kling2-6-lipsync",
@@ -1409,7 +1703,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "kling2-6-motion-control",
@@ -1436,7 +1736,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "B"
+      "classification": "B",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "sealed:kling_advanced_pro",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "llm-text",
@@ -1455,7 +1761,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "marketing-studio-brand-kit-agent",
@@ -1476,7 +1788,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "B"
+      "classification": "B",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "marketing-studio-brand-kit-scrape",
@@ -1498,7 +1816,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "marketing-studio-hook",
@@ -1525,7 +1849,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "credits_shortfall",
+      "min_credits_hundredths": 2000
     },
     {
       "alias": "marketing-studio-image",
@@ -1552,7 +1882,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "marketing-studio-video",
@@ -1592,7 +1928,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "credits_shortfall",
+      "min_credits_hundredths": 2000
     },
     {
       "alias": "minimax-hailuo",
@@ -1626,7 +1968,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "minimax-hailuo-draw",
@@ -1652,7 +2000,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "mirelo-audio",
@@ -1674,7 +2028,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "mockup-studio",
@@ -1703,7 +2063,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "ms-image",
@@ -1740,7 +2106,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "nano-banana",
@@ -1772,7 +2144,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "nano-banana-2",
@@ -1799,10 +2177,16 @@
       "needs_medias": false,
       "needs_outfit": false,
       "app_slug": "",
-      "supports_unlim": false,
-      "unlim_jst": "",
+      "supports_unlim": true,
+      "unlim_jst": "nano_banana_pro_unlimited",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "mapping:image_models.mjs",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "nano-banana-2-ai-stylist",
@@ -1826,7 +2210,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "nano-banana-2-lite",
@@ -1854,7 +2244,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "nano-banana-2-outfit-collage",
@@ -1886,7 +2282,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "sealed:nano_banana_advanced_pro",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "nano-banana-2-product-placement",
@@ -1916,7 +2318,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "nano-banana-2-relight",
@@ -1948,7 +2356,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "nano-banana-2-shots",
@@ -1974,7 +2388,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "nano-banana-2-skin-enhancer",
@@ -2000,7 +2420,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "nano-banana-2-upscale",
@@ -2019,7 +2445,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "nano-banana-2-zooms",
@@ -2045,7 +2477,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "nano-banana-clothing-cleaner",
@@ -2072,7 +2510,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "sealed:nano_banana_advanced_pro",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "nano-banana-flash",
@@ -2100,7 +2544,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "next-shots",
@@ -2126,7 +2576,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "openai-hazel",
@@ -2154,7 +2610,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "mapping:image_models.mjs",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "openai-hazel-mini",
@@ -2181,7 +2643,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "B"
+      "classification": "B",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "credits_shortfall",
+      "min_credits_hundredths": 75
     },
     {
       "alias": "outpaint",
@@ -2206,7 +2674,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "qwen-camera-control",
@@ -2225,7 +2699,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "recraft-v4",
@@ -2254,7 +2734,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "reframe",
@@ -2273,7 +2759,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "reve",
@@ -2298,7 +2790,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "B"
+      "classification": "B",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "mapping:image_models.mjs",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "sam-3-video",
@@ -2324,7 +2822,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "seedance",
@@ -2343,7 +2847,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "B"
+      "classification": "B",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "seedance-1.5",
@@ -2370,10 +2880,16 @@
       "needs_medias": true,
       "needs_outfit": false,
       "app_slug": "",
-      "supports_unlim": false,
-      "unlim_jst": "",
+      "supports_unlim": true,
+      "unlim_jst": "seedance_unlimited",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "seedance-2-0",
@@ -2407,10 +2923,16 @@
       "needs_medias": true,
       "needs_outfit": false,
       "app_slug": "",
-      "supports_unlim": false,
-      "unlim_jst": "",
+      "supports_unlim": true,
+      "unlim_jst": "seedance_2_unlimited",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "sealed:seedance_2_gated",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "seedance-2-0-mini",
@@ -2443,10 +2965,16 @@
       "needs_medias": true,
       "needs_outfit": false,
       "app_slug": "",
-      "supports_unlim": false,
-      "unlim_jst": "",
+      "supports_unlim": true,
+      "unlim_jst": "seedance_mini_unlimited",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "seedance-draw",
@@ -2475,7 +3003,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "seedream",
@@ -2504,7 +3038,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "mapping:image_models.mjs",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "seedream-5-lite",
@@ -2533,7 +3073,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "seedream-v4-5",
@@ -2563,7 +3109,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "mapping:image_models.mjs",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "skin-enhancer",
@@ -2589,7 +3141,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "sonilo-music",
@@ -2611,7 +3169,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "sora2-video",
@@ -2639,7 +3203,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "sealed:sora2_creator_pro",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "soul-cast-edit",
@@ -2664,7 +3234,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "soul-cinema-studio",
@@ -2694,7 +3270,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "soul-cinematic",
@@ -2724,7 +3306,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "soul-location",
@@ -2750,7 +3338,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "soul-location-edit",
@@ -2775,7 +3369,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "speech2text",
@@ -2796,7 +3396,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "sync-so",
@@ -2822,7 +3428,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "text2image",
@@ -2853,7 +3465,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "text2image-gpt",
@@ -2885,7 +3503,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "mapping:image_models.mjs",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "text2image-soul",
@@ -2918,7 +3542,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "text2image-soul-v2",
@@ -2944,7 +3574,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "text2speech",
@@ -2966,7 +3602,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "sealed:audio_tts_pro",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "text2speech-v2",
@@ -2990,7 +3632,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "topaz-image",
@@ -3021,7 +3669,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "topaz-image-generative",
@@ -3056,7 +3710,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "topaz-video",
@@ -3083,7 +3743,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "B"
+      "classification": "B",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "veo-3.1-lite",
@@ -3112,7 +3778,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "veo-gemini-omni",
@@ -3141,7 +3813,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "veo3-1",
@@ -3174,7 +3852,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "sealed:veo3_family_pro",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "veo3-1-speak",
@@ -3208,7 +3892,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "sealed:veo3_family_pro",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "video-background-remover",
@@ -3230,7 +3920,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "video-deflicker",
@@ -3249,7 +3945,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "video-upscale",
@@ -3273,7 +3975,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "viral-transform-image",
@@ -3301,7 +4009,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "viral-transform-video",
@@ -3329,7 +4043,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "wan2-2-animate",
@@ -3358,7 +4078,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "sealed:wan_animate_pro",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "wan2-2-image",
@@ -3390,7 +4116,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "mapping:image_models.mjs",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "wan2-2-video",
@@ -3431,7 +4163,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "wan2-5-speak",
@@ -3461,7 +4199,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "wan2-5-video",
@@ -3488,7 +4232,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "sealed:wan_animate_pro",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "wan2-6",
@@ -3519,7 +4269,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "wan2-7",
@@ -3546,7 +4302,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "watermark",
@@ -3568,7 +4330,13 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "assumed_starter_safe",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "z-image",
@@ -3593,45 +4361,93 @@
       "supports_unlim": false,
       "unlim_jst": "",
       "media_role": "",
-      "classification": "A"
+      "classification": "A",
+      "starter_locked": false,
+      "requires_paid": false,
+      "requires_ultra": false,
+      "requires_unlim": false,
+      "tier_source": "mapping:image_models.mjs",
+      "min_credits_hundredths": 0
     }
   ],
   "aliases": [
     {
-      "alias": "seedance-2-unlimited",
-      "base_alias": "seedance-2-0",
-      "base_jst": "seedance_2_0",
-      "strategy": "transparent"
-    },
-    {
-      "alias": "seedance-unlimited",
-      "base_alias": "seedance-1.5",
-      "base_jst": "seedance1_5",
-      "strategy": "transparent"
-    },
-    {
-      "alias": "seedance-mini-unlimited",
-      "base_alias": "seedance-2-0-mini",
-      "base_jst": "seedance_2_0_mini",
-      "strategy": "transparent"
+      "alias": "gpt-image-2-unlimited",
+      "base_alias": "gpt-image",
+      "base_jst": "gpt_image_2",
+      "strategy": "transparent",
+      "note": "Ultra-only endpoint; higgsgo transparently forwards to base model.",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": true,
+      "requires_unlim": false,
+      "tier_source": "sealed:unlimited_subscription",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "kling-3-unlimited",
       "base_alias": "kling-3",
       "base_jst": "kling3_0",
-      "strategy": "transparent"
-    },
-    {
-      "alias": "gpt-image-2-unlimited",
-      "base_alias": "gpt-image",
-      "base_jst": "gpt_image_2",
-      "strategy": "transparent"
+      "strategy": "transparent",
+      "note": "Ultra-only endpoint; higgsgo transparently forwards to base model.",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": true,
+      "requires_unlim": false,
+      "tier_source": "sealed:unlimited_subscription",
+      "min_credits_hundredths": 0
     },
     {
       "alias": "nano-banana-pro-unlimited",
       "base_alias": "nano-banana-2",
       "base_jst": "nano_banana_2",
-      "strategy": "transparent"
+      "strategy": "transparent",
+      "note": "Ultra-only endpoint; higgsgo transparently forwards to base model.",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": true,
+      "requires_unlim": false,
+      "tier_source": "sealed:unlimited_subscription",
+      "min_credits_hundredths": 0
+    },
+    {
+      "alias": "seedance-unlimited",
+      "base_alias": "seedance-1.5",
+      "base_jst": "seedance1_5",
+      "strategy": "transparent",
+      "note": "Ultra-only endpoint; higgsgo transparently forwards to base model.",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": true,
+      "requires_unlim": false,
+      "tier_source": "sealed:unlimited_subscription",
+      "min_credits_hundredths": 0
+    },
+    {
+      "alias": "seedance-2-unlimited",
+      "base_alias": "seedance-2-0",
+      "base_jst": "seedance_2_0",
+      "strategy": "transparent",
+      "note": "Ultra-only endpoint; higgsgo transparently forwards to base model.",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": true,
+      "requires_unlim": false,
+      "tier_source": "sealed:unlimited_subscription",
+      "min_credits_hundredths": 0
+    },
+    {
+      "alias": "seedance-mini-unlimited",
+      "base_alias": "seedance-2-0-mini",
+      "base_jst": "seedance_2_0_mini",
+      "strategy": "transparent",
+      "note": "Ultra-only endpoint; higgsgo transparently forwards to base model.",
+      "starter_locked": true,
+      "requires_paid": true,
+      "requires_ultra": true,
+      "requires_unlim": false,
+      "tier_source": "sealed:unlimited_subscription",
+      "min_credits_hundredths": 0
     }
   ]
 }

@@ -59,9 +59,17 @@ const rows = Object.entries(VERIFIED).map(([alias, spec]) => ({
   unlim_jst:     spec.unlimJobSetType || '',
   media_role:    spec.mediaRole || '',
   classification: jstClass.get(spec.jobSetType) || '',
+  // tier fields (round 2): starter_locked / requires_* / tier_source / min_credits_hundredths
+  starter_locked:         !!spec.starterLocked,
+  requires_paid:          !!spec.requiresPaid,
+  requires_ultra:         !!spec.requiresUltra,
+  requires_unlim:         !!spec.requiresUnlim,
+  tier_source:            spec.tierSource || '',
+  min_credits_hundredths: spec.minCreditsHundredths || 0,
 }));
 
-// Merge in aliases *_unlimited → base
+// Merge in aliases *_unlimited → base. Ultra-only endpoints: mark
+// requires_ultra=T so the pool selector picks an Ultra-tier account.
 const aliasEntries = [];
 for (const r of rows) {
   if (r.unlim_jst) {
@@ -71,6 +79,14 @@ for (const r of rows) {
       base_jst: r.jst,
       strategy: 'transparent',
       note: 'Ultra-only endpoint; higgsgo transparently forwards to base model.',
+      // tier: unlimited endpoints are ultra-locked regardless of the
+      // base model's own tier.
+      starter_locked:         true,
+      requires_paid:          true,
+      requires_ultra:         true,
+      requires_unlim:         false,
+      tier_source:            'sealed:unlimited_subscription',
+      min_credits_hundredths: 0,
     });
   }
 }
