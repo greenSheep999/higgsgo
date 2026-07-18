@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"regexp"
 	"sync"
 	"time"
 
@@ -168,10 +169,19 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 		async = true
 	}
 
-	// Resolve the group policy once so route strategy and concurrency
-	// caps stay consistent across the pick — a second Get during
-	// PickAndLock could see a mid-request PUT of the group config.
+	// Resolve the group policy once so route strategy, concurrency
+	// caps, model regex, and budget stay consistent across the pick —
+	// a second Get during PickAndLock could see a mid-request PUT of
+	// the group config.
 	policy := s.resolveGroupPolicy(ctx, req.GroupID)
+
+	// Pre-pick group gates (ROADMAP P1-4): reject requests that would
+	// pick an account only to fail at charge time. Runs before
+	// PickAndLock so we don't consume an in_flight slot on a doomed
+	// request. Nil-safe when Groups is unwired.
+	if err := s.enforceGroupGates(policy, spec.Alias, spec.EstCostHundredths); err != nil {
+		return nil, err
+	}
 
 	// Pick an account from the pool.
 	pickParams := ports.PickParams{
@@ -550,6 +560,20 @@ type groupPolicy struct {
 	RouteStrategy           domain.RouteStrategy
 	MaxGroupInFlight        int // 0 = uncapped
 	MaxConcurrentPerAccount int // 0 = fall back to store default (5)
+
+	// Model-alias gates and group-level monthly budget. Populated only
+	// when Groups != nil and the group row exists. Enforced in
+	// enforceGroupGates before the pick.
+	//
+	// AllowedModels / BlockedModels are pre-compiled once per pick so
+	// PickAndLock does not re-parse the regex per candidate. A nil
+	// pointer means the field was empty or invalid on the group row —
+	// treated as "no filter" (allow), which matches the historical
+	// behavior of silently ignoring these columns.
+	AllowedModels       *regexp.Regexp
+	BlockedModels       *regexp.Regexp
+	MonthlyCreditBudget int64 // 0 = unbounded
+	MonthlyCreditUsed   int64
 }
 
 // resolveGroupPolicy looks up the group's runtime policy. Returns zero
@@ -567,11 +591,78 @@ func (s *Service) resolveGroupPolicy(ctx context.Context, groupID string) groupP
 	if strat == "" {
 		strat = domain.RouteRoundRobin
 	}
+
+	// Compile regexes tolerantly: an invalid pattern on the group row
+	// falls back to "no filter" rather than 500-ing the caller. A WARN
+	// log makes the misconfiguration visible.
+	allowed := compileGroupRegex(g.AllowedModelsRegex, groupID, "allowed", s.Logger)
+	blocked := compileGroupRegex(g.BlockedModelsRegex, groupID, "blocked", s.Logger)
+
 	return groupPolicy{
 		RouteStrategy:           strat,
 		MaxGroupInFlight:        g.MaxConcurrentJobs,
 		MaxConcurrentPerAccount: g.MaxConcurrentPerAccount,
+		AllowedModels:           allowed,
+		BlockedModels:           blocked,
+		MonthlyCreditBudget:     g.MonthlyCreditBudget,
+		MonthlyCreditUsed:       g.MonthlyCreditUsed,
 	}
+}
+
+// enforceGroupGates runs the pre-pick eligibility checks that operate on
+// the request + resolved group policy without needing an account row.
+// Returns a domain error the caller can propagate straight to the HTTP
+// layer, or nil to allow the request through to PickAndLock. Split out
+// so unit tests can exercise the gate matrix without spinning up a
+// full pool.
+//
+// Enforced today:
+//   - blocked_models_regex: exact-match a compiled regex against the
+//     canonical alias. Match → ErrModelBlocked.
+//   - allowed_models_regex: if set, the alias must match. Miss →
+//     ErrModelNotAllowed.
+//   - monthly_credit_budget: est cost + already-used must stay under
+//     the budget when the budget is set. Over → ErrGroupQuotaExhausted.
+//
+// Deferred (still stored-but-not-enforced): per-Key monthly_used gate,
+// per-Key model regex. These require the resolver package's full
+// KeyConfig cascade; the plumbing is ready but the caller (v1/handler)
+// does not currently hand the APIKey to Generate.
+func (s *Service) enforceGroupGates(policy groupPolicy, alias string, estCost int64) error {
+	if policy.BlockedModels != nil && policy.BlockedModels.MatchString(alias) {
+		return domain.ErrModelBlocked
+	}
+	if policy.AllowedModels != nil && !policy.AllowedModels.MatchString(alias) {
+		return domain.ErrModelNotAllowed
+	}
+	if policy.MonthlyCreditBudget > 0 {
+		// Reserve headroom: use est cost + already-charged. Fine to
+		// approve when equal — the last credit-worth of the budget is
+		// still spendable. Subsequent picks bump used, so budget is
+		// self-limiting.
+		if policy.MonthlyCreditUsed+estCost > policy.MonthlyCreditBudget {
+			return domain.ErrGroupQuotaExhausted
+		}
+	}
+	return nil
+}
+
+func compileGroupRegex(pattern, groupID, kind string, logger *slog.Logger) *regexp.Regexp {
+	if pattern == "" {
+		return nil
+	}
+	re, err := regexp.Compile(pattern)
+	if err != nil {
+		if logger != nil {
+			logger.Warn("group regex invalid; treating as no filter",
+				slog.String("group_id", groupID),
+				slog.String("kind", kind),
+				slog.String("pattern", pattern),
+				slog.String("err", err.Error()))
+		}
+		return nil
+	}
+	return re
 }
 
 // EnsureJSON returns the body as a json.RawMessage for logging.

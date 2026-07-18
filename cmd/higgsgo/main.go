@@ -250,6 +250,7 @@ func run() error {
 		Events:   usageStore,
 		APIKeys:  apiKeyStore,
 		Accounts: accountStore,
+		Groups:   groupStore, // ROADMAP P1-4: enables group monthly_credit_budget self-limiting
 		Logger:   logger,
 		Metrics:  metrics,
 	}

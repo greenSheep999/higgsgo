@@ -39,7 +39,16 @@ type Recorder struct {
 	Events   ports.UsageEventStore
 	APIKeys  ports.APIKeyStore
 	Accounts ports.AccountStore
-	Logger   *slog.Logger
+	// Groups, when non-nil, receives an IncrementUsed call whenever a
+	// terminal job carries a non-empty GroupID and non-zero charged
+	// credits — this is what makes the group's monthly_credit_budget
+	// (checked pre-pick by proxy.Service.enforceGroupGates) self-limit.
+	// Wiring is optional: pre-P1-4 deployments that only care about
+	// per-key accounting can leave this nil and the pre-pick budget
+	// gate falls back to whatever monthly_credit_used the DB happens
+	// to hold (typically zero, so the gate is effectively disabled).
+	Groups ports.GroupStore
+	Logger *slog.Logger
 	// Metrics is optional; when non-nil, OnJobTerminal increments the
 	// UsageCredits counter (labels: media_type, status) by the charged
 	// credits (hundredths) after a successful Insert. A nil Metrics
@@ -160,6 +169,23 @@ func (r *Recorder) OnJobTerminal(ctx context.Context, job *domain.Job, account *
 			if r.Logger != nil {
 				r.Logger.Warn("metering apikey increment failed",
 					slog.String("api_key_id", job.APIKeyID),
+					slog.String("job_id", job.ID),
+					slog.String("err", err.Error()))
+			}
+		}
+	}
+
+	// 5. Increment group monthly_credit_used. Best-effort like APIKeys:
+	//    an admin who wiped the group budget mid-flight should not
+	//    make the metering pipeline fail. Charged credits — not
+	//    actual — because the operator sets the budget in the same
+	//    unit the WebUI shows (post-markup credit spend). See
+	//    docs/ROADMAP.md P1-4.
+	if job.GroupID != "" && r.Groups != nil && chargedCreditsH > 0 {
+		if err := r.Groups.IncrementUsed(ctx, job.GroupID, chargedCreditsH); err != nil {
+			if r.Logger != nil {
+				r.Logger.Warn("metering group increment failed",
+					slog.String("group_id", job.GroupID),
 					slog.String("job_id", job.ID),
 					slog.String("err", err.Error()))
 			}

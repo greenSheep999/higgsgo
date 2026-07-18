@@ -45,9 +45,9 @@ Fields you can set in the DB / admin API / WebUI that **have no runtime effect**
 | `account.bound_proxy_url` | `account_store.go:62,175,562` | ✅ **Enforced** (P1-5 landed). `utls.Pool` (`internal/adapters/httpclient/utls/pool.go`) caches one `*Client` per unique proxy URL and is wired as `upstream.Client.Resolver` in `main.go`. Empty `bound_proxy_url` falls back to the process-level `HIGGSGO_UPSTREAM_PROXY_URL`. |
 | `group.max_concurrent_jobs` | `group_store.go` | ✅ **Enforced** (P0-3 landed). `proxy.Service.resolveGroupPolicy` reads it and passes `MaxGroupInFlight` to `PickAndLock`, which runs a `SUM(in_flight_jobs)` subquery inside the tx and returns `ErrGroupConcurrencyMax` when tripped. 429 `pool_saturated` at the HTTP layer. |
 | `group.max_concurrent_per_account` | `group_store.go` | ✅ **Enforced** (P0-3 landed). Same policy hop feeds `MaxConcurrentPerAccount` into `PickAndLock` WHERE. Falls back to the historical `5` when the group hasn't set a value. |
-| `group.allowed_models_regex` | `group_store.go` | **Ignored.** Only read by dead `resolver` code. |
-| `group.blocked_models_regex` | `group_store.go` | **Ignored.** Same. |
-| `group.monthly_credit_budget` / `monthly_credit_used` | `group_store.go` | **Ignored.** `IncrementUsed` (`group_store.go:321`) has no caller. `PickAndLock` does not check group budget. |
+| `group.allowed_models_regex` | `group_store.go` | ✅ **Enforced** (P1-4 landed). `proxy.Service.enforceGroupGates` runs the compiled regex against the resolved alias before pick; miss → `ErrModelNotAllowed` → HTTP 403 `model_not_allowed`. Invalid pattern logs WARN and fails open. |
+| `group.blocked_models_regex` | `group_store.go` | ✅ **Enforced** (P1-4 landed). Same gate; match → `ErrModelBlocked` → HTTP 403 `model_blocked`. Blocked wins over allowed when both patterns match. |
+| `group.monthly_credit_budget` / `monthly_credit_used` | `group_store.go` | ✅ **Enforced** (P1-4 landed). Pre-pick gate compares `MonthlyCreditUsed + EstCost` against `MonthlyCreditBudget`; over → `ErrGroupQuotaExhausted` → HTTP 402 `group_budget_exhausted`. `metering.Recorder.OnJobTerminal` now calls `GroupStore.IncrementUsed` at every non-zero terminal so the counter actually climbs. Zero budget disables the gate. |
 | `account.max_concurrent` | migration `016` | **Ignored.** Never read by pick path. |
 | `AvailableSlots()` | `domain/account.go:140-149` | Const `upstreamLimit = 6` diverges from the enforced literal `5`. |
 | `cfg.Pool.MaxInFlightPerAccount` | `config.go:227,329` | **Ignored** by pick path. Only surfaced by config parser. |
@@ -150,17 +150,38 @@ to accept the fields the SQL WHERE / ORDER BY layer needs.
 
 ### P1 — correctness (drop silent no-ops)
 
-4. **Wire `resolver.Resolve()` into proxy path** (~1 day)
-   - In `proxy.Service.Generate` after `resolveGroup`, load
-     Key/Group/Account/Global config, call `resolver.Resolve()`, pass
-     `ResolvedConfig` through to `PickAndLock`.
-   - Migrate `PickAndLock` SQL to use `ResolvedConfig.MaxConcurrent`
-     (replaces hardcoded `5`).
-   - Enforce `ResolvedConfig.AllowedModels` / `BlockedModels` regex before
-     enqueue.
-   - Enforce `ResolvedConfig.MonthlyBudget` on both Key and Group; call
-     `GroupStore.IncrementUsed` in `Metering.Recorder` on terminal-cost
-     events (respect existing markup logic).
+4. **Wire group-level gates into proxy path** — ✅ **DONE (partial)**
+   - `proxy.Service.resolveGroupPolicy` now compiles `AllowedModels` /
+     `BlockedModels` and reads `MonthlyCreditBudget` /
+     `MonthlyCreditUsed` alongside the strategy + concurrency caps
+     already wired in P0-3.
+   - `proxy.Service.enforceGroupGates` runs the three checks
+     (blocked / allowed / budget) **before** `PickAndLock`, so a
+     doomed request never consumes an in-flight slot. Invalid regex
+     patterns are logged and treated as "no filter" — pre-existing
+     rows with bad patterns don't 500 the caller.
+   - `metering.Recorder.Groups` new field; `OnJobTerminal` calls
+     `GroupStore.IncrementUsed` at every non-zero terminal so the
+     budget gate self-limits. Wired in `main.go`.
+   - HTTP error mapping in `v1/videos.writeGenerationError`:
+     `ErrModelBlocked` → 403 `model_blocked`,
+     `ErrModelNotAllowed` → 403 `model_not_allowed`,
+     `ErrGroupQuotaExhausted` → 402 `group_budget_exhausted`.
+   - Tests: `TestEnforceGroupGates_MatrixOfDenyAndAllow` (9 cases
+     covering nil-safety, block wins over allow, exact-limit passes,
+     zero-budget disables), `TestCompileGroupRegex_InvalidPatternDegrades`.
+   - **Deferred** (still stored-but-not-enforced):
+     `APIKey.MonthlyLimit` at pre-pick (currently checked at
+     recorder-time only; monthly quota exhaustion returns after the
+     job is already charged), per-key model regex, per-key rate
+     limit fields. Wiring these requires threading the resolved
+     APIKey into `GenerationRequest` — mechanical but out of P0/P1
+     scope. Tracked as P2.
+   - `internal/core/resolver/` remains uncalled: its Key layer is
+     what would enable those deferred gates, but the group-level
+     enforcement above delivers the immediate P1 outcome without
+     restructuring the request path. The resolver package will get
+     wired when we bring the Key gates online.
 
 5. **Per-account HTTP client honoring `bound_proxy_url`** — ✅ **DONE**
    - `internal/adapters/httpclient/utls/pool.go` (`utls.Pool`) caches

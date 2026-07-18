@@ -126,6 +126,19 @@ func writeGenerationError(w http.ResponseWriter, err error) {
 		// now. Retryable; 429 is the right signal (unlike 503, which
 		// implies "pool is dry").
 		writeError(w, http.StatusTooManyRequests, "pool_saturated", err.Error())
+	case errors.Is(err, domain.ErrModelBlocked):
+		// Group policy explicitly blocks this model alias. 403 is
+		// correct: authenticated but not authorized for this alias.
+		writeError(w, http.StatusForbidden, "model_blocked", err.Error())
+	case errors.Is(err, domain.ErrModelNotAllowed):
+		// Group has an allowlist and this alias is not on it. Same
+		// 403 shape as blocked; distinct error type so admins can
+		// tell "explicit deny" from "not in allowlist" in logs.
+		writeError(w, http.StatusForbidden, "model_not_allowed", err.Error())
+	case errors.Is(err, domain.ErrGroupQuotaExhausted):
+		// Group's monthly_credit_budget is exhausted. 402 matches how
+		// individual account balance exhaustion maps.
+		writeError(w, http.StatusPaymentRequired, "group_budget_exhausted", err.Error())
 	case errors.Is(err, domain.ErrUpstreamForbidden):
 		writeError(w, http.StatusPaymentRequired, "plan_gate", err.Error())
 	case errors.Is(err, domain.ErrUpstreamRateLimit):

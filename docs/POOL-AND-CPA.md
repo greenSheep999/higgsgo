@@ -171,9 +171,9 @@ WHERE a.status = 'active'
   AND a.subscription_balance >= ? * 1.2                       // ✅ per-account balance headroom
   AND (:GroupID = '' OR a.id IN (SELECT account_id FROM account_group_members WHERE group_id = :GroupID))
                                                               // ✅ group membership filter
-  AND ...is jst in the group's allowed_models_regex...        // ❌ regex is stored but never applied (P1-4)
+  AND ...is jst in the group's allowed_models_regex...        // ✅ enforced pre-pick by proxy.Service.enforceGroupGates (P1-4)
   AND SUM(a.in_flight_jobs) OVER group < g.max_concurrent_jobs
-                                                              // ❌ aggregate cap not enforced (P0-3)
+                                                              // ✅ enforced inside the pick tx (P0-3)
 ORDER BY
   CASE :RouteStrategy
     WHEN 'least_used'         THEN (a.total_plan_credits - a.subscription_balance) ASC
@@ -187,11 +187,13 @@ LIMIT 1
 FOR UPDATE                                                    // BEGIN/COMMIT tx protects SELECT+UPDATE atomicity
 ```
 
-**Group budget enforcement.** `group.monthly_credit_budget` is currently
-❌ — the proxy path never calls `GroupStore.IncrementUsed`
-(`group_store.go:321`), so month-to-date is never charged and never
-checked. ROADMAP P1-4 wires this via `resolver.Resolve()` and
-`Metering.Recorder`.
+**Group budget enforcement.** ✅ Live since P1-4.
+`proxy.Service.enforceGroupGates` compares
+`MonthlyCreditUsed + EstCost` against `MonthlyCreditBudget` before
+the pick; over-budget returns `ErrGroupQuotaExhausted` → HTTP 402
+`group_budget_exhausted`. `metering.Recorder.OnJobTerminal` calls
+`GroupStore.IncrementUsed` at every non-zero terminal so the counter
+climbs against real-world spend. Zero budget disables the check.
 
 ### 2.4 Group Default Policy
 

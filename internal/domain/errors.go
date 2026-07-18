@@ -18,6 +18,15 @@ var (
 	ErrModelNotFound    = errors.New("model not found")
 	ErrModelStarterOnly = errors.New("model requires a paid account tier")
 	ErrModelUltraOnly   = errors.New("model requires ultra tier or higher")
+	// ErrModelNotAllowed signals the caller's group has an allowed
+	// models regex that does not match the requested alias. Distinct
+	// from ErrModelNotFound (unknown alias) and ErrModelBlocked
+	// (explicit deny) so the HTTP layer can render a precise message.
+	ErrModelNotAllowed = errors.New("model not in group's allowed list")
+	// ErrModelBlocked signals the caller's group has a blocked_models
+	// regex that matches the requested alias. Enforced before pick so
+	// the account balance is not touched.
+	ErrModelBlocked = errors.New("model blocked by group policy")
 
 	ErrAPIKeyNotFound    = errors.New("api key not found")
 	ErrAPIKeyRevoked     = errors.New("api key revoked")
