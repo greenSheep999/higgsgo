@@ -13,8 +13,8 @@
 coverage.txt
 coverage.html
 
-# Go workspace files
-go.work
+# Go workspace files — go.work is committed (monorepo binding).
+# go.work.sum is per-developer.
 go.work.sum
 
 # IDE / editor
