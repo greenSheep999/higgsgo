@@ -28,14 +28,33 @@ func NewUsageEventStore(db *DB) *UsageEventStore { return &UsageEventStore{db: d
 // allowedGroupByCols is the whitelist of columns callers may pass in
 // UsageAggQuery.GroupBy. Anything outside this set is dropped silently so a
 // bad caller cannot inject SQL through the aggregation path.
+//
+// `billing_hour` is a synthetic bucket derived from `ts` (see
+// groupByExpression) rather than a real column — added so the webui can
+// render an intraday trend without pulling raw events.
 var allowedGroupByCols = map[string]struct{}{
 	"api_key_id":     {},
 	"cpa_partner_id": {},
 	"account_id":     {},
 	"group_id":       {},
 	"model_alias":    {},
+	"billing_hour":   {},
 	"billing_day":    {},
 	"billing_month":  {},
+}
+
+// groupByExpression returns the SQL expression the SELECT/GROUP BY uses for
+// a whitelisted group-by column. Real columns are echoed as-is; synthetic
+// buckets like billing_hour compile to a strftime() call on ts.
+func groupByExpression(col string) string {
+	switch col {
+	case "billing_hour":
+		// ISO-style "YYYY-MM-DDTHH:00:00Z" so the client can sort as string
+		// and parse as RFC3339 without extra munging.
+		return "strftime('%Y-%m-%dT%H:00:00Z', ts)"
+	default:
+		return col
+	}
 }
 
 // Insert writes a single UsageEvent row.
@@ -148,15 +167,30 @@ func (s *UsageEventStore) Aggregate(ctx context.Context, q ports.UsageAggQuery) 
 	}
 	clauses, args := buildUsageFilterClauses(filters)
 
+	// Some group-by columns are synthetic (derived from ts, etc.). We select
+	// them via their expression aliased back to the column name so the scan
+	// path is uniform, and GROUP BY / ORDER BY use the expression directly
+	// because sqlite doesn't honour output aliases in GROUP BY reliably.
 	var selectCols []string
+	var groupExprs []string
 	for _, col := range groupCols {
-		selectCols = append(selectCols, col)
+		expr := groupByExpression(col)
+		if expr == col {
+			selectCols = append(selectCols, col)
+		} else {
+			selectCols = append(selectCols, expr+" AS "+col)
+		}
+		groupExprs = append(groupExprs, expr)
 	}
 	selectCols = append(selectCols,
+		// COUNT never NULLs, but the three status SUMs collapse to NULL
+		// on an empty result set (no GROUP BY + no matching rows). Wrap
+		// each in COALESCE so scan targets stay int64 without a nullable
+		// intermediate — the caller wants 0, not "unknown".
 		"COUNT(*) AS request_count",
-		"SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END) AS completed_count",
-		"SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END) AS failed_count",
-		"SUM(CASE WHEN status = 'refunded' THEN 1 ELSE 0 END) AS refunded_count",
+		"COALESCE(SUM(CASE WHEN status = 'completed' THEN 1 ELSE 0 END), 0) AS completed_count",
+		"COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) AS failed_count",
+		"COALESCE(SUM(CASE WHEN status = 'refunded' THEN 1 ELSE 0 END), 0) AS refunded_count",
 		"COALESCE(SUM(actual_credits_h), 0) AS total_credits_h",
 		"COALESCE(SUM(charged_credits_h), 0) AS charged_credits_h",
 		"COALESCE(CAST(AVG(latency_ms) AS INTEGER), 0) AS avg_latency_ms",
@@ -166,9 +200,9 @@ func (s *UsageEventStore) Aggregate(ctx context.Context, q ports.UsageAggQuery) 
 	if len(clauses) > 0 {
 		sqlStr += " WHERE " + strings.Join(clauses, " AND ")
 	}
-	if len(groupCols) > 0 {
-		sqlStr += " GROUP BY " + strings.Join(groupCols, ", ")
-		sqlStr += " ORDER BY " + strings.Join(groupCols, ", ")
+	if len(groupExprs) > 0 {
+		sqlStr += " GROUP BY " + strings.Join(groupExprs, ", ")
+		sqlStr += " ORDER BY " + strings.Join(groupExprs, ", ")
 	}
 
 	rows, err := s.db.QueryContext(ctx, sqlStr, args...)

@@ -6,7 +6,7 @@ import (
 )
 
 func TestGenerateParseRoundtrip(t *testing.T) {
-	pt, hash, err := Generate()
+	pt, hash, err := Generate(KindProject)
 	if err != nil {
 		t.Fatalf("generate: %v", err)
 	}

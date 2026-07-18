@@ -5,10 +5,12 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/greensheep999/higgsgo/internal/core/apikey"
 	"github.com/greensheep999/higgsgo/internal/domain"
+	"github.com/greensheep999/higgsgo/internal/ports"
 )
 
 // APIKeyStore implements ports.APIKeyStore backed by SQLite.
@@ -23,7 +25,7 @@ func NewAPIKeyStore(db *DB) *APIKeyStore { return &APIKeyStore{db: db} }
 // a constant so every SELECT stays in sync with the scanner.
 const apiKeyColumns = `id, key_hash, name, created_by, cpa_partner_id, group_id, status,
 	monthly_quota, monthly_used, markup_pct,
-	created_at, last_used_at, playground_scope`
+	created_at, last_used_at, playground_scope, kind, key_last4`
 
 // Get fetches a key by id.
 func (s *APIKeyStore) Get(ctx context.Context, id string) (*domain.APIKey, error) {
@@ -48,12 +50,14 @@ func (s *APIKeyStore) Create(ctx context.Context, k *domain.APIKey) error {
 		INSERT INTO api_keys (
 			id, key_hash, name, created_by, cpa_partner_id, group_id, status,
 			monthly_quota, monthly_used, markup_pct,
-			created_at, last_used_at, playground_scope
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			created_at, last_used_at, playground_scope, kind, key_last4
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		k.ID, k.KeyHash, k.Name, nullStr(k.CreatedBy), k.CPAPartnerID, k.GroupID, defaultStatus(k.Status),
 		k.MonthlyQuota, k.MonthlyUsed, defaultMarkup(k.MarkupPct),
 		fmtTime(defaultTime(k.CreatedAt)), fmtTime(k.LastUsedAt),
 		string(defaultPlaygroundScope(k.PlaygroundScope)),
+		string(defaultKind(k.Kind)),
+		k.KeyLast4,
 	)
 	if err != nil {
 		return fmt.Errorf("insert api key %s: %w", k.ID, err)
@@ -100,15 +104,25 @@ func (s *APIKeyStore) IncrementUsage(ctx context.Context, id string, chargedHund
 // plaintext is returned to the caller so the admin handler can expose it
 // to the operator exactly once.
 func (s *APIKeyStore) Rotate(ctx context.Context, id string) (string, error) {
-	plaintext, hash, err := apikey.Generate()
+	// Rotate has to preserve the key's kind — an admin key stays an
+	// admin key (sk-adm-…), a project key stays a project key
+	// (sk-hg-…). Otherwise a rotate would silently downgrade or
+	// upgrade the key's visual class and break downstream tooling
+	// that matches on the prefix.
+	existing, err := s.Get(ctx, id)
+	if err != nil {
+		return "", err
+	}
+	plaintext, hash, err := apikey.Generate(apikey.Kind(existing.Kind))
 	if err != nil {
 		return "", fmt.Errorf("rotate api key %s: mint: %w", id, err)
 	}
+	last4 := apikey.Last4(plaintext)
 	res, err := s.db.ExecContext(ctx, `
 		UPDATE api_keys
-		SET key_hash = ?, updated_at = ?
+		SET key_hash = ?, key_last4 = ?, updated_at = ?
 		WHERE id = ?`,
-		hash, fmtTime(time.Now().UTC()), id)
+		hash, last4, fmtTime(time.Now().UTC()), id)
 	if err != nil {
 		return "", fmt.Errorf("rotate api key %s: %w", id, err)
 	}
@@ -259,11 +273,13 @@ func scanAPIKey(sc scanner) (*domain.APIKey, error) {
 		createdAt       string
 		markupPct       float64
 		playgroundScope sql.NullString
+		kind            sql.NullString
+		keyLast4        sql.NullString
 	)
 	if err := sc.Scan(
 		&k.ID, &k.KeyHash, &k.Name, &createdBy, &cpaPartnerID, &groupID, &k.Status,
 		&k.MonthlyQuota, &k.MonthlyUsed, &markupPct,
-		&createdAt, &lastUsedAt, &playgroundScope,
+		&createdAt, &lastUsedAt, &playgroundScope, &kind, &keyLast4,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrAPIKeyNotFound
@@ -277,7 +293,22 @@ func scanAPIKey(sc scanner) (*domain.APIKey, error) {
 	k.CreatedAt = parseTime(createdAt)
 	k.LastUsedAt = parseTime(lastUsedAt.String)
 	k.PlaygroundScope = defaultPlaygroundScope(domain.PlaygroundScope(playgroundScope.String))
+	k.Kind = defaultKind(domain.APIKeyKind(kind.String))
+	k.KeyLast4 = keyLast4.String
 	return &k, nil
+}
+
+// defaultKind normalises the kind column so an empty / unknown value
+// (e.g. rows inserted before migration 011) resolves to "project" —
+// the safer default because a project key gets tighter permission
+// defaults than an operator "default" key.
+func defaultKind(k domain.APIKeyKind) domain.APIKeyKind {
+	switch k {
+	case domain.APIKeyKindDefault, domain.APIKeyKindProject:
+		return k
+	default:
+		return domain.APIKeyKindProject
+	}
 }
 
 // defaultStatus returns the given status, or "active" when it's empty.
@@ -332,6 +363,46 @@ func (s *APIKeyStore) UpdatePlaygroundScope(ctx context.Context, id string, scop
 		string(defaultPlaygroundScope(scope)), fmtTime(time.Now().UTC()), id)
 	if err != nil {
 		return fmt.Errorf("update playground scope %s: %w", id, err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return domain.ErrAPIKeyNotFound
+	}
+	return nil
+}
+
+// UpdateMeta patches the mutable metadata columns (name / monthly_quota
+// / markup_pct). Each pointer is optional so callers can send a partial
+// update. The SET clauses are assembled dynamically to keep the query
+// small; nothing on the safety-critical path (key_hash, status,
+// monthly_used, group bindings) is reachable through here.
+//
+// Returns domain.ErrAPIKeyNotFound when id does not exist.
+func (s *APIKeyStore) UpdateMeta(ctx context.Context, id string, patch ports.APIKeyMetaPatch) error {
+	sets := []string{}
+	args := []any{}
+	if patch.Name != nil {
+		sets = append(sets, "name = ?")
+		args = append(args, *patch.Name)
+	}
+	if patch.MonthlyQuota != nil {
+		sets = append(sets, "monthly_quota = ?")
+		args = append(args, *patch.MonthlyQuota)
+	}
+	if patch.MarkupPct != nil {
+		sets = append(sets, "markup_pct = ?")
+		args = append(args, *patch.MarkupPct)
+	}
+	if len(sets) == 0 {
+		return nil
+	}
+	sets = append(sets, "updated_at = ?")
+	args = append(args, fmtTime(time.Now().UTC()))
+	args = append(args, id)
+	q := "UPDATE api_keys SET " + strings.Join(sets, ", ") + " WHERE id = ?"
+	res, err := s.db.ExecContext(ctx, q, args...)
+	if err != nil {
+		return fmt.Errorf("update api key meta %s: %w", id, err)
 	}
 	n, _ := res.RowsAffected()
 	if n == 0 {

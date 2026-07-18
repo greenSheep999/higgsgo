@@ -87,6 +87,12 @@ type Account struct {
 	// Optional IP binding for models that require sticky IP (image2video_extend etc.).
 	BoundProxyURL string
 
+	// Priority is an operator-managed sort hint used by the pool router
+	// to prefer some accounts over others (higher = picked first).
+	// Default 0; range is [-1_000, 1_000] enforced at the handler layer.
+	// See migration 010_accounts_priority.sql.
+	Priority int
+
 	RegisteredAt time.Time
 	ImportedAt   time.Time
 }

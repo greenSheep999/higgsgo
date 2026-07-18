@@ -214,6 +214,29 @@ func TestUsageEventStore_Aggregate(t *testing.T) {
 		}
 	}
 
+	// GroupBy = billing_hour: synthetic bucket derived from ts via strftime.
+	// The fixture puts three rows at 12:00 UTC on 07-16 and one row at
+	// 12:00 UTC on 07-17, so we expect two hour buckets keyed by RFC3339
+	// hour boundaries. Verifies the derived column is spelled correctly
+	// and that the alias hits the Keys map under "billing_hour".
+	rows, err = store.Aggregate(ctx, ports.UsageAggQuery{GroupBy: []string{"billing_hour"}})
+	if err != nil {
+		t.Fatalf("aggregate by hour: %v", err)
+	}
+	if len(rows) != 2 {
+		t.Fatalf("by hour: got %d rows want 2", len(rows))
+	}
+	byHour := map[string]ports.UsageAggRow{}
+	for _, r := range rows {
+		byHour[r.Keys["billing_hour"]] = r
+	}
+	if r := byHour["2026-07-16T12:00:00Z"]; r.RequestCount != 3 || r.ChargedCreditsHundredths != 600 {
+		t.Errorf("hour 2026-07-16T12 wrong: %+v", r)
+	}
+	if r := byHour["2026-07-17T12:00:00Z"]; r.RequestCount != 1 || r.ChargedCreditsHundredths != 400 {
+		t.Errorf("hour 2026-07-17T12 wrong: %+v", r)
+	}
+
 	// Only illegal columns → behaves like no group-by: a single roll-up row.
 	rows, err = store.Aggregate(ctx, ports.UsageAggQuery{GroupBy: []string{"password"}})
 	if err != nil {
@@ -247,6 +270,24 @@ func TestUsageEventStore_QueryEmpty(t *testing.T) {
 	}
 	if len(aggs) != 0 {
 		t.Errorf("expected 0 agg rows, got %d", len(aggs))
+	}
+
+	// Regression: rollup (no GROUP BY) on an empty table must return one
+	// row of zeros. Previously SUM(CASE WHEN…) collapsed to NULL and the
+	// int64 scan targets rejected the value — the /admin/usage/aggregate
+	// caller then got a 500 "converting NULL to int64 is unsupported".
+	aggs, err = store.Aggregate(ctx, ports.UsageAggQuery{})
+	if err != nil {
+		t.Fatalf("aggregate empty rollup: %v", err)
+	}
+	if len(aggs) != 1 {
+		t.Fatalf("empty rollup: got %d rows want 1", len(aggs))
+	}
+	r := aggs[0]
+	if r.RequestCount != 0 || r.CompletedCount != 0 || r.FailedCount != 0 ||
+		r.RefundedCount != 0 || r.TotalCreditsHundredths != 0 ||
+		r.ChargedCreditsHundredths != 0 || r.AvgLatencyMS != 0 {
+		t.Errorf("empty rollup row should be all zeros: %+v", r)
 	}
 }
 

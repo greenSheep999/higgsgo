@@ -16,6 +16,24 @@ const (
 	APIKeyStatusRevoked = "revoked"
 )
 
+// APIKeyKind classifies an api_keys row. `default` is the operator's
+// own key (broad access; typically used from the admin console); it
+// exists to give managers a key they can wield without having to
+// pretend it's a partner-scoped project key. `project` is the
+// externally-shared key issued to a downstream user / team; it gets
+// tight defaults (playground=none, quota set) and is what group
+// bindings usually attach to.
+//
+// Kept as string constants so future values (e.g. "internal",
+// "experiment") can be added without a schema change beyond the
+// enum documentation.
+type APIKeyKind string
+
+const (
+	APIKeyKindDefault APIKeyKind = "default"
+	APIKeyKindProject APIKeyKind = "project"
+)
+
 // PlaygroundScope gates a key's access to the /v1/playground/* interactive
 // surface used by the WebUI. Defaults to PlaygroundScopeNone which fully
 // disables the playground for the key, matching migration 009's default so
@@ -83,6 +101,18 @@ type APIKey struct {
 	// PlaygroundScope gates access to the /v1/playground/* interactive
 	// surface used by the WebUI. Defaults to PlaygroundScopeNone.
 	PlaygroundScope PlaygroundScope
+
+	// Kind classifies the key as either an operator "default" key or a
+	// downstream "project" key (see APIKeyKind). Defaults to "project"
+	// when unset so historic rows don't accidentally get treated as
+	// admin-level defaults.
+	Kind APIKeyKind
+
+	// KeyLast4 is the last 4 chars of the plaintext body. Kept so the
+	// admin list can render a partial preview (`sk-hg-•••abc1`)
+	// without revealing the full key. Populated at create / rotate;
+	// empty for rows that pre-date migration 012.
+	KeyLast4 string
 }
 
 // HasBudget reports whether the API key has quota left for a job with the

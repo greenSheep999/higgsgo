@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/greensheep999/higgsgo/internal/domain"
+	"github.com/greensheep999/higgsgo/internal/ports"
 )
 
 // fakeAPIKeyStore records every List and ResetMonthlyUsage call.
@@ -270,4 +271,8 @@ func stringSlicesEqual(a, b []string) bool {
 		}
 	}
 	return true
+}
+
+func (s *fakeAPIKeyStore) UpdateMeta(context.Context, string, ports.APIKeyMetaPatch) error {
+	return nil
 }

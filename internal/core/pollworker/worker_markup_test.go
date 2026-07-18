@@ -170,3 +170,7 @@ func TestWorker_MarkupZeroOnAPIKeyGetError(t *testing.T) {
 // the interface grows a method the test build fails loudly instead of
 // silently drifting.
 var _ ports.APIKeyStore = (*fakeAPIKeyStore)(nil)
+
+func (s *fakeAPIKeyStore) UpdateMeta(context.Context, string, ports.APIKeyMetaPatch) error {
+	return nil
+}

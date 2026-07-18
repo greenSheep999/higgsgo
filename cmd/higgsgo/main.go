@@ -28,7 +28,10 @@ import (
 	"github.com/greensheep999/higgsgo/internal/api/cpaplugin"
 	"github.com/greensheep999/higgsgo/internal/api/v1"
 	"github.com/greensheep999/higgsgo/internal/config"
+	"github.com/greensheep999/higgsgo/internal/core/apikey"
 	"github.com/greensheep999/higgsgo/internal/core/jwt"
+	"github.com/greensheep999/higgsgo/internal/domain"
+	"github.com/greensheep999/higgsgo/internal/util/idgen"
 	"github.com/greensheep999/higgsgo/internal/core/metering"
 	"github.com/greensheep999/higgsgo/internal/core/monthreset"
 	"github.com/greensheep999/higgsgo/internal/core/pollworker"
@@ -94,6 +97,15 @@ func run() error {
 		groupStore = sqlite.NewGroupStore(db)
 		modelHealthStore = sqlite.NewModelHealthStore(db)
 		auditStore = sqlite.NewAuditStore(db)
+
+		// Seed a default admin key on first boot so the WebUI's
+		// Keys list has an operator-facing sk-adm- key waiting when
+		// a fresh deployment logs in. The plaintext is logged
+		// exactly once — the operator captures it from the boot
+		// logs and stashes it in their secret manager.
+		if err := seedDefaultAdminKey(ctx, apiKeyStore, logger); err != nil {
+			logger.Warn("seed default admin key", slog.String("err", err.Error()))
+		}
 	case "postgres":
 		return errors.New("postgres storage adapter not implemented yet")
 	}
@@ -354,3 +366,52 @@ func buildUpstreamTimeouts(cfg *config.Config, logger *slog.Logger) map[string]t
 	}
 	return out
 }
+
+// seedDefaultAdminKey ensures a kind=default sk-adm- key exists so
+// the Keys page has a starter row on a brand-new deployment. The
+// plaintext is only visible in the boot logs — operators are
+// expected to capture it there once and stash it in a secret
+// manager (rotate to get a new one if lost). If any kind=default
+// key already exists, this is a no-op.
+func seedDefaultAdminKey(ctx context.Context, store ports.APIKeyStore, logger *slog.Logger) error {
+	all, err := store.List(ctx)
+	if err != nil {
+		return err
+	}
+	for _, k := range all {
+		if k.Kind == domain.APIKeyKindDefault {
+			return nil // already seeded
+		}
+	}
+	plaintext, hash, err := apikey.Generate(apikey.KindDefault)
+	if err != nil {
+		return err
+	}
+	k := &domain.APIKey{
+		ID:              idgen.NewID("key"),
+		KeyHash:         hash,
+		Name:            "default-admin",
+		CreatedBy:       "system",
+		Status:          domain.APIKeyStatusActive,
+		MonthlyQuota:    0,
+		MarkupPct:       1.0,
+		CreatedAt:       time.Now().UTC(),
+		PlaygroundScope: domain.PlaygroundScopeFull,
+		Kind:            domain.APIKeyKindDefault,
+		KeyLast4:        apikey.Last4(plaintext),
+	}
+	if err := store.Create(ctx, k); err != nil {
+		return err
+	}
+	logger.Warn("seeded default admin key — capture the plaintext now, it will not be shown again",
+		slog.String("id", k.ID),
+		slog.String("plaintext", plaintext),
+	)
+	return nil
+}
+
+// seedDefaultAdminKey ensures a kind=default sk-adm- key exists so
+// the Keys page has a starter row on a brand-new deployment. The
+// plaintext is only visible in the boot logs — operators are
+// expected to capture it there once and stash it in a secret
+// manager (rotate to get a new one if lost). If any kind=default

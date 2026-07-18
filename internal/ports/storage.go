@@ -202,6 +202,24 @@ type APIKeyStore interface {
 	// operator write cannot silently open access.
 	// Returns domain.ErrAPIKeyNotFound when id does not exist.
 	UpdatePlaygroundScope(ctx context.Context, id string, scope domain.PlaygroundScope) error
+
+	// UpdateMeta patches the mutable metadata columns of an api_keys
+	// row. Each pointer is optional; a nil pointer means "leave the
+	// column alone". Callers must not use this path to touch key_hash,
+	// status, monthly_used, or CPA/group binding fields — those flow
+	// through their own methods so audit trails and lifecycle
+	// invariants stay clean. Returns domain.ErrAPIKeyNotFound when id
+	// does not exist.
+	UpdateMeta(ctx context.Context, id string, patch APIKeyMetaPatch) error
+}
+
+// APIKeyMetaPatch is the partial-update body accepted by
+// APIKeyStore.UpdateMeta. All fields are pointers so the caller can
+// send a subset and leave the rest untouched.
+type APIKeyMetaPatch struct {
+	Name         *string
+	MonthlyQuota *int64
+	MarkupPct    *float64
 }
 
 // GroupStore manages account pool groups.

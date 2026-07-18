@@ -106,6 +106,18 @@ func (db *DB) migrate(ctx context.Context) error {
 		if _, err := db.ExecContext(ctx, s.sql); err != nil {
 			return fmt.Errorf("apply migration %s: %w", s.name, err)
 		}
+		// Register the applied version so a subsequent Open won't try to
+		// re-run the same DDL — previously we relied on individual
+		// migration files to write their own schema_versions row, but
+		// only 001 actually did that. Everything past 001 was replayed
+		// every startup, which was silently harmless for CREATE INDEX
+		// IF NOT EXISTS but blows up on ALTER TABLE ... ADD COLUMN.
+		if _, err := db.ExecContext(ctx,
+			`INSERT OR IGNORE INTO schema_versions (version, applied_at) VALUES (?, datetime('now'))`,
+			s.version,
+		); err != nil {
+			return fmt.Errorf("record migration %s: %w", s.name, err)
+		}
 	}
 	return nil
 }

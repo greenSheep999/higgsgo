@@ -58,7 +58,7 @@ func (s *AccountStore) Get(ctx context.Context, id string) (*domain.Account, err
 		       has_unlim, has_flex_unlim, is_pro_veo3_available, cohort,
 		       subscription_balance, credits_balance, total_plan_credits, plan_ends_at,
 		       status, in_flight_jobs, last_balance_at, last_used_at, last_failed_at, fail_streak,
-		       bound_proxy_url, registered_at, imported_at
+		       bound_proxy_url, priority, registered_at, imported_at
 		FROM accounts WHERE id = ?`, id)
 	return scanAccount(row)
 }
@@ -91,7 +91,7 @@ func (s *AccountStore) List(ctx context.Context, filter ports.AccountFilter) ([]
 	             has_unlim, has_flex_unlim, is_pro_veo3_available, cohort,
 	             subscription_balance, credits_balance, total_plan_credits, plan_ends_at,
 	             status, in_flight_jobs, last_balance_at, last_used_at, last_failed_at, fail_streak,
-	             bound_proxy_url, registered_at, imported_at
+	             bound_proxy_url, priority, registered_at, imported_at
 	      FROM accounts`
 	if len(clauses) > 0 {
 		q += " WHERE " + strings.Join(clauses, " AND ")
@@ -124,14 +124,14 @@ func (s *AccountStore) Upsert(ctx context.Context, a *domain.Account) error {
 			has_unlim, has_flex_unlim, is_pro_veo3_available, cohort,
 			subscription_balance, credits_balance, total_plan_credits, plan_ends_at,
 			status, in_flight_jobs, last_balance_at, last_used_at, last_failed_at, fail_streak,
-			bound_proxy_url, registered_at, imported_at
+			bound_proxy_url, priority, registered_at, imported_at
 		) VALUES (
 			?, ?, ?, ?, ?, ?,
 			?, ?, ?,
 			?, ?, ?, ?,
 			?, ?, ?, ?,
 			?, ?, ?, ?, ?, ?,
-			?, ?, ?
+			?, ?, ?, ?
 		)
 		ON CONFLICT(id) DO UPDATE SET
 			email = excluded.email,
@@ -151,14 +151,15 @@ func (s *AccountStore) Upsert(ctx context.Context, a *domain.Account) error {
 			total_plan_credits = excluded.total_plan_credits,
 			plan_ends_at = excluded.plan_ends_at,
 			status = excluded.status,
-			bound_proxy_url = excluded.bound_proxy_url
+			bound_proxy_url = excluded.bound_proxy_url,
+			priority = excluded.priority
 	`,
 		a.ID, a.Email, a.Password, a.SessionID, a.CookiesJSON, a.UserAgent,
 		a.DataDomeClientID, a.WorkspaceID, string(a.PlanType),
 		boolToInt(a.HasUnlim), boolToInt(a.HasFlexUnlim), boolToInt(a.IsProVeo3Available), a.Cohort,
 		a.SubscriptionBalance, a.CreditsBalance, a.TotalPlanCredits, fmtTime(a.PlanEndsAt),
 		string(a.Status), a.InFlightJobs, fmtTime(a.LastBalanceAt), fmtTime(a.LastUsedAt), fmtTime(a.LastFailedAt), a.FailStreak,
-		a.BoundProxyURL, fmtTime(a.RegisteredAt), fmtTime(a.ImportedAt),
+		a.BoundProxyURL, a.Priority, fmtTime(a.RegisteredAt), fmtTime(a.ImportedAt),
 	)
 	if err != nil {
 		return fmt.Errorf("upsert account %s: %w", a.ID, err)
@@ -279,7 +280,7 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 		       has_unlim, has_flex_unlim, is_pro_veo3_available, cohort,
 		       subscription_balance, credits_balance, total_plan_credits, plan_ends_at,
 		       status, in_flight_jobs, last_balance_at, last_used_at, last_failed_at, fail_streak,
-		       bound_proxy_url, registered_at, imported_at
+		       bound_proxy_url, priority, registered_at, imported_at
 		FROM accounts
 		WHERE status = 'active'
 		  AND in_flight_jobs < 5
@@ -368,7 +369,7 @@ func scanAccount(sc scanner) (*domain.Account, error) {
 		&hasUnlim, &hasFlexUnlim, &isProVeo3, &cohort,
 		&a.SubscriptionBalance, &a.CreditsBalance, &a.TotalPlanCredits, &planEndsAt,
 		&status, &a.InFlightJobs, &lastBalanceAt, &lastUsedAt, &lastFailedAt, &a.FailStreak,
-		&boundProxy, &registeredAt, &importedAt,
+		&boundProxy, &a.Priority, &registeredAt, &importedAt,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrAccountNotFound

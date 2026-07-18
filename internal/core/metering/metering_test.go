@@ -290,3 +290,7 @@ func TestRecorder_InsertErrorPropagates(t *testing.T) {
 		t.Errorf("expected sentinel error, got %v", err)
 	}
 }
+
+func (s *fakeAPIKeyStore) UpdateMeta(context.Context, string, ports.APIKeyMetaPatch) error {
+	return nil
+}
