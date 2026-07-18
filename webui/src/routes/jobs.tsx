@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { IconClipboardList, IconRefresh } from "@tabler/icons-react";
 
 import { admin, type Job, type JobFilter } from "@/lib/api";
+import { MOCK_JOBS } from "@/lib/mock-jobs";
 import { formatCredits, formatDateTime, formatRelative } from "@/lib/format";
 import { rootRoute } from "@/routes/root";
 import {
@@ -79,7 +80,8 @@ function Jobs() {
     refetchInterval: 20_000,
   });
 
-  const rows = q.data?.data ?? [];
+  const rows = q.data?.data?.length ? q.data.data : MOCK_JOBS;
+  const usingMock = !q.data?.data?.length && !q.isLoading;
 
   return (
     <>
@@ -136,7 +138,11 @@ function Jobs() {
               className="w-56"
             />
             <div className="ml-auto text-sm text-muted-foreground">
-              {q.isLoading ? t("common.loading") : `${rows.length} rows`}
+              {q.isLoading
+                ? t("common.loading")
+                : usingMock
+                  ? `${rows.length} rows (demo)`
+                  : `${rows.length} rows`}
             </div>
           </div>
 
