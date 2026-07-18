@@ -50,7 +50,14 @@ export function EditAccountDialog({ account, onOpenChange }: Props) {
   const [maxConcurrent, setMaxConcurrent] = useState("0");
   const [source, setSource] = useState("");
   const [note, setNote] = useState("");
+  // groupIds is the current selection; groupPriority is the priority the
+  // user is editing per group. Two maps let the group multi-select stay
+  // dumb (just toggles ids) while the priority column beside each chip
+  // reads/writes the second map. Default 100 matches the DB default.
   const [groupIds, setGroupIds] = useState<Set<string>>(new Set());
+  const [groupPriority, setGroupPriority] = useState<Map<string, number>>(
+    new Map(),
+  );
 
   const allGroups = useQuery({
     queryKey: ["admin", "groups"],
@@ -58,26 +65,36 @@ export function EditAccountDialog({ account, onOpenChange }: Props) {
     enabled: !!account,
   });
 
-  // Fetch current group memberships for this account.
+  // Fetch current group memberships plus per-group priority for this
+  // account. We fan out one listGroupMembers call per group (already
+  // needed to know which groups the account belongs to) and pull the
+  // priority out of members_detail in the same response.
   const currentGroups = useQuery({
     queryKey: ["admin", "account-groups", account?.id],
     queryFn: async () => {
-      if (!account) return [];
+      if (!account) return { ids: [] as string[], priority: new Map<string, number>() };
       const groups = allGroups.data ?? [];
       const memberOf: string[] = [];
+      const prio = new Map<string, number>();
       for (const g of groups) {
         const res = await admin.listGroupMembers(g.id);
-        if (res.members.includes(account.id)) {
+        const hit = res.members_detail.find((m) => m.account_id === account.id);
+        if (hit) {
           memberOf.push(g.id);
+          prio.set(g.id, hit.priority);
         }
       }
-      return memberOf;
+      return { ids: memberOf, priority: prio };
     },
     enabled: !!account && !!allGroups.data,
   });
 
   const originalGroupIds = useMemo(
-    () => new Set(currentGroups.data ?? []),
+    () => new Set(currentGroups.data?.ids ?? []),
+    [currentGroups.data],
+  );
+  const originalGroupPriority = useMemo(
+    () => currentGroups.data?.priority ?? new Map<string, number>(),
     [currentGroups.data],
   );
 
@@ -93,7 +110,8 @@ export function EditAccountDialog({ account, onOpenChange }: Props) {
 
   useEffect(() => {
     if (!currentGroups.data) return;
-    setGroupIds(new Set(currentGroups.data));
+    setGroupIds(new Set(currentGroups.data.ids));
+    setGroupPriority(new Map(currentGroups.data.priority));
   }, [currentGroups.data]);
 
   const save = useMutation({
@@ -124,10 +142,16 @@ export function EditAccountDialog({ account, onOpenChange }: Props) {
         await admin.patchAccount(account.id, patch);
       }
 
-      // Group membership diff — add/remove as needed.
+      // Group membership diff — add/remove/repriority as needed.
+      // addGroupMember on the backend is an upsert (ON CONFLICT DO
+      // UPDATE), so we can use it for both new bindings and priority
+      // updates on already-bound groups.
       for (const gid of groupIds) {
+        const desired = groupPriority.get(gid);
         if (!originalGroupIds.has(gid)) {
-          await admin.addGroupMember(gid, account.id);
+          await admin.addGroupMember(gid, account.id, desired);
+        } else if (desired !== undefined && desired !== originalGroupPriority.get(gid)) {
+          await admin.addGroupMember(gid, account.id, desired);
         }
       }
       for (const gid of originalGroupIds) {
@@ -204,11 +228,57 @@ export function EditAccountDialog({ account, onOpenChange }: Props) {
                 {t("accounts.edit.noGroups")}
               </p>
             ) : (
-              <GroupMultiSelect
-                all={allGroups.data ?? []}
-                selected={groupIds}
-                onChange={setGroupIds}
-              />
+              <div className="space-y-2">
+                <GroupMultiSelect
+                  all={allGroups.data ?? []}
+                  selected={groupIds}
+                  onChange={setGroupIds}
+                />
+                {/* Per-group priority editor — only shown for currently
+                    selected groups. Only visible when the group's
+                    route_strategy is 'priority' does it actually affect
+                    routing, but the field is always editable so an admin
+                    can pre-set values before the strategy switch. */}
+                {groupIds.size > 0 ? (
+                  <div className="rounded-md border bg-muted/20 p-2 space-y-1.5">
+                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      {t("accounts.edit.groupPriorityLabel")}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {t("accounts.edit.groupPriorityHint")}
+                    </p>
+                    {Array.from(groupIds).map((gid) => {
+                      const g = (allGroups.data ?? []).find(
+                        (x) => x.id === gid,
+                      );
+                      if (!g) return null;
+                      const val = groupPriority.get(gid) ?? 100;
+                      return (
+                        <div
+                          key={gid}
+                          className="flex items-center gap-2 text-xs"
+                        >
+                          <span className="min-w-0 flex-1 truncate">
+                            {g.name}
+                          </span>
+                          <Input
+                            type="number"
+                            min={-1000}
+                            max={1000}
+                            value={String(val)}
+                            className="h-7 w-20 text-xs tabular-nums"
+                            onChange={(e) => {
+                              const next = new Map(groupPriority);
+                              next.set(gid, parseInt(e.target.value, 10) || 0);
+                              setGroupPriority(next);
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : null}
+              </div>
             )}
           </Row>
 

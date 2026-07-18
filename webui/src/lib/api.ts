@@ -531,13 +531,31 @@ export const admin = {
   deleteGroup: (id: string) =>
     request<{ id: string }>(`/admin/groups/${id}`, { method: "DELETE" }),
   listGroupMembers: (id: string) =>
-    request<{ group_id: string; members: string[] }>(
-      `/admin/groups/${id}/members`,
-    ),
-  addGroupMember: (groupId: string, accountId: string) =>
-    request<{ group_id: string; account_id: string }>(
+    request<{
+      group_id: string;
+      // members preserves the legacy string[] shape so existing callers
+      // (multi-select filter, plain lists) keep working unchanged.
+      members: string[];
+      // members_detail carries the per-member priority column that
+      // PickAndLock sorts on when route_strategy = "priority". Higher
+      // wins. Default 100.
+      members_detail: { account_id: string; priority: number }[];
+    }>(`/admin/groups/${id}/members`),
+  // addGroupMember is an upsert: repeating the call with the same
+  // (groupId, accountId) updates the priority via ON CONFLICT DO UPDATE
+  // in the sqlite store. Priority controls sort order within a group
+  // when route_strategy = "priority" (higher wins). Defaults to 100
+  // if omitted, matching the DB default.
+  addGroupMember: (groupId: string, accountId: string, priority?: number) =>
+    request<{ group_id: string; account_id: string; priority: number }>(
       `/admin/groups/${groupId}/members`,
-      { method: "POST", body: JSON.stringify({ account_id: accountId }) },
+      {
+        method: "POST",
+        body: JSON.stringify({
+          account_id: accountId,
+          ...(priority !== undefined ? { priority } : {}),
+        }),
+      },
     ),
   removeGroupMember: (groupId: string, accountId: string) =>
     request<{ group_id: string; account_id: string }>(

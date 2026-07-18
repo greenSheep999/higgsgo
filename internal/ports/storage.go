@@ -19,6 +19,14 @@ type AccountStore interface {
 	// cohort). Called by the balance refresher ticker.
 	UpdateEntitlements(ctx context.Context, id string, e EntitlementUpdate) error
 	UpdateInFlight(ctx context.Context, id string, delta int) error
+
+	// ResetAllInFlight zeroes in_flight_jobs across every row in one UPDATE
+	// and returns the number of rows that were previously non-zero. Called
+	// once at process boot to clear any counter leaks from a prior crash
+	// or panic between PickAndLock and Unlock (see docs/ROADMAP.md P0-2).
+	// Safe to call on a healthy DB: rows already at zero are unaffected.
+	ResetAllInFlight(ctx context.Context) (int, error)
+
 	MarkStatus(ctx context.Context, id string, status domain.AccountStatus, reason string) error
 
 	// MarkThrottled parks the account in status=throttled and stamps
@@ -96,6 +104,25 @@ type PickParams struct {
 
 	// Routing.
 	RouteStrategy domain.RouteStrategy // empty means group-defined default
+
+	// Group-level concurrency cap. When > 0 and GroupID != "", PickAndLock
+	// refuses to pick if SUM(in_flight_jobs) across the group's members
+	// has already reached this value. Enforced inside the transaction so
+	// two concurrent picks cannot both slip past the check.
+	//
+	// Zero disables the check (unlimited group aggregate, subject only to
+	// each account's per-row cap). Semantic: "at most N jobs alive across
+	// all accounts in this group at once".
+	MaxGroupInFlight int
+
+	// Per-account concurrency ceiling. When > 0, PickAndLock refuses to
+	// pick an account whose in_flight_jobs >= this value. Zero falls back
+	// to the historical hardcoded cap of 5 so behavior stays stable for
+	// callers that don't resolve group settings.
+	//
+	// Sourced from Group.MaxConcurrentPerAccount today; will feed from
+	// resolver.Resolve() once ROADMAP P1-4 lands.
+	MaxConcurrentPerAccount int
 }
 
 // JobStore persists proxied job records.
@@ -250,6 +277,14 @@ type APIKeyMetaPatch struct {
 }
 
 // GroupStore manages account pool groups.
+// GroupMember is one row in an account-to-group association, exposed via
+// ListMembersWithPriority so admins can see and edit the per-group
+// priority in the UI without needing separate queries.
+type GroupMember struct {
+	AccountID string
+	Priority  int
+}
+
 type GroupStore interface {
 	Get(ctx context.Context, id string) (*domain.Group, error)
 	GetByName(ctx context.Context, name string) (*domain.Group, error)
@@ -262,6 +297,11 @@ type GroupStore interface {
 	AddMember(ctx context.Context, groupID, accountID string, priority int) error
 	RemoveMember(ctx context.Context, groupID, accountID string) error
 	ListMembers(ctx context.Context, groupID string) ([]string, error)
+	// ListMembersWithPriority returns members paired with their per-group
+	// priority. Used by the admin UI to show and edit the priority column
+	// (backend already reads it via PickAndLock when route_strategy =
+	// "priority"). Ordered priority DESC, account_id ASC for determinism.
+	ListMembersWithPriority(ctx context.Context, groupID string) ([]GroupMember, error)
 
 	// Bindings.
 	BindAPIKey(ctx context.Context, apiKeyID, groupID string) error

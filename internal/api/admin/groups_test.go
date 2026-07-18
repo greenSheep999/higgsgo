@@ -21,9 +21,10 @@ import (
 // serialized correctly).
 type fakeGroupStore struct {
 	// Data.
-	groups  map[string]*domain.Group
-	members map[string][]string // group id → account ids
-	binds   map[string][]string // group id → api key ids
+	groups     map[string]*domain.Group
+	members    map[string][]string          // group id → account ids
+	memberPrio map[string]map[string]int    // group id → account id → priority
+	binds      map[string][]string          // group id → api key ids
 
 	// Injectable errors.
 	createErr error
@@ -43,9 +44,10 @@ type fakeGroupStore struct {
 
 func newFakeGroupStore() *fakeGroupStore {
 	return &fakeGroupStore{
-		groups:  map[string]*domain.Group{},
-		members: map[string][]string{},
-		binds:   map[string][]string{},
+		groups:     map[string]*domain.Group{},
+		members:    map[string][]string{},
+		memberPrio: map[string]map[string]int{},
+		binds:      map[string][]string{},
 	}
 }
 
@@ -107,12 +109,23 @@ func (f *fakeGroupStore) List(_ context.Context) ([]domain.Group, error) {
 	return out, nil
 }
 
-func (f *fakeGroupStore) AddMember(_ context.Context, groupID, accountID string, _ int) error {
+func (f *fakeGroupStore) AddMember(_ context.Context, groupID, accountID string, priority int) error {
 	f.lastAddMember = struct{ GroupID, AccountID string }{groupID, accountID}
 	if f.addErr != nil {
 		return f.addErr
 	}
-	f.members[groupID] = append(f.members[groupID], accountID)
+	// Upsert semantics: if already a member, only update priority. If new,
+	// append to members list.
+	if _, ok := f.memberPrio[groupID]; !ok {
+		f.memberPrio[groupID] = map[string]int{}
+	}
+	if _, existed := f.memberPrio[groupID][accountID]; !existed {
+		f.members[groupID] = append(f.members[groupID], accountID)
+	}
+	if priority == 0 {
+		priority = 100 // match DB default
+	}
+	f.memberPrio[groupID][accountID] = priority
 	return nil
 }
 
@@ -133,6 +146,20 @@ func (f *fakeGroupStore) RemoveMember(_ context.Context, groupID, accountID stri
 
 func (f *fakeGroupStore) ListMembers(_ context.Context, groupID string) ([]string, error) {
 	return append([]string(nil), f.members[groupID]...), nil
+}
+
+func (f *fakeGroupStore) ListMembersWithPriority(_ context.Context, groupID string) ([]ports.GroupMember, error) {
+	ids := f.members[groupID]
+	prio := f.memberPrio[groupID]
+	out := make([]ports.GroupMember, 0, len(ids))
+	for _, id := range ids {
+		p := prio[id]
+		if p == 0 {
+			p = 100
+		}
+		out = append(out, ports.GroupMember{AccountID: id, Priority: p})
+	}
+	return out, nil
 }
 
 func (f *fakeGroupStore) BindAPIKey(_ context.Context, apiKeyID, groupID string) error {

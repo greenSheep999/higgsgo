@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/greensheep999/higgsgo/internal/domain"
+	"github.com/greensheep999/higgsgo/internal/ports"
 )
 
 // GroupStore implements ports.GroupStore backed by SQLite.
@@ -232,6 +233,31 @@ func (s *GroupStore) ListMembers(ctx context.Context, groupID string) ([]string,
 			return nil, err
 		}
 		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
+// ListMembersWithPriority returns the (account_id, priority) pairs for the
+// given group so admin UIs can display and edit the per-group priority
+// column that PickAndLock reads under route_strategy = "priority".
+// Same ordering as ListMembers.
+func (s *GroupStore) ListMembersWithPriority(ctx context.Context, groupID string) ([]ports.GroupMember, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT account_id, priority FROM account_group_members
+		WHERE group_id = ?
+		ORDER BY priority DESC, account_id ASC`, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("list members with priority group=%s: %w", groupID, err)
+	}
+	defer rows.Close()
+
+	var out []ports.GroupMember
+	for rows.Next() {
+		var m ports.GroupMember
+		if err := rows.Scan(&m.AccountID, &m.Priority); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
 	}
 	return out, rows.Err()
 }

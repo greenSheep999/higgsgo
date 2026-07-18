@@ -69,6 +69,9 @@ func (f *fakeGroupStore) RemoveMember(context.Context, string, string) error {
 func (f *fakeGroupStore) ListMembers(context.Context, string) ([]string, error) {
 	panic("ListMembers not implemented")
 }
+func (f *fakeGroupStore) ListMembersWithPriority(context.Context, string) ([]ports.GroupMember, error) {
+	panic("ListMembersWithPriority not implemented")
+}
 func (f *fakeGroupStore) BindAPIKey(context.Context, string, string) error {
 	panic("BindAPIKey not implemented")
 }

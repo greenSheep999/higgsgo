@@ -259,18 +259,37 @@ func (h *GroupsHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{"id": id, "status": "deleted"})
 }
 
-// ListMembers returns the account ids attached to a group.
+// memberDTO is the per-row shape returned in the members_detail array of
+// the group membership response. account_id is the primary key; priority
+// is what PickAndLock sorts on when the group's route_strategy is
+// "priority" — higher wins, default 100.
+type memberDTO struct {
+	AccountID string `json:"account_id"`
+	Priority  int    `json:"priority"`
+}
+
+// ListMembers returns the account ids attached to a group plus a parallel
+// members_detail array with per-member priority. Two fields ship at once
+// so existing WebUI code that reads members: []string keeps working, and
+// the priority editor can consume members_detail without a second call.
 func (h *GroupsHandler) ListMembers(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-	ids, err := h.Groups.ListMembers(r.Context(), id)
+	members, err := h.Groups.ListMembersWithPriority(r.Context(), id)
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
 		return
 	}
-	if ids == nil {
-		ids = []string{}
+	ids := make([]string, 0, len(members))
+	detail := make([]memberDTO, 0, len(members))
+	for _, m := range members {
+		ids = append(ids, m.AccountID)
+		detail = append(detail, memberDTO{AccountID: m.AccountID, Priority: m.Priority})
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"group_id": id, "members": ids})
+	writeJSON(w, http.StatusOK, map[string]any{
+		"group_id":       id,
+		"members":        ids,
+		"members_detail": detail,
+	})
 }
 
 // addMemberRequest is the body shape for POST /admin/groups/{id}/members.

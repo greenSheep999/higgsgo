@@ -331,6 +331,8 @@ const en = {
       maxConcurrentHint: "0 = use global default (6).",
       groups: "Groups",
       noGroups: "No groups defined.",
+      groupPriorityLabel: "Per-group priority",
+      groupPriorityHint: "Sort weight within each group when the group's route_strategy = priority. Higher = picked first. Default 100.",
       source: "Source",
       note: "Note",
       notePlaceholder: "Free-form memo for this account…",

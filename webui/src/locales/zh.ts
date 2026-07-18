@@ -331,6 +331,8 @@ const zh: Dict = {
       maxConcurrentHint: "0 = 使用全局默认值 (6)。",
       groups: "分组",
       noGroups: "尚无分组。",
+      groupPriorityLabel: "分组内优先级",
+      groupPriorityHint: "当分组的 route_strategy = priority 时用作组内排序权重，越大越优先。默认 100。",
       source: "来源",
       note: "备注",
       notePlaceholder: "此账号的自由备注…",
