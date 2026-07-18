@@ -15,11 +15,13 @@ import (
 	"github.com/greensheep999/higgsgo/internal/api/middleware"
 	"github.com/greensheep999/higgsgo/internal/api/v1"
 	"github.com/greensheep999/higgsgo/internal/config"
+	"github.com/greensheep999/higgsgo/internal/core/bearer"
 	"github.com/greensheep999/higgsgo/internal/core/refresher"
 	"github.com/greensheep999/higgsgo/internal/core/regression"
 	"github.com/greensheep999/higgsgo/internal/core/webhook"
 	"github.com/greensheep999/higgsgo/internal/observability"
 	"github.com/greensheep999/higgsgo/internal/ports"
+	"github.com/greensheep999/higgsgo/internal/version"
 	"github.com/greensheep999/higgsgo/webui"
 )
 
@@ -43,6 +45,27 @@ type Server struct {
 	Regression *regression.Ticker     // optional; enables /admin/tickers/regression
 	Audit      ports.AuditStore       // optional; enables admin write auditing + /admin/audit
 	Registry   ports.ModelRegistry    // optional; enables /admin/models/reload
+	Registrar  ports.Registrar        // optional; enables /admin/registrations (stub answers 503 disabled)
+	Settings   ports.SettingsStore    // optional; enables /admin/settings/* runtime-editable knobs
+	// ModelOverrides is optional; enables /admin/models/overrides and
+	// the per-alias /admin/models/{alias}/override surface. When
+	// wired, the same store is expected to have been handed to
+	// Registry.SetOverrideProvider so read paths see the merged view.
+	ModelOverrides ports.ModelOverrideStore
+	// Failover wiring. Any nil pointer here disables the corresponding
+	// /admin/failover/* routes; the accounts / events / overrides
+	// stores together are what makes the surface useful.
+	FailoverEvents    ports.FailoverEventStore
+	FailoverOverrides ports.FailoverOverridesStore
+	FailoverConfig    *config.FailoverConfig
+	// Bearer is the runtime-mutable admin bearer manager. Required for
+	// /admin/*: BearerAuth reads Current() on every request so a
+	// rotation via POST /admin/settings/bearer/rotate takes effect
+	// without a restart. Nil disables the whole /admin surface (New
+	// falls back to StaticBearer over cfg.Server.AdminBearer so the
+	// server never boots wide-open even if the caller forgot to wire
+	// this in).
+	Bearer *bearer.Manager
 
 	public   *http.Server
 	admin    *http.Server
@@ -52,7 +75,7 @@ type Server struct {
 // New builds a Server. Handlers are wired up here; concrete route
 // registrations (v1 / admin / internal) live in sibling files as they are
 // implemented.
-func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore, metrics *observability.Metrics, cpa *cpaplugin.Handler, health ports.ModelHealthStore, webhooks *webhook.Dispatcher, rf *refresher.Refresher, rg *regression.Ticker, audit ports.AuditStore, registry ports.ModelRegistry) *Server {
+func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys ports.APIKeyStore, accounts ports.AccountStore, jobs ports.JobStore, usage ports.UsageEventStore, groups ports.GroupStore, metrics *observability.Metrics, cpa *cpaplugin.Handler, health ports.ModelHealthStore, webhooks *webhook.Dispatcher, rf *refresher.Refresher, rg *regression.Ticker, audit ports.AuditStore, registry ports.ModelRegistry, settings ports.SettingsStore, bearerMgr *bearer.Manager) *Server {
 	s := &Server{
 		Config:     cfg,
 		Logger:     logger,
@@ -70,22 +93,25 @@ func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys
 		Regression: rg,
 		Audit:      audit,
 		Registry:   registry,
+		Settings:   settings,
+		Bearer:     bearerMgr,
 	}
 
+	// Build stub http.Server structs; routers are attached at
+	// ListenAndServe time so late-assigned dependencies (e.g.
+	// FailoverEvents / ModelOverrides set after New() returns)
+	// are visible when routes register.
 	s.public = &http.Server{
 		Addr:              cfg.Server.Listen,
-		Handler:           s.publicRouter(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	s.admin = &http.Server{
 		Addr:              cfg.Server.AdminListen,
-		Handler:           s.adminRouter(),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 	if cfg.Modes.CPAPlugin && cfg.Server.InternalListen != "" {
 		s.internal = &http.Server{
 			Addr:              cfg.Server.InternalListen,
-			Handler:           s.internalRouter(),
 			ReadHeaderTimeout: 10 * time.Second,
 		}
 	}
@@ -95,6 +121,14 @@ func New(cfg *config.Config, logger *slog.Logger, v1Handler *v1.Handler, apiKeys
 // ListenAndServe starts all configured listeners. Blocks until ctx is done
 // or a listener fails.
 func (s *Server) ListenAndServe(ctx context.Context) error {
+	// Attach routers lazily so late field assignments (e.g.
+	// FailoverEvents / ModelOverrides) participate in route
+	// registration.
+	s.public.Handler = s.publicRouter()
+	s.admin.Handler = s.adminRouter()
+	if s.internal != nil {
+		s.internal.Handler = s.internalRouter()
+	}
 	errCh := make(chan error, 3)
 	go func() {
 		s.Logger.Info("public listener starting", slog.String("addr", s.public.Addr))
@@ -191,7 +225,7 @@ func (s *Server) publicRouter() http.Handler {
 			// so admin bearer traffic is not rejected before reaching the
 			// scope resolver in the handler.
 			r.Route("/playground", func(r chi.Router) {
-				r.Use(middleware.PlaygroundAuth(s.Config.Server.AdminBearer, s.APIKeys))
+				r.Use(middleware.PlaygroundAuth(s.adminBearerAccepter(), s.APIKeys))
 				// Rate-limit still applies to API-key callers (bucket keyed
 				// off APIKey.ID). Admin bearer callers land with no APIKey
 				// in ctx and pass through unlimited — acceptable given the
@@ -239,7 +273,7 @@ func (s *Server) adminRouter() http.Handler {
 	// scope check downstream via IsAdminBearer marker.
 	if s.V1 != nil {
 		r.Route("/v1/playground", func(r chi.Router) {
-			r.Use(middleware.PlaygroundAuth(s.Config.Server.AdminBearer, s.APIKeys))
+			r.Use(middleware.PlaygroundAuth(s.adminBearerAccepter(), s.APIKeys))
 			rl := &middleware.RateLimit{
 				RPS:    s.Config.Server.RateLimit.RPS,
 				Burst:  s.Config.Server.RateLimit.Burst,
@@ -251,13 +285,24 @@ func (s *Server) adminRouter() http.Handler {
 			r.Post("/estimate", s.V1.HandlePlaygroundEstimate)
 			r.Post("/execute", s.V1.HandlePlaygroundExecute)
 		})
+
+		// Mirror the read-only /v1/models catalog on the admin listener
+		// too. The WebUI needs it for the group model picker; it already
+		// talks to a single admin base URL with the admin bearer, so
+		// re-issuing the public listener's mount here (behind admin
+		// bearer) keeps the "one base URL" invariant.
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.BearerAuth(s.adminBearerAccepter()))
+			r.Get("/v1/models", s.V1.HandleModelsList)
+			r.Get("/v1/models/{alias}", s.V1.HandleModelDetail)
+		})
 	}
 
 	// All admin handlers live under /admin so the URL scheme matches the
 	// documented API surface (docs/API_REFERENCE.md, docs/OPERATIONS.md)
 	// and the WebUI client which prefixes every request with /admin.
 	r.Route("/admin", func(r chi.Router) {
-		r.Use(middleware.BearerAuth(s.Config.Server.AdminBearer))
+		r.Use(middleware.BearerAuth(s.adminBearerAccepter()))
 		if s.Audit != nil {
 			r.Use(middleware.Audit(s.Audit, s.Logger))
 		}
@@ -284,7 +329,12 @@ func (s *Server) adminRouter() http.Handler {
 			admin.NewUsageHandler(s.Usage).Register(r)
 		}
 		if s.Groups != nil {
-			admin.NewGroupsHandler(s.Groups).Register(r)
+			gh := admin.NewGroupsHandler(s.Groups)
+			// Wire the SettingsStore so POST /admin/groups can fall
+			// back to the operator-configured routing_strategy_default
+			// when no explicit route_strategy is supplied.
+			gh.Settings = s.Settings
+			gh.Register(r)
 		}
 		if s.Health != nil {
 			admin.NewModelHealthHandler(s.Health).Register(r)
@@ -299,6 +349,41 @@ func (s *Server) adminRouter() http.Handler {
 		if s.Registry != nil {
 			admin.NewModelsHandler(s.Registry, s.Logger).Register(r)
 		}
+		// Settings surface: currently only /admin/settings/bearer,
+		// wired only when both a persistence store and a bearer.Manager
+		// were supplied. Slimmer deployments that skip settings still
+		// boot; the WebUI's rotate dialog will simply 404.
+		if s.Settings != nil && s.Bearer != nil {
+			admin.NewSettingsHandler(s.Bearer, s.Settings).Register(r)
+		}
+		// Routing-strategy default (nil-safe: falls back to
+		// round_robin on Create when Settings is missing).
+		admin.NewRoutingSettingsHandler(s.Settings).Register(r)
+		// Model overrides layered on top of the static jsonstatic
+		// catalog. Requires a Registry so writes can trigger a Reload
+		// and downstream reads see the merged view immediately.
+		if s.ModelOverrides != nil && s.Registry != nil {
+			admin.NewModelOverridesHandler(s.ModelOverrides, s.Registry, s.Logger).Register(r)
+		}
+		// Failover / auto-isolation admin surface. Wired only when all
+		// three dependencies (accounts + events + config) are present.
+		if s.FailoverConfig != nil && s.FailoverEvents != nil && s.FailoverOverrides != nil {
+			admin.NewFailoverHandler(s.Accounts, s.FailoverEvents, s.FailoverOverrides, s.FailoverConfig, s.Logger).Register(r)
+		}
+		// Version + update-check surface. Always mounted — the current
+		// version is useful even when Updates.CheckEnabled=false, since
+		// operators can still confirm which build is running.
+		admin.NewVersionHandler(
+			s.Config.Updates.GitHubOwner,
+			s.Config.Updates.GitHubRepo,
+			s.Config.Updates.CheckEnabled,
+		).Register(r)
+		// Registrations (plugin family): always mounted so the WebUI's
+		// Registrations tab renders a stable "registrar_disabled" 503
+		// on slim builds instead of a 404. When the binary is built
+		// with -tags register, main.go supplies a real Registrar and
+		// these routes come alive.
+		admin.NewRegistrationsHandler(s.Registrar).Register(r)
 	})
 
 	// SPA fallback. Serves the embedded webui/ dist for any path that
@@ -319,7 +404,7 @@ func (s *Server) internalRouter() http.Handler {
 	r.Get("/health", s.healthHandler)
 
 	r.Group(func(r chi.Router) {
-		r.Use(middleware.BearerAuth(s.Config.Server.InternalBearer))
+		r.Use(middleware.BearerAuth(middleware.StaticBearer(s.Config.Server.InternalBearer)))
 		// The /internal/* surface performs writes (register, execute,
 		// delete, refresh_jwt) driven by the upstream CPA platform.
 		// Audit those the same way we audit /admin/* so operators have
@@ -334,11 +419,26 @@ func (s *Server) internalRouter() http.Handler {
 	return r
 }
 
-// healthHandler answers all /health probes with a minimal JSON body.
+// adminBearerAccepter returns the middleware.BearerAccepter used to
+// gate /admin/* and the /v1/playground/* mirror on the admin listener.
+// The runtime-mutable bearer.Manager wins when wired; otherwise we
+// fall back to a StaticBearer over the boot-time TOML value so the
+// server never accidentally boots wide-open.
+func (s *Server) adminBearerAccepter() middleware.BearerAccepter {
+	if s.Bearer != nil {
+		return s.Bearer
+	}
+	return middleware.StaticBearer(s.Config.Server.AdminBearer)
+}
+
+// healthHandler answers all /health probes with a minimal JSON body. The
+// version field is included so uptime probes / load balancers can confirm
+// the exact build behind each replica without hitting /admin/version.
 func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"status": "ok",
-		"time":   time.Now().UTC().Format(time.RFC3339),
+		"status":  "ok",
+		"time":    time.Now().UTC().Format(time.RFC3339),
+		"version": version.Info().Version,
 	})
 }

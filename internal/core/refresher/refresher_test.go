@@ -80,6 +80,18 @@ func (f *fakeAccountStore) UpdateInFlight(ctx context.Context, id string, delta 
 func (f *fakeAccountStore) MarkStatus(ctx context.Context, id string, s domain.AccountStatus, reason string) error {
 	panic("fakeAccountStore.MarkStatus not implemented")
 }
+func (f *fakeAccountStore) MarkThrottled(ctx context.Context, id string, until time.Time, reason string) error {
+	panic("fakeAccountStore.MarkThrottled not implemented")
+}
+func (f *fakeAccountStore) RecoverThrottled(ctx context.Context) (int, error) {
+	return 0, nil
+}
+func (f *fakeAccountStore) IncrFailStreak(ctx context.Context, id string) (int, error) {
+	panic("fakeAccountStore.IncrFailStreak not implemented")
+}
+func (f *fakeAccountStore) ResetFailStreak(ctx context.Context, id string) error {
+	panic("fakeAccountStore.ResetFailStreak not implemented")
+}
 func (f *fakeAccountStore) PickAndLock(ctx context.Context, p ports.PickParams) (*domain.Account, string, error) {
 	panic("fakeAccountStore.PickAndLock not implemented")
 }

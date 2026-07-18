@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/greensheep999/higgsgo/internal/core/failover"
 	"github.com/greensheep999/higgsgo/internal/core/metering"
 	"github.com/greensheep999/higgsgo/internal/core/upstream"
 	"github.com/greensheep999/higgsgo/internal/domain"
@@ -101,6 +102,12 @@ type Worker struct {
 	// (completed / failed / refunded / timeout). Fire is non-blocking; the
 	// Dispatcher owns retry and drain-on-close.
 	Webhooks WebhookSink
+
+	// Failover, when non-nil, receives account-attributable failure
+	// / success signals so the failover controller can pull dead
+	// accounts out of rotation. Nil-safe on every call site: the
+	// controller's methods short-circuit on a nil receiver.
+	Failover *failover.Controller
 
 	// Internal.
 	lastPolled sync.Map // upstream_job_id -> time.Time
@@ -210,6 +217,10 @@ func (w *Worker) pollOne(ctx context.Context, j *domain.Job, now time.Time) {
 		w.Logger.Debug("pollworker fetch status",
 			slog.String("job_id", j.ID),
 			slog.String("err", err.Error()))
+		// Feed the failover controller with the poll-time error so a
+		// dead account (persistent 401 / DataDome challenge) doesn't
+		// silently rack up polls until its deadline. Nil-safe.
+		w.Failover.RecordError(ctx, j.AccountID, err, err.Error())
 		// Increment poll count anyway so operators can see we tried.
 		_ = w.Jobs.UpdateStatus(ctx, j.ID, j.Status, ports.JobMeta{PollCount: j.PollCount + 1})
 		return
@@ -261,6 +272,14 @@ func (w *Worker) pollOne(ctx context.Context, j *domain.Job, now time.Time) {
 			slog.String("job_id", j.ID),
 			slog.String("err", err.Error()))
 		return
+	}
+	// Failover feedback: a "completed" upstream terminal is a healthy
+	// run and clears the account's fail streak. Any other terminal
+	// (failed / nsfw / terminated) is a content-level outcome and is
+	// intentionally NOT fed back — those tell us nothing about the
+	// health of the account itself. Nil-safe.
+	if status.Status == "completed" {
+		w.Failover.RecordSuccess(ctx, j.AccountID)
 	}
 	w.Logger.Info("job terminal",
 		slog.String("job_id", j.ID),

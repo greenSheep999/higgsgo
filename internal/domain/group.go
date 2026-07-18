@@ -19,6 +19,13 @@ const (
 	// RouteMostCreditsFirst picks the account with the largest remaining
 	// subscription balance. Useful for high-cost models.
 	RouteMostCreditsFirst RouteStrategy = "most_credits_first"
+
+	// RoutePriority orders candidates by accounts.priority DESC. Used
+	// when the operator wants deterministic routing to preferred
+	// accounts before falling back to the rest of the pool. Pairs with
+	// the sidebar "priority" mode via the routing_strategy_default
+	// system setting.
+	RoutePriority RouteStrategy = "priority"
 )
 
 // OwnerType describes who a group belongs to.

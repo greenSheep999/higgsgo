@@ -48,7 +48,7 @@ func servePlaygroundAuth(t *testing.T, header string, store *authFakeStore) (*ht
 		req.Header.Set("Authorization", header)
 	}
 	rec := httptest.NewRecorder()
-	PlaygroundAuth(testAdminBearer, store)(stub.handler()).ServeHTTP(rec, req)
+	PlaygroundAuth(StaticBearer(testAdminBearer), store)(stub.handler()).ServeHTTP(rec, req)
 	return rec, stub
 }
 
@@ -199,7 +199,7 @@ func TestPlaygroundAuth_ContextCancellation(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+plain)
 	stub := &authStub{}
 	rec := httptest.NewRecorder()
-	PlaygroundAuth(testAdminBearer, store)(stub.handler()).ServeHTTP(rec, req)
+	PlaygroundAuth(StaticBearer(testAdminBearer), store)(stub.handler()).ServeHTTP(rec, req)
 	// The stub store ignores ctx, so it still returns the key and the
 	// handler is reached. This test exists as a regression guard: if a
 	// future refactor plumbs ctx into the store the assertion below can

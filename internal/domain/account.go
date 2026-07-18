@@ -35,6 +35,12 @@ func (p PlanType) IsPaid() bool {
 }
 
 // AccountStatus is the lifecycle state we track locally.
+//
+// suspended / banned carry manual, operator-initiated semantics (e.g.,
+// "we paused this account on purpose" / "upstream banned this account").
+// throttled / disabled are populated exclusively by the failover
+// controller (see core/failover) — never reuse those two for manual
+// pauses or the recovery ticker will fight the operator.
 type AccountStatus string
 
 const (
@@ -42,6 +48,18 @@ const (
 	StatusSuspended AccountStatus = "suspended"
 	StatusExpired   AccountStatus = "expired"
 	StatusBanned    AccountStatus = "banned"
+	// StatusThrottled — set by core/failover.RecordThrottle when the
+	// controller decides an account has been rate-limited or
+	// challenged by higgsfield's anti-bot layer. Paired with
+	// Account.ThrottledUntil; the Recoverer goroutine flips the row
+	// back to active once that deadline passes.
+	StatusThrottled AccountStatus = "throttled"
+	// StatusDisabled — set by core/failover on the terminal edge
+	// (consecutive-failure limit or repeated-blacklist evict). Only
+	// an operator can bring a disabled account back to active via
+	// POST /admin/accounts/{id}/recover; the Recoverer never touches
+	// this state on its own.
+	StatusDisabled AccountStatus = "disabled"
 )
 
 // Account is a higgsfield account we can drive on behalf of a user.
@@ -84,6 +102,19 @@ type Account struct {
 	LastFailedAt  time.Time
 	FailStreak    int
 
+	// ThrottledUntil, when non-zero and in the future, means the failover
+	// controller has cooled this account down (status == StatusThrottled).
+	// PickAndLock skips the row until now() >= ThrottledUntil, and the
+	// Recoverer goroutine flips status back to active once the deadline
+	// passes. See migration 013.
+	ThrottledUntil time.Time
+	// StatusReason is a short opcode ("consec_fail", "risk_marker",
+	// "auth_failed", ...) written alongside status transitions so the
+	// admin surface can render "why" without joining the events table
+	// for every list rendering. Empty when the row was never touched
+	// by the failover controller.
+	StatusReason string
+
 	// Optional IP binding for models that require sticky IP (image2video_extend etc.).
 	BoundProxyURL string
 
@@ -92,6 +123,15 @@ type Account struct {
 	// Default 0; range is [-1_000, 1_000] enforced at the handler layer.
 	// See migration 010_accounts_priority.sql.
 	Priority int
+
+	// MaxConcurrent overrides the global upstream concurrency cap (6) for
+	// this account. 0 means "use the global default".
+	MaxConcurrent int
+	// Note is a free-form operator memo for this account.
+	Note string
+	// Source records how this account entered the pool (e.g. "manual",
+	// "imported", "registered").
+	Source string
 
 	RegisteredAt time.Time
 	ImportedAt   time.Time

@@ -151,6 +151,16 @@ func (f *fakeAccountStore) UpdateInFlight(context.Context, string, int) error {
 func (f *fakeAccountStore) MarkStatus(context.Context, string, domain.AccountStatus, string) error {
 	panic("not implemented")
 }
+func (f *fakeAccountStore) MarkThrottled(context.Context, string, time.Time, string) error {
+	panic("not implemented")
+}
+func (f *fakeAccountStore) RecoverThrottled(context.Context) (int, error) { return 0, nil }
+func (f *fakeAccountStore) IncrFailStreak(context.Context, string) (int, error) {
+	panic("not implemented")
+}
+func (f *fakeAccountStore) ResetFailStreak(context.Context, string) error {
+	panic("not implemented")
+}
 func (f *fakeAccountStore) PickAndLock(context.Context, ports.PickParams) (*domain.Account, string, error) {
 	panic("not implemented")
 }

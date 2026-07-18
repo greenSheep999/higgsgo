@@ -50,6 +50,12 @@ func (s *stubAccountStore) UpdateInFlight(context.Context, string, int) error { 
 func (s *stubAccountStore) MarkStatus(context.Context, string, domain.AccountStatus, string) error {
 	return nil
 }
+func (s *stubAccountStore) MarkThrottled(context.Context, string, time.Time, string) error {
+	return nil
+}
+func (s *stubAccountStore) RecoverThrottled(context.Context) (int, error)       { return 0, nil }
+func (s *stubAccountStore) IncrFailStreak(context.Context, string) (int, error) { return 0, nil }
+func (s *stubAccountStore) ResetFailStreak(context.Context, string) error       { return nil }
 func (s *stubAccountStore) PickAndLock(context.Context, ports.PickParams) (*domain.Account, string, error) {
 	return nil, "", nil
 }

@@ -2,11 +2,15 @@ package admin
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/greensheep999/higgsgo/internal/ports"
 )
+
+// Default uptime window (7 days). Overridable via ?uptime_days= query.
+const defaultUptimeDays = 7
 
 // ModelHealthHandler serves /admin/model-health endpoints. It surfaces the
 // model_health rows written by the regression Ticker so operators can see
@@ -36,6 +40,8 @@ func (h *ModelHealthHandler) Register(r chi.Router) {
 //	stale_before    RFC3339 timestamp; only rows with checked_at strictly
 //	                earlier than this are returned. Useful for "which
 //	                models haven't been probed since <T>?".
+//	uptime_days     integer; window for the uptime percentage calculation.
+//	                Defaults to 7.
 //
 // Rows are returned newest first (ORDER BY checked_at DESC in the store).
 func (h *ModelHealthHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -51,22 +57,59 @@ func (h *ModelHealthHandler) List(w http.ResponseWriter, r *http.Request) {
 		staleBefore = t.UTC()
 	}
 
+	uptimeDays := defaultUptimeDays
+	if raw := q.Get("uptime_days"); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v < 1 {
+			writeErr(w, http.StatusBadRequest, "invalid_query", "uptime_days: must be a positive integer")
+			return
+		}
+		uptimeDays = v
+	}
+
 	rows, err := h.Health.List(r.Context())
 	if err != nil {
 		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
 		return
 	}
 
+	// Compute uptime percentages for the window.
+	since := time.Now().UTC().AddDate(0, 0, -uptimeDays)
+	uptimeMap, err := h.Health.UptimeByJST(r.Context(), since)
+	if err != nil {
+		writeErr(w, http.StatusInternalServerError, "internal", err.Error())
+		return
+	}
+
+	// The store keeps every probe as its own row (primary key is
+	// jst + checked_at) so historical dashboards can walk the series.
+	// The admin surface wants "current status per jst", though, so
+	// each manual /tickers/regression click would otherwise stack
+	// N more rows on top of the previous run's — the UI would grow
+	// unboundedly. Rows arrive ORDER BY checked_at DESC, so a first-
+	// seen sweep per jst gives us the latest state cheaply, and
+	// filters apply to that latest row (not to arbitrary history).
+	seen := make(map[string]struct{}, len(rows))
 	data := make([]map[string]any, 0, len(rows))
 	for i := range rows {
 		row := &rows[i]
+		if _, dup := seen[row.JST]; dup {
+			continue
+		}
+		seen[row.JST] = struct{}{}
 		if verdict != "" && string(row.Verdict) != verdict {
 			continue
 		}
 		if !staleBefore.IsZero() && !row.CheckedAt.Before(staleBefore) {
 			continue
 		}
-		data = append(data, modelHealthView(row))
+		view := modelHealthView(row)
+		if pct, ok := uptimeMap[row.JST]; ok {
+			view["uptime_pct"] = pct
+		} else {
+			view["uptime_pct"] = nil
+		}
+		data = append(data, view)
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"data": data})
 }

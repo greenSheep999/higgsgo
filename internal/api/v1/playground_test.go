@@ -20,6 +20,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/greensheep999/higgsgo/internal/api/middleware"
 	"github.com/greensheep999/higgsgo/internal/core/proxy"
@@ -68,6 +69,16 @@ func (f *fakeAccountStorePG) UpdateInFlight(context.Context, string, int) error 
 	panic("not implemented")
 }
 func (f *fakeAccountStorePG) MarkStatus(context.Context, string, domain.AccountStatus, string) error {
+	panic("not implemented")
+}
+func (f *fakeAccountStorePG) MarkThrottled(context.Context, string, time.Time, string) error {
+	panic("not implemented")
+}
+func (f *fakeAccountStorePG) RecoverThrottled(context.Context) (int, error) { return 0, nil }
+func (f *fakeAccountStorePG) IncrFailStreak(context.Context, string) (int, error) {
+	panic("not implemented")
+}
+func (f *fakeAccountStorePG) ResetFailStreak(context.Context, string) error {
 	panic("not implemented")
 }
 func (f *fakeAccountStorePG) PickAndLock(context.Context, ports.PickParams) (*domain.Account, string, error) {
@@ -374,9 +385,227 @@ func (s *pickFailStore) UpdateInFlight(context.Context, string, int) error {
 func (s *pickFailStore) MarkStatus(context.Context, string, domain.AccountStatus, string) error {
 	panic("not implemented")
 }
+func (s *pickFailStore) MarkThrottled(context.Context, string, time.Time, string) error {
+	panic("not implemented")
+}
+func (s *pickFailStore) RecoverThrottled(context.Context) (int, error) { return 0, nil }
+func (s *pickFailStore) IncrFailStreak(context.Context, string) (int, error) {
+	panic("not implemented")
+}
+func (s *pickFailStore) ResetFailStreak(context.Context, string) error {
+	panic("not implemented")
+}
 func (s *pickFailStore) PickAndLock(context.Context, ports.PickParams) (*domain.Account, string, error) {
 	return nil, "", s.err
 }
 func (s *pickFailStore) Unlock(context.Context, string, string) error {
 	panic("not implemented")
+}
+
+// fakeAPIKeyStorePG is a minimal APIKeyStore for the as_api_key_id
+// impersonation tests. Only Get is exercised; every other method is
+// inherited from the embedded (nil) interface and panics if called, which
+// keeps the fake honest about what the handler actually touches.
+type fakeAPIKeyStorePG struct {
+	ports.APIKeyStore
+	byID map[string]*domain.APIKey
+	err  error
+}
+
+func (f *fakeAPIKeyStorePG) Get(_ context.Context, id string) (*domain.APIKey, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	k, ok := f.byID[id]
+	if !ok {
+		return nil, domain.ErrAPIKeyNotFound
+	}
+	return k, nil
+}
+
+// newAdminPlaygroundHandler wires a Handler as if the caller authenticated
+// with the admin bearer (IsAdminBearer=true) rather than an sk-hg- key. The
+// optional apiKeys store backs as_api_key_id resolution.
+func newAdminPlaygroundHandler(t *testing.T, apiKeys ports.APIKeyStore, accounts ports.AccountStore) (*Handler, http.Handler) {
+	t.Helper()
+	reg := &fakeModelRegistry{specs: playgroundSpecs()}
+	h := &Handler{Registry: reg, Accounts: accounts, APIKeys: apiKeys}
+	mux := http.NewServeMux()
+	inject := func(next http.HandlerFunc) http.HandlerFunc {
+		return func(w http.ResponseWriter, r *http.Request) {
+			r = r.WithContext(middleware.WithAdminBearer(r.Context()))
+			next(w, r)
+		}
+	}
+	mux.HandleFunc("/v1/playground/estimate", inject(h.HandlePlaygroundEstimate))
+	mux.HandleFunc("/v1/playground/execute", inject(h.HandlePlaygroundExecute))
+	return h, mux
+}
+
+func TestPlaygroundEstimate_AdminNoAsKey_UsesFullScope(t *testing.T) {
+	// Admin bearer without as_api_key_id keeps the historical behaviour:
+	// full scope, so a pricey model still estimates fine.
+	_, mux := newAdminPlaygroundHandler(t, nil, nil)
+
+	body, _ := json.Marshal(map[string]any{"model": "pricey-img"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/playground/estimate", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status: got %d want 200 (body=%q)", rec.Code, rec.Body.String())
+	}
+}
+
+func TestPlaygroundEstimate_AdminAsKeyCheap_GatesByKeyScope(t *testing.T) {
+	// Admin impersonating a cheap-scope key must be gated by that key's
+	// scope: a pricey model is rejected with blocked_by_scope even though
+	// the admin bearer itself would be full.
+	keys := &fakeAPIKeyStorePG{byID: map[string]*domain.APIKey{
+		"k-cheap": {ID: "k-cheap", Status: domain.APIKeyStatusActive, PlaygroundScope: domain.PlaygroundScopeCheap},
+	}}
+	_, mux := newAdminPlaygroundHandler(t, keys, nil)
+
+	body, _ := json.Marshal(map[string]any{"model": "pricey-img", "as_api_key_id": "k-cheap"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/playground/estimate", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status: got %d want 403 (body=%q)", rec.Code, rec.Body.String())
+	}
+	got := decodePlaygroundBody(t, rec.Body)
+	errObj, _ := got["error"].(map[string]any)
+	if k, _ := errObj["type"].(string); k != "blocked_by_scope" {
+		t.Errorf("error type: got %q want blocked_by_scope", k)
+	}
+
+	// The same key permits a cheap model.
+	body2, _ := json.Marshal(map[string]any{"model": "cheap-img", "as_api_key_id": "k-cheap"})
+	req2 := httptest.NewRequest(http.MethodPost, "/v1/playground/estimate", bytes.NewReader(body2))
+	rec2 := httptest.NewRecorder()
+	mux.ServeHTTP(rec2, req2)
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("cheap model status: got %d want 200 (body=%q)", rec2.Code, rec2.Body.String())
+	}
+}
+
+func TestPlaygroundEstimate_AdminAsKeyUnknown_Rejected(t *testing.T) {
+	keys := &fakeAPIKeyStorePG{byID: map[string]*domain.APIKey{}}
+	_, mux := newAdminPlaygroundHandler(t, keys, nil)
+
+	body, _ := json.Marshal(map[string]any{"model": "cheap-img", "as_api_key_id": "nope"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/playground/estimate", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status: got %d want 400 (body=%q)", rec.Code, rec.Body.String())
+	}
+	got := decodePlaygroundBody(t, rec.Body)
+	errObj, _ := got["error"].(map[string]any)
+	if k, _ := errObj["type"].(string); k != "invalid_as_api_key" {
+		t.Errorf("error type: got %q want invalid_as_api_key", k)
+	}
+}
+
+func TestPlaygroundEstimate_AdminAsKeyNoneScope_Disabled(t *testing.T) {
+	keys := &fakeAPIKeyStorePG{byID: map[string]*domain.APIKey{
+		"k-none": {ID: "k-none", Status: domain.APIKeyStatusActive, PlaygroundScope: domain.PlaygroundScopeNone},
+	}}
+	_, mux := newAdminPlaygroundHandler(t, keys, nil)
+
+	body, _ := json.Marshal(map[string]any{"model": "cheap-img", "as_api_key_id": "k-none"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/playground/estimate", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusForbidden {
+		t.Fatalf("status: got %d want 403 (body=%q)", rec.Code, rec.Body.String())
+	}
+	got := decodePlaygroundBody(t, rec.Body)
+	errObj, _ := got["error"].(map[string]any)
+	if k, _ := errObj["type"].(string); k != "playground_disabled" {
+		t.Errorf("error type: got %q want playground_disabled", k)
+	}
+}
+
+func TestPlaygroundEstimate_AdminAsKeyRevoked_Rejected(t *testing.T) {
+	keys := &fakeAPIKeyStorePG{byID: map[string]*domain.APIKey{
+		"k-rev": {ID: "k-rev", Status: domain.APIKeyStatusRevoked, PlaygroundScope: domain.PlaygroundScopeFull},
+	}}
+	_, mux := newAdminPlaygroundHandler(t, keys, nil)
+
+	body, _ := json.Marshal(map[string]any{"model": "cheap-img", "as_api_key_id": "k-rev"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/playground/estimate", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status: got %d want 400 (body=%q)", rec.Code, rec.Body.String())
+	}
+	got := decodePlaygroundBody(t, rec.Body)
+	errObj, _ := got["error"].(map[string]any)
+	if k, _ := errObj["type"].(string); k != "invalid_as_api_key" {
+		t.Errorf("error type: got %q want invalid_as_api_key", k)
+	}
+}
+
+func TestPlaygroundExecute_AdminAsKey_ForwardsUnderKeyScope(t *testing.T) {
+	// An admin bearer impersonating a full-scope key forwards to the image
+	// handler; the no-eligible-account path maps to 503, confirming the
+	// per-model gate passed under the impersonated scope and the request
+	// reached HandleImageGeneration.
+	asKey := &domain.APIKey{ID: "k-full", Status: domain.APIKeyStatusActive, PlaygroundScope: domain.PlaygroundScopeFull}
+	keys := &fakeAPIKeyStorePG{byID: map[string]*domain.APIKey{"k-full": asKey}}
+	reg := &fakeModelRegistry{specs: playgroundSpecs()}
+	accounts := &pickFailStore{err: domain.ErrNoEligibleAccount}
+	svc := &proxy.Service{Store: accounts, Registry: reg}
+	h := &Handler{Registry: reg, Service: svc, Accounts: accounts, APIKeys: keys}
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/playground/execute", func(w http.ResponseWriter, r *http.Request) {
+		r = r.WithContext(middleware.WithAdminBearer(r.Context()))
+		h.HandlePlaygroundExecute(w, r)
+	})
+
+	body, _ := json.Marshal(map[string]any{"model": "cheap-img", "prompt": "hi", "as_api_key_id": "k-full"})
+	req := httptest.NewRequest(http.MethodPost, "/v1/playground/execute", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status: got %d want 503 (body=%q)", rec.Code, rec.Body.String())
+	}
+
+	// Direct unit assertion on the identity resolver: admin + as_api_key_id
+	// returns the impersonated key so execute injects it into the context
+	// (which drives downstream usage / markup / group routing / quota).
+	req2 := httptest.NewRequest(http.MethodPost, "/v1/playground/execute", nil)
+	req2 = req2.WithContext(middleware.WithAdminBearer(req2.Context()))
+	scope, k, herr := h.resolveExecutionIdentity(req2, "k-full")
+	if herr != nil {
+		t.Fatalf("resolveExecutionIdentity: unexpected error %+v", herr)
+	}
+	if scope != domain.PlaygroundScopeFull {
+		t.Errorf("scope: got %q want full", scope)
+	}
+	if k == nil || k.ID != "k-full" {
+		t.Errorf("resolved key: got %+v want k-full", k)
+	}
+}
+
+func TestResolveExecutionIdentity_SkKeyIgnoresAsKeyID(t *testing.T) {
+	// A real sk-hg- caller (key in context, not admin bearer) must run as
+	// itself and ignore as_api_key_id entirely — no impersonation, nil key.
+	selfKey := &domain.APIKey{ID: "self", Status: domain.APIKeyStatusActive, PlaygroundScope: domain.PlaygroundScopeCheap}
+	other := &domain.APIKey{ID: "other", Status: domain.APIKeyStatusActive, PlaygroundScope: domain.PlaygroundScopeFull}
+	keys := &fakeAPIKeyStorePG{byID: map[string]*domain.APIKey{"other": other}}
+	h := &Handler{APIKeys: keys}
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/playground/execute", nil)
+	req = req.WithContext(middleware.ContextWithAPIKey(req.Context(), selfKey))
+	scope, k, herr := h.resolveExecutionIdentity(req, "other")
+	if herr != nil {
+		t.Fatalf("resolveExecutionIdentity: unexpected error %+v", herr)
+	}
+	if scope != domain.PlaygroundScopeCheap {
+		t.Errorf("scope: got %q want cheap (self scope, not impersonated)", scope)
+	}
+	if k != nil {
+		t.Errorf("resolved key: got %+v want nil (sk-hg- caller runs as self)", k)
+	}
 }

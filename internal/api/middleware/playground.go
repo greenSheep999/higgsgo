@@ -2,7 +2,6 @@ package middleware
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -17,10 +16,13 @@ import (
 // PlaygroundAuth is the /v1/playground/* auth middleware. Unlike APIKeyAuth
 // it accepts two token shapes on the same Authorization header:
 //
-//   - The deploy-wide admin bearer (verified by constant-time compare
-//     against `adminBearer`). On success the request context is flagged
-//     via WithAdminBearer so PlaygroundGate and the handlers can grant
-//     scope=full without minting an API key.
+//   - The deploy-wide admin bearer (verified via `adminBearer.Accepts`).
+//     On success the request context is flagged via WithAdminBearer so
+//     PlaygroundGate and the handlers can grant scope=full without
+//     minting an API key. adminBearer is a BearerAccepter so the
+//     runtime-mutable bearer.Manager (and its short grace window on
+//     rotation) plugs in naturally alongside a StaticBearer wrapper
+//     over the legacy TOML-only path.
 //   - An `sk-hg-...` API key (looked up in `store`). On success the
 //     resolved APIKey is stashed via ContextWithAPIKey and the request
 //     falls through to PlaygroundGate for the scope check.
@@ -33,7 +35,7 @@ import (
 // error.type matching the client-side heuristics (`invalid_api_key`,
 // `malformed_authorization`, etc.) so the WebUI's ApiError handling in
 // @/lib/api reacts consistently across both credential paths.
-func PlaygroundAuth(adminBearer string, store ports.APIKeyStore) func(http.Handler) http.Handler {
+func PlaygroundAuth(adminBearer BearerAccepter, store ports.APIKeyStore) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			raw := r.Header.Get("Authorization")
@@ -49,9 +51,10 @@ func PlaygroundAuth(adminBearer string, store ports.APIKeyStore) func(http.Handl
 				return
 			}
 			// Admin bearer wins if configured and matches — no store lookup
-			// so the console-side flow stays free of DB round-trips.
-			if adminBearer != "" &&
-				subtle.ConstantTimeCompare([]byte(token), []byte(adminBearer)) == 1 {
+			// so the console-side flow stays free of DB round-trips. The
+			// accepter honours both Current and the short grace-window
+			// Previous when it is a bearer.Manager.
+			if adminBearer != nil && adminBearer.Accepts(token) {
 				next.ServeHTTP(w, r.WithContext(WithAdminBearer(r.Context())))
 				return
 			}

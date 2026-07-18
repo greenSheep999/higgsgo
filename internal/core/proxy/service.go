@@ -18,6 +18,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/greensheep999/higgsgo/internal/core/failover"
 	"github.com/greensheep999/higgsgo/internal/core/metering"
 	"github.com/greensheep999/higgsgo/internal/core/upstream"
 	"github.com/greensheep999/higgsgo/internal/core/webhook"
@@ -31,8 +32,16 @@ type Service struct {
 	Registry ports.ModelRegistry
 	Upstream *upstream.Client
 	Jobs     ports.JobStore // optional; when set every create is persisted
+	Groups   ports.GroupStore // optional; when set, group RouteStrategy is resolved
 	Logger   *slog.Logger
 	Clock    ports.Clock
+
+	// Failover, when non-nil, observes upstream outcomes and pulls
+	// accounts out of rotation according to the [failover] policy.
+	// Nil-safe: main.go leaves this unset when [failover].enabled is
+	// false, and every method on the controller short-circuits on a
+	// nil receiver so the proxy path stays a straight line.
+	Failover *failover.Controller
 
 	// APIKeys, when non-nil, is consulted at the terminal transition to look
 	// up the caller's APIKey.MarkupPct so the Recorder can apply the
@@ -165,6 +174,7 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 		RequiresPaid:      s.Registry.StarterLocked(spec.JST) || spec.RequiresPaid,
 		RequiresUltra:     spec.RequiresUltra,
 		GroupID:           req.GroupID,
+		RouteStrategy:     s.resolveRouteStrategy(ctx, req.GroupID),
 	}
 	acc, lockToken, err := s.Store.PickAndLock(ctx, pickParams)
 	if err != nil {
@@ -205,6 +215,13 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 		Body:     body,
 	})
 	if err != nil {
+		// Feed the failover controller before we let the error bubble
+		// up. body-for-risk-marker is not readily available here (the
+		// upstream client wraps the response body into a sentinel error
+		// string), so we pass err.Error() to the throttle path so the
+		// operator-configured RiskMarkers can still match on the
+		// stringified body snippet the sentinel carries. Nil-safe.
+		s.Failover.RecordError(ctx, acc.ID, err, err.Error())
 		unlock()
 		return nil, mapUpstreamError(err, spec)
 	}
@@ -275,7 +292,9 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 	unlock()
 	if err != nil {
 		if errors.Is(err, domain.ErrUpstreamTimeout) {
-			// The job may still complete via pollworker; return queued.
+			// Timeout is not account-attributable — the job may still
+			// complete via the pollworker. Skip the failover feedback
+			// and return queued.
 			return &GenerationResponse{
 				ID:         created.JobID,
 				Object:     objectForOutput(spec.Output),
@@ -287,6 +306,7 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 				PollURL:    fmt.Sprintf("/v1/jobs/%s", created.JobID),
 			}, nil
 		}
+		s.Failover.RecordError(ctx, acc.ID, err, err.Error())
 		return nil, mapUpstreamError(err, spec)
 	}
 	// Also update the DB row so the pollworker skips this job on its next tick.
@@ -304,6 +324,15 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 			LatencyMS: s.now().Sub(requestTS).Milliseconds(),
 			Refunded:  final.Refunded,
 		})
+	}
+
+	// Feed the failover controller with the terminal outcome. Only a
+	// "completed" upstream status counts as a healthy run — a "failed"
+	// / "nsfw" / "terminated" job is a content-level outcome (see the
+	// design doc §8.1) and MUST NOT count against the account.
+	// RecordSuccess is nil-safe.
+	if final.Status == "completed" {
+		s.Failover.RecordSuccess(ctx, acc.ID)
 	}
 
 	// Build the terminal Job snapshot once; it feeds both metering and the
@@ -488,6 +517,23 @@ func (s *Service) now() time.Time {
 		return s.Clock.Now()
 	}
 	return time.Now()
+}
+
+// resolveRouteStrategy looks up the group's configured RouteStrategy.
+// Returns RouteRoundRobin when no group store is wired, the group id is
+// empty, the group row is missing, or the persisted strategy is blank.
+func (s *Service) resolveRouteStrategy(ctx context.Context, groupID string) domain.RouteStrategy {
+	if s.Groups == nil || groupID == "" {
+		return domain.RouteRoundRobin
+	}
+	g, err := s.Groups.Get(ctx, groupID)
+	if err != nil || g == nil {
+		return domain.RouteRoundRobin
+	}
+	if g.RouteStrategy == "" {
+		return domain.RouteRoundRobin
+	}
+	return g.RouteStrategy
 }
 
 // EnsureJSON returns the body as a json.RawMessage for logging.

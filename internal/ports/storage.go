@@ -21,6 +21,33 @@ type AccountStore interface {
 	UpdateInFlight(ctx context.Context, id string, delta int) error
 	MarkStatus(ctx context.Context, id string, status domain.AccountStatus, reason string) error
 
+	// MarkThrottled parks the account in status=throttled and stamps
+	// throttled_until with the caller-supplied deadline. The pool router
+	// skips throttled rows until that deadline; the Recoverer goroutine
+	// flips them back to active once it passes. reason is persisted to
+	// accounts.status_reason so the admin surface can render "why". Set
+	// by the failover controller (mechanism ②) — do not use this path for
+	// operator-initiated pauses (that's StatusSuspended via MarkStatus).
+	MarkThrottled(ctx context.Context, id string, until time.Time, reason string) error
+
+	// RecoverThrottled bulk-flips status=throttled AND throttled_until<=now
+	// back to status=active in a single UPDATE. Returns the number of rows
+	// affected so the caller can log a summary. Invoked periodically by
+	// core/failover.Recoverer.
+	RecoverThrottled(ctx context.Context) (int, error)
+
+	// IncrFailStreak atomically increments fail_streak and updates
+	// last_failed_at, returning the new streak value so the caller can
+	// judge whether the consecutive-fail limit was hit. Preferred over
+	// MarkStatus for tick-only writes because it does not flip status
+	// and does not overwrite status_reason.
+	IncrFailStreak(ctx context.Context, id string) (int, error)
+
+	// ResetFailStreak zeroes fail_streak. Called on every successful
+	// upstream outcome (mechanism ①'s recovery edge) so a transient
+	// hiccup does not accumulate across weeks of healthy traffic.
+	ResetFailStreak(ctx context.Context, id string) error
+
 	// PickAndLock atomically selects an eligible account and increments its
 	// in_flight counter. Returns the selected account and an opaque lock
 	// token that Unlock must be called with when the caller is done.
@@ -379,6 +406,12 @@ type ModelHealthStore interface {
 	// bounded by the model catalog size (~130 jsts × recent history),
 	// which is small enough for admin surfaces to consume in one shot.
 	List(ctx context.Context) ([]ModelHealthRow, error)
+	// UptimeByJST computes the uptime percentage for every jst that has
+	// at least one probe within the window [since, now). Returns a map
+	// of jst -> uptime percentage (0.0–100.0). A probe is counted as
+	// "ok" when its verdict equals "completed". The table is small
+	// enough for a single aggregate query.
+	UptimeByJST(ctx context.Context, since time.Time) (map[string]float64, error)
 }
 
 // ModelHealthRow is one row from the model_health table.
@@ -389,4 +422,114 @@ type ModelHealthRow struct {
 	HTTPStatus  int
 	Cost        int64
 	PollTimeSec int
+}
+
+// FailoverEventStore persists the raw failover-controller events used
+// for the sliding-window judge / evict counters and the admin audit
+// trail. Every write is a single INSERT and every read a single COUNT
+// / SELECT, so a naive SQLite implementation is thread-safe without
+// extra locking (the driver's connection pool handles concurrency).
+type FailoverEventStore interface {
+	Insert(ctx context.Context, accountID string, kind FailoverEventKind, reason string, httpStatus int) error
+	Count(ctx context.Context, accountID string, kind FailoverEventKind, windowSec int) (int, error)
+	CountRecentDisables(ctx context.Context, windowSec int) (int, error)
+	List(ctx context.Context, accountID string, limit int) ([]FailoverEventRow, error)
+	DeleteForAccount(ctx context.Context, accountID string) error
+}
+
+// FailoverEventKind enumerates the persisted event kinds.
+type FailoverEventKind string
+
+const (
+	FailoverEventFailure   FailoverEventKind = "failure"
+	FailoverEventThrottle  FailoverEventKind = "throttle"
+	FailoverEventBlacklist FailoverEventKind = "blacklist"
+)
+
+// FailoverEventRow mirrors one account_failover_events row.
+type FailoverEventRow struct {
+	ID         int64
+	AccountID  string
+	Kind       FailoverEventKind
+	Reason     string
+	HTTPStatus int
+	CreatedAt  time.Time
+}
+
+// FailoverOverridesStore persists per-account overrides of the global
+// failover tunables.
+type FailoverOverridesStore interface {
+	Get(ctx context.Context, accountID string) (*FailoverOverride, error)
+	Upsert(ctx context.Context, o *FailoverOverride) error
+	Delete(ctx context.Context, accountID string) error
+}
+
+// FailoverOverride mirrors one account_failover_overrides row. A
+// pointer field means "explicitly overridden"; nil means "inherit
+// global default".
+type FailoverOverride struct {
+	AccountID      string
+	Enabled        *bool
+	FailLimit      *int
+	JudgeWindowSec *int
+	JudgeCount     *int
+	CooldownSec    *int
+	EvictWindowSec *int
+	EvictCount     *int
+	UpdatedAt      time.Time
+}
+
+// SettingsStore persists operator-editable configuration overrides.
+// Values that were originally loaded from configs/*.toml can be
+// mutated at runtime (e.g. rotating the admin bearer from the WebUI)
+// and the override survives restarts because it lives in the DB.
+//
+// The store is intentionally minimal — a plain key/value surface —
+// so new operator-editable settings can land without another port
+// change. The single row schema mirrors the system_settings table
+// added in migration 014.
+type SettingsStore interface {
+	// Get returns the raw string value for key. Returns
+	// domain.ErrSettingNotFound when the row is absent so callers can
+	// fall back to the TOML-loaded default without inspecting a
+	// second error type.
+	Get(ctx context.Context, key string) (string, error)
+
+	// Set writes value under key, replacing any existing row. The
+	// updated_at column is refreshed to the current wall-clock time
+	// by the store.
+	Set(ctx context.Context, key, value string) error
+
+	// UpdatedAt returns the wall-clock time value under key was last
+	// written. Returns domain.ErrSettingNotFound when the row is
+	// absent. Kept separate from Get so callers that just want the
+	// value do not pay for a second column parse.
+	UpdatedAt(ctx context.Context, key string) (time.Time, error)
+}
+
+// ModelOverrideStore persists operator overrides that layer on top of
+// the static jsonstatic ModelSpec catalog. The registry consults this
+// store on Reload() and after every /admin/models/reload to rebuild
+// the in-memory merged map, and admin writes call Upsert / Delete
+// one row at a time.
+type ModelOverrideStore interface {
+	// Get returns the override for alias, or (nil, nil) when no row
+	// exists. A nil result must be treated as "no override — spec
+	// defaults apply". Callers should not need to inspect
+	// domain.ErrModelOverrideNotFound for the common absence case.
+	Get(ctx context.Context, alias string) (*domain.ModelOverride, error)
+
+	// Upsert writes (or replaces) the override for o.Alias. Pointer
+	// fields land as NULL when nil so the registry's merge helper
+	// falls back to spec defaults on read.
+	Upsert(ctx context.Context, o *domain.ModelOverride) error
+
+	// Delete removes the override row for alias. Missing rows are a
+	// no-op so callers can idempotently reset.
+	Delete(ctx context.Context, alias string) error
+
+	// List returns every override row, newest updated first. Used by
+	// the admin surface to render the overrides table and by the
+	// registry to rebuild its merged map on Reload().
+	List(ctx context.Context) ([]domain.ModelOverride, error)
 }

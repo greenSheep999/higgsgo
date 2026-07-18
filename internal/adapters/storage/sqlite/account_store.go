@@ -50,16 +50,22 @@ func boolToInt(b bool) int {
 
 func intToBool(i int) bool { return i != 0 }
 
+// accountColumns is the canonical SELECT list used by every reader on
+// the accounts table. Kept as a package-level constant so a schema
+// extension only needs a single edit rather than N string-literal
+// duplicates.
+const accountColumns = `id, email, password_enc, session_id, cookies_json, user_agent,
+		datadome_client_id, workspace_id, plan_type,
+		has_unlim, has_flex_unlim, is_pro_veo3_available, cohort,
+		subscription_balance, credits_balance, total_plan_credits, plan_ends_at,
+		status, in_flight_jobs, last_balance_at, last_used_at, last_failed_at, fail_streak,
+		bound_proxy_url, priority, throttled_until, status_reason,
+		max_concurrent, note, source,
+		registered_at, imported_at`
+
 // Get returns a single account by id.
 func (s *AccountStore) Get(ctx context.Context, id string) (*domain.Account, error) {
-	row := s.db.QueryRowContext(ctx, `
-		SELECT id, email, password_enc, session_id, cookies_json, user_agent,
-		       datadome_client_id, workspace_id, plan_type,
-		       has_unlim, has_flex_unlim, is_pro_veo3_available, cohort,
-		       subscription_balance, credits_balance, total_plan_credits, plan_ends_at,
-		       status, in_flight_jobs, last_balance_at, last_used_at, last_failed_at, fail_streak,
-		       bound_proxy_url, priority, registered_at, imported_at
-		FROM accounts WHERE id = ?`, id)
+	row := s.db.QueryRowContext(ctx, `SELECT `+accountColumns+` FROM accounts WHERE id = ?`, id)
 	return scanAccount(row)
 }
 
@@ -86,13 +92,7 @@ func (s *AccountStore) List(ctx context.Context, filter ports.AccountFilter) ([]
 		args = append(args, boolToInt(*filter.HasUnlim))
 	}
 
-	q := `SELECT id, email, password_enc, session_id, cookies_json, user_agent,
-	             datadome_client_id, workspace_id, plan_type,
-	             has_unlim, has_flex_unlim, is_pro_veo3_available, cohort,
-	             subscription_balance, credits_balance, total_plan_credits, plan_ends_at,
-	             status, in_flight_jobs, last_balance_at, last_used_at, last_failed_at, fail_streak,
-	             bound_proxy_url, priority, registered_at, imported_at
-	      FROM accounts`
+	q := `SELECT ` + accountColumns + ` FROM accounts`
 	if len(clauses) > 0 {
 		q += " WHERE " + strings.Join(clauses, " AND ")
 	}
@@ -116,6 +116,12 @@ func (s *AccountStore) List(ctx context.Context, filter ports.AccountFilter) ([]
 }
 
 // Upsert inserts a new account or updates an existing one (matched by id).
+//
+// throttled_until / status_reason are intentionally NOT touched by the
+// UPDATE branch — the failover controller owns those two columns and a
+// full-account import should not clobber an in-progress cooldown or the
+// last-recorded reason on an existing row. New rows still land with the
+// caller-provided values so an import can restore state on a fresh DB.
 func (s *AccountStore) Upsert(ctx context.Context, a *domain.Account) error {
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO accounts (
@@ -124,14 +130,18 @@ func (s *AccountStore) Upsert(ctx context.Context, a *domain.Account) error {
 			has_unlim, has_flex_unlim, is_pro_veo3_available, cohort,
 			subscription_balance, credits_balance, total_plan_credits, plan_ends_at,
 			status, in_flight_jobs, last_balance_at, last_used_at, last_failed_at, fail_streak,
-			bound_proxy_url, priority, registered_at, imported_at
+			bound_proxy_url, priority, throttled_until, status_reason,
+			max_concurrent, note, source,
+			registered_at, imported_at
 		) VALUES (
 			?, ?, ?, ?, ?, ?,
 			?, ?, ?,
 			?, ?, ?, ?,
 			?, ?, ?, ?,
 			?, ?, ?, ?, ?, ?,
-			?, ?, ?, ?
+			?, ?, ?, ?,
+			?, ?, ?,
+			?, ?
 		)
 		ON CONFLICT(id) DO UPDATE SET
 			email = excluded.email,
@@ -152,19 +162,36 @@ func (s *AccountStore) Upsert(ctx context.Context, a *domain.Account) error {
 			plan_ends_at = excluded.plan_ends_at,
 			status = excluded.status,
 			bound_proxy_url = excluded.bound_proxy_url,
-			priority = excluded.priority
+			priority = excluded.priority,
+			max_concurrent = excluded.max_concurrent,
+			note = excluded.note,
+			source = excluded.source
 	`,
 		a.ID, a.Email, a.Password, a.SessionID, a.CookiesJSON, a.UserAgent,
 		a.DataDomeClientID, a.WorkspaceID, string(a.PlanType),
 		boolToInt(a.HasUnlim), boolToInt(a.HasFlexUnlim), boolToInt(a.IsProVeo3Available), a.Cohort,
 		a.SubscriptionBalance, a.CreditsBalance, a.TotalPlanCredits, fmtTime(a.PlanEndsAt),
 		string(a.Status), a.InFlightJobs, fmtTime(a.LastBalanceAt), fmtTime(a.LastUsedAt), fmtTime(a.LastFailedAt), a.FailStreak,
-		a.BoundProxyURL, a.Priority, fmtTime(a.RegisteredAt), fmtTime(a.ImportedAt),
+		a.BoundProxyURL, a.Priority, nullableTime(a.ThrottledUntil), a.StatusReason,
+		a.MaxConcurrent, a.Note, a.Source,
+		fmtTime(a.RegisteredAt), fmtTime(a.ImportedAt),
 	)
 	if err != nil {
 		return fmt.Errorf("upsert account %s: %w", a.ID, err)
 	}
 	return nil
+}
+
+// nullableTime returns a sql-friendly value for a nullable TEXT
+// timestamp column: an interface holding nil for a zero time.Time (so
+// the column stores NULL) or the RFC3339 string otherwise. Used for
+// accounts.throttled_until where the "no cooldown" state must be a
+// real NULL for the PickAndLock filter to short-circuit cleanly.
+func nullableTime(t time.Time) any {
+	if t.IsZero() {
+		return nil
+	}
+	return t.UTC().Format(timeFormat)
 }
 
 // UpdateBalance overwrites the balance triplet.
@@ -227,24 +254,39 @@ func (s *AccountStore) UpdateInFlight(ctx context.Context, id string, delta int)
 	return nil
 }
 
-// MarkStatus updates the lifecycle status field. When status is not "active",
-// the fail_streak is incremented; on transition back to "active" it resets.
+// MarkStatus updates the lifecycle status field and persists the reason
+// opcode. When status is StatusActive, the transition also clears the
+// throttled_until column and the status_reason string so the row starts
+// clean on the recovery edge (operator "recover disabled" flow or the
+// Recoverer flip). fail_streak is preserved on active transitions
+// because the failover controller owns it separately via
+// ResetFailStreak — resetting here would silently mask misuse.
+//
+// For every non-active status the call bumps fail_streak, stamps
+// last_failed_at, and writes the reason. The failover controller
+// prefers the finer-grained IncrFailStreak for tick-only updates and
+// only calls MarkStatus on the terminal edge (evict / disable).
 func (s *AccountStore) MarkStatus(ctx context.Context, id string, status domain.AccountStatus, reason string) error {
-	var q string
-	switch status {
-	case domain.StatusActive:
-		q = `UPDATE accounts SET status = ?, fail_streak = 0 WHERE id = ?`
-	default:
-		q = `UPDATE accounts SET status = ?, fail_streak = fail_streak + 1, last_failed_at = ? WHERE id = ?`
-	}
 	var (
 		res sql.Result
 		err error
 	)
-	if status == domain.StatusActive {
-		res, err = s.db.ExecContext(ctx, q, string(status), id)
-	} else {
-		res, err = s.db.ExecContext(ctx, q, string(status), fmtTime(time.Now()), id)
+	switch status {
+	case domain.StatusActive:
+		res, err = s.db.ExecContext(ctx, `
+			UPDATE accounts
+			SET status = ?, status_reason = ?, throttled_until = NULL
+			WHERE id = ?`,
+			string(status), reason, id)
+	default:
+		res, err = s.db.ExecContext(ctx, `
+			UPDATE accounts
+			SET status = ?,
+			    status_reason = ?,
+			    fail_streak = fail_streak + 1,
+			    last_failed_at = ?
+			WHERE id = ?`,
+			string(status), reason, fmtTime(time.Now()), id)
 	}
 	if err != nil {
 		return err
@@ -253,7 +295,95 @@ func (s *AccountStore) MarkStatus(ctx context.Context, id string, status domain.
 	if n == 0 {
 		return domain.ErrAccountNotFound
 	}
-	_ = reason // audit logging is emitted at the caller level for now.
+	return nil
+}
+
+// MarkThrottled parks the account in status=throttled and stamps
+// throttled_until with the caller-supplied deadline. Written by the
+// failover controller (mechanism ②) when the sliding-window judge
+// count is reached. Does not touch fail_streak — throttle and
+// consecutive-fail streaks are independent signals; a throttled
+// account that later returns 401 still ticks the streak.
+func (s *AccountStore) MarkThrottled(ctx context.Context, id string, until time.Time, reason string) error {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE accounts
+		SET status = ?,
+		    status_reason = ?,
+		    throttled_until = ?,
+		    last_failed_at = ?
+		WHERE id = ?`,
+		string(domain.StatusThrottled), reason, nullableTime(until), fmtTime(time.Now()), id)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return domain.ErrAccountNotFound
+	}
+	return nil
+}
+
+// RecoverThrottled bulk-flips every throttled row whose cooldown has
+// expired back to status=active, clears throttled_until, and blanks
+// status_reason so the row is indistinguishable from an untouched
+// active row afterwards. Returns the number of rows recovered.
+//
+// Runs on a fixed cadence from core/failover.Recoverer; a naive UPDATE
+// keeps the operation single-SQL so contention with an in-flight
+// PickAndLock is bounded to the SQLite busy_timeout.
+func (s *AccountStore) RecoverThrottled(ctx context.Context) (int, error) {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE accounts
+		SET status = ?,
+		    throttled_until = NULL,
+		    status_reason = ''
+		WHERE status = ? AND throttled_until IS NOT NULL AND throttled_until <= ?`,
+		string(domain.StatusActive), string(domain.StatusThrottled), fmtTime(time.Now()))
+	if err != nil {
+		return 0, err
+	}
+	n, _ := res.RowsAffected()
+	return int(n), nil
+}
+
+// IncrFailStreak atomically increments fail_streak, stamps
+// last_failed_at, and returns the resulting streak count. Preferred
+// over MarkStatus for tick-only writes because it does not flip status
+// (the failover controller decides whether the new streak is over the
+// limit) and does not overwrite status_reason.
+//
+// Returns ErrAccountNotFound when the id does not exist.
+func (s *AccountStore) IncrFailStreak(ctx context.Context, id string) (int, error) {
+	// SQLite's UPDATE ... RETURNING landed in 3.35 — the modernc.org/sqlite
+	// driver bundled with higgsgo speaks it. Fall back to a read after the
+	// update if a future driver revert breaks this.
+	row := s.db.QueryRowContext(ctx, `
+		UPDATE accounts
+		SET fail_streak = fail_streak + 1, last_failed_at = ?
+		WHERE id = ?
+		RETURNING fail_streak`,
+		fmtTime(time.Now()), id)
+	var streak int
+	if err := row.Scan(&streak); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, domain.ErrAccountNotFound
+		}
+		return 0, err
+	}
+	return streak, nil
+}
+
+// ResetFailStreak zeroes fail_streak. Called on every successful
+// upstream outcome by the failover controller.
+func (s *AccountStore) ResetFailStreak(ctx context.Context, id string) error {
+	res, err := s.db.ExecContext(ctx, `UPDATE accounts SET fail_streak = 0 WHERE id = ?`, id)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return domain.ErrAccountNotFound
+	}
 	return nil
 }
 
@@ -274,17 +404,20 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 	// asks for a paid tier (RequiresPaid / RequiresUltra).
 	q := strings.Builder{}
 	args := []any{}
+	// Eligibility is either "already active" or "throttled but the
+	// cooldown deadline has passed" (a lazy fallback so a Recoverer
+	// stall does not silently starve the pool). The Recoverer
+	// goroutine promotes the throttled row on its next tick.
 	q.WriteString(`
-		SELECT id, email, password_enc, session_id, cookies_json, user_agent,
-		       datadome_client_id, workspace_id, plan_type,
-		       has_unlim, has_flex_unlim, is_pro_veo3_available, cohort,
-		       subscription_balance, credits_balance, total_plan_credits, plan_ends_at,
-		       status, in_flight_jobs, last_balance_at, last_used_at, last_failed_at, fail_streak,
-		       bound_proxy_url, priority, registered_at, imported_at
+		SELECT ` + accountColumns + `
 		FROM accounts
-		WHERE status = 'active'
+		WHERE (
+		        status = 'active'
+		        OR (status = 'throttled' AND throttled_until IS NOT NULL AND throttled_until <= ?)
+		      )
 		  AND in_flight_jobs < 5
 		  AND subscription_balance >= ?`)
+	args = append(args, fmtTime(time.Now()))
 	minBalance := params.EstCostHundredths + params.EstCostHundredths/5
 	args = append(args, minBalance)
 
@@ -304,8 +437,46 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 		args = append(args, params.GroupID)
 	}
 
-	// Ordering: least-recently-used first (round-robin default).
-	q.WriteString(` ORDER BY COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC LIMIT 1`)
+	// Ordering: determined by RouteStrategy.
+	strategy := params.RouteStrategy
+	if strategy == "" {
+		strategy = domain.RouteRoundRobin
+	}
+	switch strategy {
+	case domain.RouteLeastUsed:
+		// Account with the highest remaining balance has consumed the fewest credits.
+		q.WriteString(` ORDER BY (COALESCE(total_plan_credits, 0) - COALESCE(subscription_balance, 0)) ASC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC LIMIT 1`)
+	case domain.RouteCheapestFirst:
+		// Prefer lower-tier plans so expensive plan budgets are reserved for
+		// models that require them. Numeric tier: lower = cheaper.
+		q.WriteString(` ORDER BY CASE plan_type`)
+		q.WriteString(` WHEN 'free' THEN 1`)
+		q.WriteString(` WHEN 'starter' THEN 2`)
+		q.WriteString(` WHEN 'basic' THEN 3`)
+		q.WriteString(` WHEN 'pro' THEN 4`)
+		q.WriteString(` WHEN 'plus' THEN 5`)
+		q.WriteString(` WHEN 'creator' THEN 6`)
+		q.WriteString(` WHEN 'team' THEN 7`)
+		q.WriteString(` WHEN 'scale' THEN 8`)
+		q.WriteString(` WHEN 'ultimate' THEN 9`)
+		q.WriteString(` WHEN 'ultra' THEN 10`)
+		q.WriteString(` WHEN 'enterprise' THEN 11`)
+		q.WriteString(` ELSE 99 END ASC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC LIMIT 1`)
+	case domain.RouteMostCreditsFirst:
+		// Prefer the account with the largest remaining balance.
+		q.WriteString(` ORDER BY (COALESCE(subscription_balance, 0) + COALESCE(credits_balance, 0)) DESC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC LIMIT 1`)
+	case domain.RoutePriority:
+		// Use group-level priority from account_group_members when scoped to a group,
+		// otherwise fall back to accounts.priority.
+		if params.GroupID != "" {
+			q.WriteString(` ORDER BY COALESCE((SELECT m.priority FROM account_group_members m WHERE m.account_id = accounts.id AND m.group_id = ?), 0) DESC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC LIMIT 1`)
+			args = append(args, params.GroupID)
+		} else {
+			q.WriteString(` ORDER BY COALESCE(priority, 0) DESC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC LIMIT 1`)
+		}
+	default: // RouteRoundRobin
+		q.WriteString(` ORDER BY COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC LIMIT 1`)
+	}
 
 	row := tx.QueryRowContext(ctx, q.String(), args...)
 	acc, err := scanAccount(row)
@@ -346,22 +517,24 @@ type scanner interface {
 
 func scanAccount(sc scanner) (*domain.Account, error) {
 	var (
-		a             domain.Account
-		planEndsAt    sql.NullString
-		lastBalanceAt sql.NullString
-		lastUsedAt    sql.NullString
-		lastFailedAt  sql.NullString
-		registeredAt  sql.NullString
-		importedAt    sql.NullString
-		datadomeCID   sql.NullString
-		workspaceID   sql.NullString
-		cohort        sql.NullString
-		boundProxy    sql.NullString
-		planType      string
-		status        string
-		hasUnlim      int
-		hasFlexUnlim  int
-		isProVeo3     int
+		a              domain.Account
+		planEndsAt     sql.NullString
+		lastBalanceAt  sql.NullString
+		lastUsedAt     sql.NullString
+		lastFailedAt   sql.NullString
+		throttledUntil sql.NullString
+		statusReason   sql.NullString
+		registeredAt   sql.NullString
+		importedAt     sql.NullString
+		datadomeCID    sql.NullString
+		workspaceID    sql.NullString
+		cohort         sql.NullString
+		boundProxy     sql.NullString
+		planType       string
+		status         string
+		hasUnlim       int
+		hasFlexUnlim   int
+		isProVeo3      int
 	)
 	if err := sc.Scan(
 		&a.ID, &a.Email, &a.Password, &a.SessionID, &a.CookiesJSON, &a.UserAgent,
@@ -369,7 +542,9 @@ func scanAccount(sc scanner) (*domain.Account, error) {
 		&hasUnlim, &hasFlexUnlim, &isProVeo3, &cohort,
 		&a.SubscriptionBalance, &a.CreditsBalance, &a.TotalPlanCredits, &planEndsAt,
 		&status, &a.InFlightJobs, &lastBalanceAt, &lastUsedAt, &lastFailedAt, &a.FailStreak,
-		&boundProxy, &a.Priority, &registeredAt, &importedAt,
+		&boundProxy, &a.Priority, &throttledUntil, &statusReason,
+		&a.MaxConcurrent, &a.Note, &a.Source,
+		&registeredAt, &importedAt,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrAccountNotFound
@@ -389,6 +564,8 @@ func scanAccount(sc scanner) (*domain.Account, error) {
 	a.LastBalanceAt = parseTime(lastBalanceAt.String)
 	a.LastUsedAt = parseTime(lastUsedAt.String)
 	a.LastFailedAt = parseTime(lastFailedAt.String)
+	a.ThrottledUntil = parseTime(throttledUntil.String)
+	a.StatusReason = statusReason.String
 	a.RegisteredAt = parseTime(registeredAt.String)
 	a.ImportedAt = parseTime(importedAt.String)
 	return &a, nil

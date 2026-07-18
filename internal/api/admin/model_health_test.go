@@ -50,6 +50,23 @@ func (f *fakeHealthStore) List(context.Context) ([]ports.ModelHealthRow, error) 
 	return f.listRows, nil
 }
 
+func (f *fakeHealthStore) UptimeByJST(_ context.Context, _ time.Time) (map[string]float64, error) {
+	// Return uptime derived from listRows for test convenience.
+	m := make(map[string]float64)
+	totals := make(map[string]int)
+	oks := make(map[string]int)
+	for _, r := range f.listRows {
+		totals[r.JST]++
+		if r.Verdict == "completed" {
+			oks[r.JST]++
+		}
+	}
+	for jst, total := range totals {
+		m[jst] = float64(oks[jst]) / float64(total) * 100.0
+	}
+	return m, nil
+}
+
 // Compile-time assertion: fakeHealthStore must satisfy ports.ModelHealthStore
 // so a future interface change breaks this file rather than silently making
 // the handler tests exercise a stale surface.

@@ -78,6 +78,11 @@ func (h *Handler) HandlePlaygroundModels(w http.ResponseWriter, r *http.Request)
 type playgroundEstimateRequest struct {
 	Model  string         `json:"model"`
 	Params map[string]any `json:"params,omitempty"`
+	// AsAPIKeyID, when set by an admin-bearer caller, asks the handler to
+	// evaluate the estimate under the named API key's identity (its
+	// playground_scope in particular). Ignored for sk-hg- key callers,
+	// which always run as themselves. See resolveExecutionIdentity.
+	AsAPIKeyID string `json:"as_api_key_id,omitempty"`
 }
 
 // HandlePlaygroundEstimate serves POST /v1/playground/estimate.
@@ -89,12 +94,6 @@ type playgroundEstimateRequest struct {
 // RequiresUnlim, we report will_charge=false so the WebUI can flag the
 // call as free-from-user-credits.
 func (h *Handler) HandlePlaygroundEstimate(w http.ResponseWriter, r *http.Request) {
-	scope, ok := resolvePlaygroundScope(r)
-	if !ok {
-		writeError(w, http.StatusForbidden, "playground_disabled",
-			"api key is not permitted to use the playground")
-		return
-	}
 	raw, err := readAll(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_body", err.Error())
@@ -106,6 +105,15 @@ func (h *Handler) HandlePlaygroundEstimate(w http.ResponseWriter, r *http.Reques
 			writeError(w, http.StatusBadRequest, "invalid_body", err.Error())
 			return
 		}
+	}
+	// Resolve the effective identity (scope) after reading the body so an
+	// admin-bearer caller's as_api_key_id can switch the scope used for the
+	// per-model gate below. Estimate never forwards to a generation handler,
+	// so the resolved *APIKey is not injected into the context here.
+	scope, _, herr := h.resolveExecutionIdentity(r, req.AsAPIKeyID)
+	if herr != nil {
+		writeError(w, herr.Status, herr.Kind, herr.Message)
+		return
 	}
 	if strings.TrimSpace(req.Model) == "" {
 		writeError(w, http.StatusBadRequest, "invalid_body", "model is required")
@@ -153,27 +161,33 @@ func (h *Handler) HandlePlaygroundEstimate(w http.ResponseWriter, r *http.Reques
 // long-running video jobs from the WebUI without holding the HTTP
 // request open.
 func (h *Handler) HandlePlaygroundExecute(w http.ResponseWriter, r *http.Request) {
-	scope, ok := resolvePlaygroundScope(r)
-	if !ok {
-		writeError(w, http.StatusForbidden, "playground_disabled",
-			"api key is not permitted to use the playground")
-		return
-	}
 	raw, err := readAll(r)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid_body", err.Error())
 		return
 	}
-	// Peek at the model field for the scope check; the underlying
-	// image/video handler re-parses the full body from the request.
+	// Peek at the model field for the scope check plus the optional
+	// as_api_key_id used by admin-bearer callers to run under a specific
+	// key's identity. The underlying image/video handler re-parses the
+	// full body from the (rewritten) request.
 	var peek struct {
-		Model string `json:"model"`
+		Model      string `json:"model"`
+		AsAPIKeyID string `json:"as_api_key_id"`
 	}
 	if len(raw) > 0 {
 		if err := json.Unmarshal(raw, &peek); err != nil {
 			writeError(w, http.StatusBadRequest, "invalid_body", err.Error())
 			return
 		}
+	}
+	// Resolve the effective identity. For an admin-bearer caller supplying
+	// as_api_key_id this returns the impersonated key so we can inject it
+	// into the forwarded context — that makes downstream usage, markup,
+	// group routing and quota all accrue against that key.
+	scope, asKey, herr := h.resolveExecutionIdentity(r, peek.AsAPIKeyID)
+	if herr != nil {
+		writeError(w, herr.Status, herr.Kind, herr.Message)
+		return
 	}
 	if strings.TrimSpace(peek.Model) == "" {
 		writeError(w, http.StatusBadRequest, "invalid_body", "model is required")
@@ -192,7 +206,13 @@ func (h *Handler) HandlePlaygroundExecute(w http.ResponseWriter, r *http.Request
 	// Default async=false when the caller did not specify. Users who
 	// explicitly send async=true keep their choice.
 	forwarded := normalisePlaygroundBody(raw)
-	r2 := r.Clone(r.Context())
+	ctx := r.Context()
+	if asKey != nil {
+		// Impersonation: forward as the named key so the generation
+		// handlers read it via middleware.APIKeyFromContext.
+		ctx = middleware.ContextWithAPIKey(ctx, asKey)
+	}
+	r2 := r.Clone(ctx)
 	r2.Body = io.NopCloser(bytes.NewReader(forwarded))
 	r2.ContentLength = int64(len(forwarded))
 	if spec.Output == "image" {
@@ -228,6 +248,86 @@ func resolvePlaygroundScope(r *http.Request) (domain.PlaygroundScope, bool) {
 	default:
 		return domain.PlaygroundScopeNone, true
 	}
+}
+
+// resolveExecutionIdentity determines the effective playground scope for a
+// /v1/playground/{estimate,execute} request and, when the caller is an admin
+// bearer impersonating an API key via as_api_key_id, returns that key so the
+// caller can inject it into the forwarded request context.
+//
+// Behaviour by caller type:
+//
+//   - admin bearer + as_api_key_id: look the key up, validate it, and run
+//     under its playground_scope. A missing/revoked/paused key yields an
+//     invalid_as_api_key error; a scope=none key yields playground_disabled
+//     (mirroring what a real call with that key would hit at the gate). The
+//     returned *APIKey is non-nil so execute can impersonate it.
+//   - admin bearer without as_api_key_id: full scope, nil key (unchanged
+//     admin behaviour — the request keeps running as the admin identity).
+//   - sk-hg- key caller: always runs as itself; as_api_key_id is ignored so
+//     a key cannot impersonate another. The key already lives in the request
+//     context (injected by APIKeyAuth), so the returned *APIKey is nil.
+//
+// The returned *APIKey is non-nil only in the admin-impersonation case; a nil
+// key means "leave the context's existing identity in place".
+func (h *Handler) resolveExecutionIdentity(r *http.Request, asAPIKeyID string) (domain.PlaygroundScope, *domain.APIKey, *httpError) {
+	ctx := r.Context()
+	asAPIKeyID = strings.TrimSpace(asAPIKeyID)
+
+	if middleware.IsAdminBearer(ctx) {
+		if asAPIKeyID == "" {
+			// Unchanged admin behaviour: full scope, no impersonation.
+			return domain.PlaygroundScopeFull, nil, nil
+		}
+		if h.APIKeys == nil {
+			return domain.PlaygroundScopeNone, nil, &httpError{
+				Status:  http.StatusInternalServerError,
+				Kind:    "as_api_key_unavailable",
+				Message: "server is not configured to resolve as_api_key_id",
+			}
+		}
+		k, err := h.APIKeys.Get(ctx, asAPIKeyID)
+		if err != nil || k == nil {
+			return domain.PlaygroundScopeNone, nil, &httpError{
+				Status:  http.StatusBadRequest,
+				Kind:    "invalid_as_api_key",
+				Message: "as_api_key_id does not match a known API key",
+			}
+		}
+		if k.Status != domain.APIKeyStatusActive {
+			return domain.PlaygroundScopeNone, nil, &httpError{
+				Status:  http.StatusBadRequest,
+				Kind:    "invalid_as_api_key",
+				Message: "as_api_key_id is not an active API key",
+			}
+		}
+		scope := k.PlaygroundScope
+		if scope == "" {
+			scope = domain.PlaygroundScopeNone
+		}
+		// Fail closed on scope=none and any unrecognised value, mirroring
+		// what a real call with this key would hit at PlaygroundGate.
+		if scope != domain.PlaygroundScopeCheap && scope != domain.PlaygroundScopeFull {
+			return domain.PlaygroundScopeNone, nil, &httpError{
+				Status:  http.StatusForbidden,
+				Kind:    "playground_disabled",
+				Message: "the selected api key is not permitted to use the playground",
+			}
+		}
+		return scope, k, nil
+	}
+
+	// sk-hg- key caller: ignore as_api_key_id and run as self. The scope
+	// comes from the context-resolved key exactly as before.
+	scope, ok := resolvePlaygroundScope(r)
+	if !ok {
+		return domain.PlaygroundScopeNone, nil, &httpError{
+			Status:  http.StatusForbidden,
+			Kind:    "playground_disabled",
+			Message: "api key is not permitted to use the playground",
+		}
+	}
+	return scope, nil, nil
 }
 
 // hasUnlimAccountAvailable reports whether the pool currently holds an

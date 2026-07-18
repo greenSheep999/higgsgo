@@ -340,7 +340,7 @@ func newHarness(t *testing.T) *e2eHarness {
 	jobsH := admin.NewJobsHandler(jobStore)
 	usageH := admin.NewUsageHandler(usageStore)
 	adminRouter.Route("/admin", func(r chi.Router) {
-		r.Use(middleware.BearerAuth(testAdminBearer))
+		r.Use(middleware.BearerAuth(middleware.StaticBearer(testAdminBearer)))
 		keysH.Register(r)
 		jobsH.Register(r)
 		usageH.Register(r)

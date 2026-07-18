@@ -23,6 +23,7 @@ import (
 
 	"github.com/greensheep999/higgsgo/internal/adapters/httpclient/utls"
 	"github.com/greensheep999/higgsgo/internal/adapters/modelregistry/jsonstatic"
+	"github.com/greensheep999/higgsgo/internal/adapters/registrar/higgsfield"
 	"github.com/greensheep999/higgsgo/internal/adapters/storage/sqlite"
 	"github.com/greensheep999/higgsgo/internal/api"
 	"github.com/greensheep999/higgsgo/internal/api/cpaplugin"
@@ -37,6 +38,8 @@ import (
 	"github.com/greensheep999/higgsgo/internal/core/pollworker"
 	"github.com/greensheep999/higgsgo/internal/core/proxy"
 	"github.com/greensheep999/higgsgo/internal/core/refresher"
+	"github.com/greensheep999/higgsgo/internal/core/bearer"
+	"github.com/greensheep999/higgsgo/internal/core/failover"
 	"github.com/greensheep999/higgsgo/internal/core/regression"
 	"github.com/greensheep999/higgsgo/internal/core/upstream"
 	"github.com/greensheep999/higgsgo/internal/core/webhook"
@@ -81,6 +84,10 @@ func run() error {
 		groupStore       ports.GroupStore
 		modelHealthStore ports.ModelHealthStore
 		auditStore       ports.AuditStore
+		settingsStore    ports.SettingsStore
+		failoverEvents   ports.FailoverEventStore
+		failoverOverrs   ports.FailoverOverridesStore
+		modelOverrides   ports.ModelOverrideStore
 	)
 	switch cfg.Storage.Driver {
 	case "sqlite":
@@ -97,6 +104,10 @@ func run() error {
 		groupStore = sqlite.NewGroupStore(db)
 		modelHealthStore = sqlite.NewModelHealthStore(db)
 		auditStore = sqlite.NewAuditStore(db)
+		settingsStore = sqlite.NewSettingsStore(db)
+		failoverEvents = sqlite.NewFailoverEventStore(db)
+		failoverOverrs = sqlite.NewFailoverOverridesStore(db)
+		modelOverrides = sqlite.NewModelOverrideStore(db)
 
 		// Seed a default admin key on first boot so the WebUI's
 		// Keys list has an operator-facing sk-adm- key waiting when
@@ -110,13 +121,66 @@ func run() error {
 		return errors.New("postgres storage adapter not implemented yet")
 	}
 
+	// Runtime-mutable admin bearer manager. Loads any DB override on
+	// boot and falls back to the TOML value. All /admin/* traffic
+	// authenticates via BearerAuth(mgr), so a POST to
+	// /admin/settings/bearer/rotate takes effect for new requests
+	// immediately (with a 30s grace window for in-flight XHRs — see
+	// internal/core/bearer for the guarantees).
+	bearerMgr := bearer.New(cfg.Server.AdminBearer, settingsStore, logger)
+	if err := bearerMgr.Load(ctx); err != nil {
+		return fmt.Errorf("load admin bearer: %w", err)
+	}
+	logger.Info("admin bearer loaded",
+		slog.String("source", string(bearerMgr.CurrentSource())),
+		slog.String("last4", bearer.Last4(bearerMgr.Current())),
+	)
+
+	// Failover controller: nil when cfg.Failover.Enabled is false so
+	// the proxy service / pollworker stay on their pre-013 fast path.
+	// FallbackFailLimit shadows the deprecated [pool].fail_streak_threshold
+	// so a config that never learned about [failover.consecutive] still
+	// gets the same MVP behaviour.
+	failoverCtl := failover.New(&cfg.Failover, accountStore, failoverEvents, failoverOverrs, nil, logger)
+	if failoverCtl != nil {
+		failoverCtl.FallbackFailLimit = cfg.Pool.FailStreakThreshold
+		logger.Info("failover controller wired",
+			slog.Bool("consecutive_enabled", cfg.Failover.Consecutive.Enabled),
+			slog.Bool("throttle_enabled", cfg.Failover.Throttle.Enabled),
+			slog.Int("fail_limit", cfg.Failover.Consecutive.FailLimit),
+		)
+		rec := &failover.Recoverer{Accounts: accountStore, Logger: logger}
+		go rec.Run(ctx)
+	} else {
+		logger.Info("failover controller disabled by config")
+	}
+
 	// Model registry (jsonstatic backed by data/reference/verified-models.json).
 	regPath := filepath.Join(cfg.Models.DataPath, "verified-models.json")
-	registry, err := jsonstatic.New(jsonstatic.Config{Path: regPath})
+	extraPath := filepath.Join(cfg.Models.DataPath, "model-specs-extra.json")
+	registry, err := jsonstatic.New(jsonstatic.Config{
+		Path:           regPath,
+		ExtraSpecsPath: extraPath,
+	})
 	if err != nil {
 		return fmt.Errorf("load model registry: %w", err)
 	}
-	logger.Info("model registry loaded", slog.String("path", regPath))
+	logger.Info("model registry loaded",
+		slog.String("path", regPath),
+		slog.String("extra_path", extraPath))
+
+	// Wire the persisted operator overrides (migration 015) into the
+	// registry, then re-Reload so the first request served post-boot
+	// already reflects them. Failure here is non-fatal — the registry
+	// keeps its pre-override snapshot and operators can retry via
+	// POST /admin/models/reload.
+	if modelOverrides != nil {
+		registry.SetOverrideProvider(modelOverrides)
+		if err := registry.Reload(ctx); err != nil {
+			logger.Warn("model registry: reload after wiring overrides failed",
+				slog.String("err", err.Error()))
+		}
+	}
 
 	// Upstream HTTP client (utls Chrome fingerprint).
 	proxyURL := os.Getenv("HIGGSGO_UPSTREAM_PROXY_URL")
@@ -182,6 +246,7 @@ func run() error {
 		Registry:         registry,
 		Upstream:         upstreamClient,
 		Jobs:             jobStore,
+		Groups:           groupStore,
 		Logger:           logger,
 		Clock:            ports.RealClock{},
 		AsyncByDefault:   true,
@@ -189,6 +254,7 @@ func run() error {
 		APIKeys:          apiKeyStore,
 		Meter:            meter,
 		Webhooks:         webhooks,
+		Failover:         failoverCtl,
 	}
 	v1h := v1.New(svc, registry, jobStore, groupStore, apiKeyStore)
 	v1h.Logger = logger
@@ -209,6 +275,7 @@ func run() error {
 	worker.APIKeys = apiKeyStore
 	worker.Meter = meter
 	worker.Webhooks = webhooks
+	worker.Failover = failoverCtl
 	go worker.Run(ctx)
 
 	// Background balance + entitlement refresher: keeps every active
@@ -227,35 +294,43 @@ func run() error {
 	go rf.Run(ctx)
 
 	// Background regression ticker: samples a handful of image models
-	// once per Interval and records the outcome to model_health. Only
-	// enabled when the operator flipped [tickers.a_regression].enabled
-	// in the config; otherwise silent so dev boots do not burn credits.
-	// Hoisted above the if block so /admin/tickers/regression can trigger
-	// it manually even when the background schedule is disabled.
-	var tk *regression.Ticker
-	if cfg.Tickers.ARegression.Enabled {
-		interval, err := time.ParseDuration(cfg.Tickers.ARegression.Interval)
-		if err != nil || interval <= 0 {
+	// once per Interval and records the outcome to model_health.
+	//
+	// We ALWAYS construct the Ticker so /admin/tickers/regression can
+	// fire a one-shot probe from the WebUI. The [tickers.a_regression].
+	// enabled flag only gates the background scheduler — flipping it
+	// off keeps dev boots quiet without disabling the manual button.
+	// SkipUpstream defaults to true when the schedule is disabled so a
+	// misconfig can't drain credits from a manual click.
+	interval, err := time.ParseDuration(cfg.Tickers.ARegression.Interval)
+	if err != nil || interval <= 0 {
+		if cfg.Tickers.ARegression.Enabled {
 			logger.Warn("invalid tickers.a_regression.interval, falling back to 24h",
 				slog.String("value", cfg.Tickers.ARegression.Interval))
-			interval = 24 * time.Hour
 		}
-		tk = &regression.Ticker{
-			Health:       modelHealthStore,
-			Registry:     registry,
-			Proxy:        svc,
-			Logger:       logger,
-			Interval:     interval,
-			Concurrency:  2,
-			SampleSize:   cfg.Tickers.ARegression.SampleSize,
-			SkipUpstream: cfg.Tickers.ARegression.SkipUpstream,
-		}
+		interval = 24 * time.Hour
+	}
+	tk := &regression.Ticker{
+		Health:       modelHealthStore,
+		Registry:     registry,
+		Proxy:        svc,
+		Logger:       logger,
+		Interval:     interval,
+		Concurrency:  2,
+		SampleSize:   cfg.Tickers.ARegression.SampleSize,
+		SkipUpstream: cfg.Tickers.ARegression.SkipUpstream,
+	}
+	if cfg.Tickers.ARegression.Enabled {
 		logger.Info("regression ticker started",
 			slog.Duration("interval", interval),
 			slog.Int("sample_size", cfg.Tickers.ARegression.SampleSize),
 			slog.Bool("skip_upstream", cfg.Tickers.ARegression.SkipUpstream),
 		)
 		go tk.Run(ctx)
+	} else {
+		logger.Info("regression ticker scheduler disabled (manual trigger still available)",
+			slog.Bool("skip_upstream", cfg.Tickers.ARegression.SkipUpstream),
+		)
 	}
 
 	// Background monthly usage reset ticker: zeros api_keys.monthly_used
@@ -307,7 +382,19 @@ func run() error {
 	}
 
 	// Boot API server.
-	srv := api.New(cfg, logger, v1h, apiKeyStore, accountStore, jobStore, usageStore, groupStore, metrics, cpaHandler, modelHealthStore, webhooks, rf, tk, auditStore, registry)
+	// Registrar (higgsfield signup flow). Build tag "register" swaps
+	// higgsfield.NewRegistrar between stub (returns ErrRegistrarDisabled
+	// on every method) and the real puppeteer/OTP/captcha skeleton.
+	registrar := higgsfield.NewRegistrar(higgsfield.Deps{})
+
+	srv := api.New(cfg, logger, v1h, apiKeyStore, accountStore, jobStore, usageStore, groupStore, metrics, cpaHandler, modelHealthStore, webhooks, rf, tk, auditStore, registry, settingsStore, bearerMgr)
+	srv.Registrar = registrar
+	// Wire the failover admin surface (assigned as fields rather than
+	// added to the already-large api.New signature).
+	srv.FailoverEvents = failoverEvents
+	srv.FailoverOverrides = failoverOverrs
+	srv.FailoverConfig = &cfg.Failover
+	srv.ModelOverrides = modelOverrides
 	if err := srv.ListenAndServe(ctx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return fmt.Errorf("serve: %w", err)
 	}

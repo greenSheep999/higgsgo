@@ -26,6 +26,23 @@ var (
 
 	ErrJobNotFound = errors.New("job not found")
 
+	// ErrSettingNotFound is returned by SettingsStore.Get when the key
+	// has no row. Callers that expect a fallback (e.g. TOML defaults)
+	// should treat this as "no override" rather than propagating it.
+	ErrSettingNotFound = errors.New("setting not found")
+
+	// ErrModelOverrideNotFound — no override row for the alias. Treat
+	// as "no override, spec defaults apply", don't propagate as error.
+	ErrModelOverrideNotFound = errors.New("model override not found")
+
+	// Registrar (higgsfield account registration flow). The slim build
+	// ships a stub Registrar returning ErrRegistrarDisabled so admin
+	// handlers answer 503 with a stable error shape. Real puppeteer /
+	// OTP / captcha implementation is compiled in behind build tag
+	// "register".
+	ErrRegistrarDisabled    = errors.New("registrar disabled (build without 'register' tag)")
+	ErrRegistrationNotFound = errors.New("registration not found")
+
 	ErrUpstreamTimeout      = errors.New("upstream did not reach terminal state within deadline")
 	ErrUpstreamRateLimit    = errors.New("upstream rate limit reached")
 	ErrUpstreamUnauthorized = errors.New("upstream 401: JWT invalid or session expired")

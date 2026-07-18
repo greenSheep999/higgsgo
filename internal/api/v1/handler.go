@@ -143,19 +143,59 @@ func (h *Handler) HandleModelsList(w http.ResponseWriter, r *http.Request) {
 // modelView renders a ModelSpec as the map shape emitted by
 // GET /v1/models. Kept close to the handler so the wire contract stays
 // visible next to the endpoint that promises it.
+//
+// The list intentionally over-serialises: fields like endpoint /
+// version / media_role are useful both to the WebUI's detail sheet
+// and to a downstream aggregator (new-api) that wants to describe
+// each model without a second /admin round trip. Empty strings /
+// nil slices are still emitted so the client's zod schema stays
+// stable across catalog reloads.
 func modelView(m *domain.ModelSpec) map[string]any {
+	// Never emit `null` for slice fields — the WebUI expects an
+	// array so it can `.map` without branching. Every other field
+	// mirrors the domain zero value.
+	extra := m.ExtraAliases
+	if extra == nil {
+		extra = []string{}
+	}
+	required := m.RequiredParams
+	if required == nil {
+		required = []string{}
+	}
+	// tags is always an array so the WebUI's `.map` never has to
+	// branch. The registry's deriveTags() populates a non-nil slice
+	// but keep this guard for older cached specs / test doubles.
+	tags := m.Tags
+	if tags == nil {
+		tags = []string{}
+	}
 	return map[string]any{
-		"id":              m.Alias,
-		"object":          "model",
-		"output":          m.Output,
-		"jst":             m.JST,
-		"est_cost":        float64(m.EstCostHundredths) / 100.0,
-		"required_params": m.RequiredParams,
-		"unstable":        m.Unstable,
-		"requires_paid":   m.RequiresPaid,
-		"requires_unlim":  m.RequiresUnlim,
-		"requires_ultra":  m.RequiresUltra,
-		"starter_locked":  m.StarterLocked,
+		"id":                     m.Alias,
+		"object":                 "model",
+		"output":                 m.Output,
+		"jst":                    m.JST,
+		"endpoint":               m.Endpoint,
+		"version":                m.Version,
+		"media_role":             m.MediaRole,
+		"app_slug":               m.ApplicationSlug,
+		"example_body_json":      m.ExampleBodyJSON,
+		"est_cost":               float64(m.EstCostHundredths) / 100.0,
+		"required_params":        required,
+		"unstable":               m.Unstable,
+		"requires_paid":          m.RequiresPaid,
+		"requires_unlim":         m.RequiresUnlim,
+		"requires_ultra":         m.RequiresUltra,
+		"starter_locked":         m.StarterLocked,
+		"tier_source":            m.TierSource,
+		"min_credits_hundredths": m.MinCreditsHundredths,
+		"extra_aliases":          extra,
+		"note":                   m.Note,
+		// User-facing tier + operational tags derived at load time.
+		// min_plan == "" means "no gate found — free tier ok".
+		"min_plan":         string(m.MinPlan),
+		"tags":             tags,
+		"max_resolution":   m.MaxResolution,
+		"max_duration_sec": m.MaxDurationSec,
 	}
 }
 

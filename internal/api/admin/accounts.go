@@ -147,6 +147,9 @@ func accountCanRun(a *domain.Account, m *domain.ModelSpec) (bool, string) {
 type patchAccountRequest struct {
 	Priority      *int    `json:"priority,omitempty"`
 	BoundProxyURL *string `json:"bound_proxy_url,omitempty"`
+	MaxConcurrent *int    `json:"max_concurrent,omitempty"`
+	Note          *string `json:"note,omitempty"`
+	Source        *string `json:"source,omitempty"`
 }
 
 // priorityRange bounds the operator-managed sort hint so a typo can't
@@ -195,6 +198,20 @@ func (h *AccountsHandler) Patch(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.BoundProxyURL != nil {
 		existing.BoundProxyURL = *req.BoundProxyURL
+	}
+	if req.MaxConcurrent != nil {
+		if *req.MaxConcurrent < 0 || *req.MaxConcurrent > 20 {
+			writeErr(w, http.StatusBadRequest, "invalid_body",
+				"max_concurrent must be in [0, 20]")
+			return
+		}
+		existing.MaxConcurrent = *req.MaxConcurrent
+	}
+	if req.Note != nil {
+		existing.Note = *req.Note
+	}
+	if req.Source != nil {
+		existing.Source = *req.Source
 	}
 
 	// Upsert rewrites every column, so the two writes above collide with
@@ -770,6 +787,9 @@ func accountView(a *domain.Account) map[string]any {
 		"fail_streak":          a.FailStreak,
 		"bound_proxy_url":      a.BoundProxyURL,
 		"priority":             a.Priority,
+		"max_concurrent":       a.MaxConcurrent,
+		"note":                 a.Note,
+		"source":               a.Source,
 	}
 	if !a.PlanEndsAt.IsZero() {
 		v["plan_ends_at"] = a.PlanEndsAt.UTC().Format(time.RFC3339)

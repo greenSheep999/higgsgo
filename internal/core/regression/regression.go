@@ -119,7 +119,7 @@ func (t *Ticker) Run(ctx context.Context) {
 
 	// One immediate pass so a freshly booted process does not wait an
 	// entire interval before observing model health. Matches refresher.go.
-	t.tick(ctx)
+	t.tick(ctx, t.SampleSize)
 	for {
 		select {
 		case <-ctx.Done():
@@ -128,18 +128,28 @@ func (t *Ticker) Run(ctx context.Context) {
 			}
 			return
 		case <-ticker.C:
-			t.tick(ctx)
+			t.tick(ctx, t.SampleSize)
 		}
 	}
 }
 
-// TriggerOnce runs a single probe pass synchronously. Intended for admin
-// endpoints that want to force an immediate regression sweep without
-// waiting for the ticker interval. Failures inside tick / probeOne are
-// already logged per-model, so this wrapper has nothing to return.
+// TriggerOnce runs a single probe pass synchronously, honouring the
+// configured SampleSize (i.e. the same small batch the background ticker
+// would run). Kept for callers that want a scheduler-equivalent nudge.
 func (t *Ticker) TriggerOnce(ctx context.Context) {
 	t.applyDefaults()
-	t.tick(ctx)
+	t.tick(ctx, t.SampleSize)
+}
+
+// TriggerSweep probes the ENTIRE image catalog in one pass, ignoring
+// SampleSize. This is what the admin "probe now" button calls: an
+// operator clicking it expects every model's status to refresh at
+// once, not a 5-at-a-time trickle that only fills in after repeated
+// clicks. Concurrency still bounds in-flight probes so a full sweep
+// does not stampede upstream.
+func (t *Ticker) TriggerSweep(ctx context.Context) {
+	t.applyDefaults()
+	t.tick(ctx, 0 /* 0 = no cap, probe all candidates */)
 }
 
 // applyDefaults fills zero-valued config fields with package defaults.
@@ -159,13 +169,14 @@ func (t *Ticker) applyDefaults() {
 	}
 }
 
-// tick runs one probe pass. Exposed to tests via a single-shot entry point
-// (see regression_test.go) so they can assert without dealing with real
-// time.Ticker cadence.
-func (t *Ticker) tick(ctx context.Context) {
+// tick runs one probe pass over up to `sampleSize` candidates (0 = probe
+// every image model this pass). Exposed to tests via a single-shot entry
+// point (see regression_test.go) so they can assert without dealing with
+// real time.Ticker cadence.
+func (t *Ticker) tick(ctx context.Context, sampleSize int) {
 	t.applyDefaults()
 
-	candidates := t.pickCandidates(ctx)
+	candidates := t.pickCandidates(ctx, sampleSize)
 	if len(candidates) == 0 {
 		if t.Logger != nil {
 			t.Logger.Debug("regression tick: no candidates")
@@ -193,11 +204,13 @@ func (t *Ticker) tick(ctx context.Context) {
 	wg.Wait()
 }
 
-// pickCandidates enumerates image-output models and returns the SampleSize
-// entries with the oldest Latest.CheckedAt. Never-probed models sort as
-// "oldest" (nil row) so they are picked first — that guarantees a freshly
-// registered model gets covered on the very next tick.
-func (t *Ticker) pickCandidates(ctx context.Context) []*domain.ModelSpec {
+// pickCandidates enumerates image-output models and returns up to
+// `sampleSize` entries with the oldest Latest.CheckedAt. A sampleSize of
+// 0 (or ≥ candidate count) returns every candidate — used by the manual
+// "probe now" sweep. Never-probed models sort as "oldest" (nil row) so
+// they are picked first — that guarantees a freshly registered model
+// gets covered on the very next tick.
+func (t *Ticker) pickCandidates(ctx context.Context, sampleSize int) []*domain.ModelSpec {
 	all := t.Registry.List(ports.ModelFilter{Output: "image"})
 
 	// Belt-and-suspenders JST filter: some jsonstatic registries used to

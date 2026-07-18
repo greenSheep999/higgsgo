@@ -131,3 +131,31 @@ func scanModelHealth(sc scanner) (*ports.ModelHealthRow, error) {
 	r.PollTimeSec = int(pollSec.Int64)
 	return &r, nil
 }
+
+// UptimeByJST computes per-jst uptime as a percentage over all probes
+// whose checked_at >= since. A verdict of "completed" counts as success.
+func (s *ModelHealthStore) UptimeByJST(ctx context.Context, since time.Time) (map[string]float64, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT jst,
+			COUNT(*) AS total,
+			SUM(CASE WHEN verdict = 'completed' THEN 1 ELSE 0 END) AS ok
+		FROM model_health
+		WHERE checked_at >= ?
+		GROUP BY jst`, fmtTime(since.UTC()))
+	if err != nil {
+		return nil, fmt.Errorf("uptime by jst: %w", err)
+	}
+	defer rows.Close()
+	out := make(map[string]float64)
+	for rows.Next() {
+		var jst string
+		var total, ok int64
+		if err := rows.Scan(&jst, &total, &ok); err != nil {
+			return nil, err
+		}
+		if total > 0 {
+			out[jst] = float64(ok) / float64(total) * 100.0
+		}
+	}
+	return out, rows.Err()
+}

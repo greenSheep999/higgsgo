@@ -131,6 +131,12 @@ func (h *fakeHealthStore) List(context.Context) ([]ports.ModelHealthRow, error) 
 	return out, nil
 }
 
+// UptimeByJST satisfies the ports.ModelHealthStore interface. The
+// regression ticker never calls this; shim exists for interface parity.
+func (h *fakeHealthStore) UptimeByJST(_ context.Context, _ time.Time) (map[string]float64, error) {
+	return map[string]float64{}, nil
+}
+
 func (h *fakeHealthStore) seedLatest(jst string, checkedAt time.Time) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -244,7 +250,7 @@ func TestTicker_ProbesSampleSize(t *testing.T) {
 		Concurrency: 4,
 	}
 	tk.applyDefaults()
-	tk.tick(context.Background())
+	tk.tick(context.Background(), tk.SampleSize)
 
 	got := fake.calledAliases()
 	if len(got) != 3 {
@@ -293,7 +299,7 @@ func TestTicker_UpdatesHealthStore(t *testing.T) {
 		SampleSize:  5,
 		Concurrency: 5,
 	}
-	tk.tick(context.Background())
+	tk.tick(context.Background(), tk.SampleSize)
 
 	// Count verdicts by inspecting the recorded inserts.
 	var completed, failed int
@@ -341,7 +347,7 @@ func TestTicker_ConcurrencyBound(t *testing.T) {
 		SampleSize:  7,
 		Concurrency: 1,
 	}
-	tk.tick(context.Background())
+	tk.tick(context.Background(), tk.SampleSize)
 
 	if got := atomic.LoadInt32(&fake.maxActive); got > 1 {
 		t.Errorf("maxActive: got %d want <= 1 (concurrency bound violated)", got)
@@ -364,7 +370,7 @@ func TestTicker_SkipsWhenRegistryEmpty(t *testing.T) {
 		Concurrency: 2,
 	}
 	// No panic, no proxy call, no insert.
-	tk.tick(context.Background())
+	tk.tick(context.Background(), tk.SampleSize)
 	if len(fake.calls) != 0 {
 		t.Errorf("expected 0 proxy calls, got %d", len(fake.calls))
 	}
@@ -391,7 +397,7 @@ func TestTicker_SkipUpstream(t *testing.T) {
 		Concurrency:  2,
 		SkipUpstream: true,
 	}
-	tk.tick(context.Background())
+	tk.tick(context.Background(), tk.SampleSize)
 
 	if len(fake.calls) != 0 {
 		t.Errorf("SkipUpstream should not call Proxy, got %d calls", len(fake.calls))
@@ -433,7 +439,7 @@ func TestTicker_PicksOldestFirst(t *testing.T) {
 		SampleSize:  3,
 		Concurrency: 3,
 	}
-	tk.tick(context.Background())
+	tk.tick(context.Background(), tk.SampleSize)
 
 	got := fake.calledAliases()
 	want := []string{"unseen-1", "unseen-2", "unseen-3"}
@@ -453,7 +459,7 @@ func TestTicker_PicksOldestFirst(t *testing.T) {
 	fake.mu.Lock()
 	fake.calls = nil
 	fake.mu.Unlock()
-	tk.tick(context.Background())
+	tk.tick(context.Background(), tk.SampleSize)
 	got = fake.calledAliases()
 	if len(got) != 1 || got[0] != "old-1" {
 		t.Errorf("second tick: got %v want [old-1]", got)

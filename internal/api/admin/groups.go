@@ -19,9 +19,19 @@ import (
 // pool subset.
 type GroupsHandler struct {
 	Groups ports.GroupStore
+
+	// Settings is an optional dependency used only by Create to look up
+	// the operator-configured routing_strategy_default when the request
+	// body does not carry an explicit route_strategy. Nil is safe — the
+	// handler falls back to domain.RouteRoundRobin, matching the prior
+	// hard-coded behaviour.
+	Settings ports.SettingsStore
 }
 
-// NewGroupsHandler wires a GroupsHandler over the given store.
+// NewGroupsHandler wires a GroupsHandler over the given store. The
+// SettingsStore-dependent default routing behaviour is opt-in via the
+// public Settings field; slimmer deployments that skip the settings
+// surface still get sane defaults.
 func NewGroupsHandler(g ports.GroupStore) *GroupsHandler {
 	return &GroupsHandler{Groups: g}
 }
@@ -95,7 +105,13 @@ func (h *GroupsHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 	route := domain.RouteStrategy(req.RouteStrategy)
 	if route == "" {
-		route = domain.RouteRoundRobin
+		// No explicit strategy on the request → consult the operator-
+		// configured routing_strategy_default in system_settings. When
+		// the store is nil, the row is missing, or the persisted value
+		// is unrecognised, ResolveDefaultRouteStrategy falls back to
+		// domain.RouteRoundRobin so this path degrades to the prior
+		// hard-coded behaviour.
+		route = ResolveDefaultRouteStrategy(r, h.Settings)
 	}
 	g := &domain.Group{
 		ID:                      idgen.NewID("grp"),

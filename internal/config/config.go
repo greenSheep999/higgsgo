@@ -30,6 +30,65 @@ type Config struct {
 	Tickers       TickersConfig       `toml:"tickers"`
 	Notifiers     []NotifierConfig    `toml:"notifiers"`
 	Observability ObservabilityConfig `toml:"observability"`
+	Updates       UpdatesConfig       `toml:"updates"`
+	Failover      FailoverConfig      `toml:"failover"`
+}
+
+// FailoverConfig configures the two automatic-isolation mechanisms
+// implemented in core/failover. When disabled the pool behaves exactly
+// like it did pre-013 (no auto-disable, no throttle cooldowns).
+type FailoverConfig struct {
+	Enabled     bool                       `toml:"enabled"`
+	Consecutive ConsecutiveFailoverConfig  `toml:"consecutive"`
+	Throttle    ThrottleFailoverConfig     `toml:"throttle"`
+	OutageGuard OutageGuardConfig          `toml:"outage_guard"`
+}
+
+// ConsecutiveFailoverConfig — mechanism ①: N account-attributable
+// failures in a row → disable.
+type ConsecutiveFailoverConfig struct {
+	Enabled   bool `toml:"enabled"`
+	FailLimit int  `toml:"fail_limit"`
+}
+
+// ThrottleFailoverConfig — mechanism ②: sliding window over 429 /
+// risk-marker events. Off by default until real production 429 body
+// samples let us populate RiskMarkers safely.
+type ThrottleFailoverConfig struct {
+	Enabled        bool     `toml:"enabled"`
+	JudgeWindowSec int      `toml:"judge_window_sec"`
+	JudgeCount     int      `toml:"judge_count"`
+	CooldownSec    int      `toml:"cooldown_sec"`
+	EvictWindowSec int      `toml:"evict_window_sec"`
+	EvictCount     int      `toml:"evict_count"`
+	// RiskMarkers is a case-insensitive substring list matched against
+	// 429 response bodies. Empty = every 429 counts equally. TODO
+	// (failover): fill this in after collecting real higgsfield 429 /
+	// DataDome bodies. Do not use third-party CDN/WAF product names.
+	RiskMarkers []string `toml:"risk_markers"`
+}
+
+// OutageGuardConfig — pool-level circuit breaker. If the controller
+// disabled more than DisableCountLimit accounts in the last WindowSec
+// seconds, stop disabling and just log/alert (assume it's a
+// higgsfield-wide incident, not N bad accounts).
+type OutageGuardConfig struct {
+	WindowSec         int `toml:"window_sec"`
+	DisableCountLimit int `toml:"disable_count_limit"`
+}
+
+// UpdatesConfig controls the /admin/version/check endpoint that polls
+// GitHub Releases for a newer higgsgo. Purely advisory — the running
+// binary is never replaced; the WebUI simply surfaces a badge when
+// a newer release is available.
+//
+// Owner is case-sensitive at api.github.com (mismatched case still
+// resolves to the same repo but leaks the mismatch back in error
+// bodies), so keep the canonical mixed-case here.
+type UpdatesConfig struct {
+	GitHubOwner  string `toml:"github_owner"`
+	GitHubRepo   string `toml:"github_repo"`
+	CheckEnabled bool   `toml:"check_enabled"`
 }
 
 type ServerConfig struct {
@@ -286,6 +345,31 @@ func defaults() *Config {
 			// is a hard cap on outbound spend and a stale value would
 			// silently freeze traffic on the first of the month.
 			MonthReset: MonthResetConfig{Enabled: true},
+		},
+		Updates: UpdatesConfig{
+			GitHubOwner:  "greenSheep999",
+			GitHubRepo:   "higgsgo",
+			CheckEnabled: true,
+		},
+		Failover: FailoverConfig{
+			Enabled: true,
+			Consecutive: ConsecutiveFailoverConfig{
+				Enabled:   true,
+				FailLimit: 3,
+			},
+			Throttle: ThrottleFailoverConfig{
+				Enabled:        false,
+				JudgeWindowSec: 60,
+				JudgeCount:     5,
+				CooldownSec:    600,
+				EvictWindowSec: 3600,
+				EvictCount:     3,
+				RiskMarkers:    []string{},
+			},
+			OutageGuard: OutageGuardConfig{
+				WindowSec:         30,
+				DisableCountLimit: 3,
+			},
 		},
 	}
 }
