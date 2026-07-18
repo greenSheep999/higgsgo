@@ -17,6 +17,14 @@ coverage.html
 # go.work.sum is per-developer.
 go.work.sum
 
+# WebUI build output — embedded from source at build time via
+# webui/dist/... //go:embed, so committing dist would just duplicate the
+# working tree.
+webui/dist/
+
+# Claude Code local session state (worktrees, cached agent output).
+.claude/
+
 # IDE / editor
 .idea/
 .vscode/
