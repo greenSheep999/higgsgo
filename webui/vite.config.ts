@@ -33,7 +33,14 @@ export default defineConfig({
     ],
   },
   server: {
-    port: 5173,
+    // 5373 is deliberately non-standard so a sibling project's vite
+    // dev server (e.g. claudego's, which uses 5273) can't collide.
+    // Vite's auto-increment fallback silently jumps to 5174/5175
+    // when 5173 is taken and the browser tab you already opened
+    // then serves someone else's SPA — this bit us in P4-3c.
+    // strictPort makes the collision fail loudly instead.
+    port: 5373,
+    strictPort: true,
     proxy: {
       "/admin": "http://127.0.0.1:18081",
       "/v1/playground": "http://127.0.0.1:18081",
