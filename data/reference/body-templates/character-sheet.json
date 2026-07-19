@@ -1,0 +1,41 @@
+{
+  "alias": "character-sheet",
+  "jobSetType": "character_sheet",
+  "endpoint": "/jobs/v2/character_sheet",
+  "version": "v2",
+  "output": "image",
+  "realCost": 2,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k",
+      "medias": [
+        {
+          "role": "image",
+          "data": {
+            "id": "3267a19f-addc-49ac-8292-f1acf5e1c63b",
+            "type": "media_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/3267a19f-addc-49ac-8292-f1acf5e1c63b.jpg"
+          }
+        }
+      ]
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "4e00ce33-c880-4c47-9d50-83ef541178a8",
+    "jobId": "6ef4d2a8-78e7-448e-b5e6-e69d13d26dec",
+    "cost": 200
+  },
+  "generatedAt": "2026-07-01T16:38:38.048Z"
+}

@@ -4,11 +4,13 @@
 package jsonstatic
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 
@@ -18,8 +20,10 @@ import (
 
 // Registry implements ports.ModelRegistry.
 type Registry struct {
-	path      string
-	extraPath string
+	path             string
+	extraPath        string
+	bodyTemplatesDir string
+	catalogsDir      string
 
 	mu      sync.RWMutex
 	byAlias map[string]*domain.ModelSpec
@@ -75,11 +79,32 @@ type Config struct {
 	// non-fatal — models without an entry render as "—" in the UI.
 	// See data/reference/model-specs-extra.json for the shape.
 	ExtraSpecsPath string
+
+	// BodyTemplatesDir (optional) points at a directory of per-alias
+	// body-template JSON files (see higgsfield-register/server/data/
+	// body-templates/). When set, each file's `exampleBody` is
+	// serialised into ModelSpec.ExampleBodyJSON and its `catalogRefs`
+	// map is used to resolve enum values from CatalogsDir. Missing dir
+	// is non-fatal — the loader silently skips enrichment.
+	BodyTemplatesDir string
+
+	// CatalogsDir (optional) points at a directory of catalog JSON
+	// files (see higgsfield-register/server/data/catalogs/) referenced
+	// by body-template catalogRefs. Each catalog is a `{items: [{id,
+	// name, ...}]}` document; the loader extracts every item's id and
+	// exposes them via ModelSpec.Enums[<param>]. Ignored when
+	// BodyTemplatesDir is empty.
+	CatalogsDir string
 }
 
 // New constructs a Registry and loads the file immediately.
 func New(cfg Config) (*Registry, error) {
-	r := &Registry{path: cfg.Path, extraPath: cfg.ExtraSpecsPath}
+	r := &Registry{
+		path:             cfg.Path,
+		extraPath:        cfg.ExtraSpecsPath,
+		bodyTemplatesDir: cfg.BodyTemplatesDir,
+		catalogsDir:      cfg.CatalogsDir,
+	}
 	if err := r.Reload(context.Background()); err != nil {
 		return nil, err
 	}
@@ -169,6 +194,20 @@ func (r *Registry) Reload(ctx context.Context) error {
 		return fmt.Errorf("load model extras: %w", err)
 	}
 
+	// Load body-templates + catalogs up front so every spec below can be
+	// enriched with ExampleBodyJSON + Enums in the same pass. Both are
+	// optional: a missing directory returns an empty map and downstream
+	// consumers (buildBody defaults, WebUI schema-driven forms) simply
+	// see the pre-enrichment behaviour.
+	templates, err := loadBodyTemplates(r.bodyTemplatesDir)
+	if err != nil {
+		return fmt.Errorf("load body templates: %w", err)
+	}
+	catalogs, err := loadCatalogs(r.catalogsDir)
+	if err != nil {
+		return fmt.Errorf("load catalogs: %w", err)
+	}
+
 	byAlias := make(map[string]*domain.ModelSpec, len(raw.Models))
 	locked := make(map[string]struct{})
 	for _, m := range raw.Models {
@@ -201,6 +240,25 @@ func (r *Registry) Reload(ctx context.Context) error {
 		if e, ok := extras[m.Alias]; ok {
 			spec.MaxResolution = e.MaxResolution
 			spec.MaxDurationSec = e.MaxDurationSec
+		}
+		// Apply body-template enrichment. The template lookup key is the
+		// alias itself; missing template leaves ExampleBodyJSON/Enums
+		// zero-valued so pre-enrichment behaviour is preserved.
+		if t, ok := templates[m.Alias]; ok {
+			if len(t.exampleBodyJSON) > 0 {
+				spec.ExampleBodyJSON = t.exampleBodyJSON
+			}
+			if len(t.catalogRefs) > 0 {
+				enums := make(map[string][]string, len(t.catalogRefs))
+				for paramName, catalogPath := range t.catalogRefs {
+					if ids, ok := catalogs[catalogPath]; ok && len(ids) > 0 {
+						enums[paramName] = ids
+					}
+				}
+				if len(enums) > 0 {
+					spec.Enums = enums
+				}
+			}
 		}
 		byAlias[m.Alias] = spec
 		// Keep a JST-keyed locked set in sync with the per-spec flag so
@@ -511,4 +569,161 @@ func loadExtras(path string) (map[string]extraSpec, error) {
 		return map[string]extraSpec{}, nil
 	}
 	return wrapper.Aliases, nil
+}
+
+// bodyTemplate is the loader-facing slice of a body-template file. The
+// raw file also carries `exampleResponse` / `bestPracticeBody` /
+// `generatedAt` which the higgsgo consumer does not need.
+type bodyTemplate struct {
+	exampleBodyJSON string
+	catalogRefs     map[string]string // paramName -> "catalogs/foo.json"
+}
+
+// loadBodyTemplates walks BodyTemplatesDir and returns an alias-keyed
+// map. The alias is taken from the `alias` field inside each JSON file,
+// NOT the filename — kebab-case filenames don't always match the
+// snake_case JST or the alias key used by verified-models.json. An
+// empty or missing dir returns an empty map without error so tests /
+// slim deployments can opt out. Individual malformed files are logged
+// via the returned error only on Unmarshal failure; a missing exampleBody
+// or catalogRefs simply produces an empty template entry.
+func loadBodyTemplates(dir string) (map[string]bodyTemplate, error) {
+	out := map[string]bodyTemplate{}
+	if dir == "" {
+		return out, nil
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return out, nil
+		}
+		return nil, fmt.Errorf("read body-templates dir %q: %w", dir, err)
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		body, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			return nil, fmt.Errorf("read body template %q: %w", e.Name(), err)
+		}
+		var raw struct {
+			Alias        string            `json:"alias"`
+			ExampleBody  json.RawMessage   `json:"exampleBody"`
+			CatalogRefs  map[string]string `json:"catalogRefs"`
+		}
+		if err := json.Unmarshal(body, &raw); err != nil {
+			return nil, fmt.Errorf("parse body template %q: %w", e.Name(), err)
+		}
+		if raw.Alias == "" {
+			continue
+		}
+		t := bodyTemplate{catalogRefs: raw.CatalogRefs}
+		if len(raw.ExampleBody) > 0 {
+			// Compact so the serialised string is deterministic and
+			// small — the field is transmitted to the SPA on every
+			// model-list load.
+			var buf bytes.Buffer
+			if err := json.Compact(&buf, raw.ExampleBody); err == nil {
+				t.exampleBodyJSON = buf.String()
+			} else {
+				// Fall back to the raw slice on compact failure —
+				// still valid JSON, just not minimised.
+				t.exampleBodyJSON = string(raw.ExampleBody)
+			}
+		}
+		out[raw.Alias] = t
+	}
+	return out, nil
+}
+
+// loadCatalogs walks CatalogsDir and returns a map keyed by
+// "catalogs/<name>.json" (matching the catalogRefs values in body
+// templates) whose value is the ordered list of item ids. Each catalog
+// file follows the shape `{"items": [{"id": "...", ...}, ...]}`. An
+// empty or missing dir returns an empty map without error.
+func loadCatalogs(dir string) (map[string][]string, error) {
+	out := map[string][]string{}
+	if dir == "" {
+		return out, nil
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return out, nil
+		}
+		return nil, fmt.Errorf("read catalogs dir %q: %w", dir, err)
+	}
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		body, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		if err != nil {
+			return nil, fmt.Errorf("read catalog %q: %w", e.Name(), err)
+		}
+		// Two shapes appear in practice:
+		//   * {"items": [{"id": "...", ...}, ...]} — the common case
+		//     (styles / motions / soul_v2_presets / ...)
+		//   * [{"job_id": "...", ...}, ...] — a top-level array with
+		//     job_id as the identifier (marketing_studio_presets)
+		// Both variants are decoded to a flat []string of ids. Some
+		// files may have neither and simply produce an empty slice.
+		ids := parseCatalogIDs(body)
+		if len(ids) == 0 {
+			continue
+		}
+		// The key uses the "catalogs/foo.json" form that body-templates
+		// use in catalogRefs so lookups can be direct map hits.
+		out["catalogs/"+e.Name()] = ids
+	}
+	return out, nil
+}
+
+// parseCatalogIDs handles the two on-disk catalog shapes and returns
+// the ordered list of identifiers. Unknown shapes yield an empty slice
+// so the caller silently skips the catalog rather than aborting the
+// whole registry reload.
+func parseCatalogIDs(body []byte) []string {
+	// Try the wrapped {"items": [...]} shape first.
+	var wrapped struct {
+		Items []map[string]any `json:"items"`
+	}
+	if err := json.Unmarshal(body, &wrapped); err == nil && len(wrapped.Items) > 0 {
+		ids := make([]string, 0, len(wrapped.Items))
+		for _, it := range wrapped.Items {
+			if id := pickCatalogID(it); id != "" {
+				ids = append(ids, id)
+			}
+		}
+		if len(ids) > 0 {
+			return ids
+		}
+	}
+	// Fall back to the top-level array shape.
+	var arr []map[string]any
+	if err := json.Unmarshal(body, &arr); err == nil {
+		ids := make([]string, 0, len(arr))
+		for _, it := range arr {
+			if id := pickCatalogID(it); id != "" {
+				ids = append(ids, id)
+			}
+		}
+		return ids
+	}
+	return nil
+}
+
+// pickCatalogID returns the first identifier field found on an item.
+// Different catalogs use `id`, `job_id`, or `preset_id`; the loader
+// accepts any of them.
+func pickCatalogID(item map[string]any) string {
+	for _, key := range []string{"id", "job_id", "preset_id"} {
+		if v, ok := item[key]; ok {
+			if s, ok := v.(string); ok && s != "" {
+				return s
+			}
+		}
+	}
+	return ""
 }

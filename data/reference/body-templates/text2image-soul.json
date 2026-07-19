@@ -1,0 +1,31 @@
+{
+  "alias": "text2image-soul",
+  "jobSetType": "text2image_soul",
+  "endpoint": "/jobs/text2image-soul",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": 0.25,
+  "catalogRefs": {
+    "style_id": "catalogs/soul_v1_presets.json (106 items via /soul/presets)"
+  },
+  "bestPracticeBody": {
+    "params": {
+      "prompt": "a portrait, cinematic",
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "resolution": "1k",
+      "steps": 4,
+      "seed": 12345,
+      "style_id": "464ea177-8d40-4940-8d9d-b438bab269c7",
+      "input_images": [],
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "style_id from catalogs/soul_v1_presets.json (106 options: General/iPhone/Realistic/DigitalCam/Flight mode/etc)"
+}

@@ -1,0 +1,46 @@
+{
+  "alias": "ai-influencer",
+  "jobSetType": "ai_influencer",
+  "endpoint": "/jobs/ai-influencer",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": 2,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "f9309cb5-983a-4b3b-b8e1-73537a24176d",
+    "jobId": "348e3d59-47ed-453e-b464-c61b084f19d4",
+    "cost": 200
+  },
+  "generatedAt": "2026-07-01T06:08:15.429Z",
+  "bestPracticeBody": {
+    "params": {
+      "width": 768,
+      "height": 1344,
+      "aspect_ratio": "9:16",
+      "resolution": "2k",
+      "batch_size": 1,
+      "input_images": [],
+      "config": {},
+      "prompt": "a stylish influencer, casual photo"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "No catalog needed for basic mode. For outfit-driven, add outfit_preset_ids like nano-banana-2-ai-stylist."
+}

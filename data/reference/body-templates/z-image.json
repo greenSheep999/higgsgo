@@ -1,0 +1,31 @@
+{
+  "alias": "z-image",
+  "jobSetType": "z_image",
+  "endpoint": "/jobs/z-image",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": 0.15,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "f160ea75-2a13-4723-8134-8c95214e13c6",
+    "jobId": "45fb3ece-5bff-4fa5-8f82-9cd61aa71349",
+    "cost": 15
+  },
+  "generatedAt": "2026-07-01T07:20:01.134Z"
+}

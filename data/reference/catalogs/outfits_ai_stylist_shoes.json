@@ -1,0 +1,163 @@
+{
+  "user_cursor": null,
+  "preset_cursor": null,
+  "has_more": false,
+  "items": [
+    {
+      "id": "f720796c-9ba3-44fc-a57a-2e740360d35c",
+      "name": "White Dance Cut-Out Heels",
+      "asset_type": "shoes",
+      "gender": "female",
+      "input_image": {
+        "id": "ef21a34a-039e-4246-a406-e8fe55fedd26",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/ef21a34a-039e-4246-a406-e8fe55fedd26.jpg"
+      },
+      "created_at": 1765216516.310822,
+      "type": "preset"
+    },
+    {
+      "id": "4645b639-f582-40da-8cfa-ebbd617164bd",
+      "name": "White Classic Ballet Flats",
+      "asset_type": "shoes",
+      "gender": "female",
+      "input_image": {
+        "id": "5473583e-d2ec-4911-9d25-5435bae86b7e",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/5473583e-d2ec-4911-9d25-5435bae86b7e.jpg"
+      },
+      "created_at": 1765216516.309561,
+      "type": "preset"
+    },
+    {
+      "id": "8df48885-affc-4c01-8ca5-a942b16fe8c8",
+      "name": "Vintage Brown High-Top Sneakers",
+      "asset_type": "shoes",
+      "gender": "female",
+      "input_image": {
+        "id": "3f04aa66-bdc6-4d4f-bb1a-b6881c7ce88d",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/3f04aa66-bdc6-4d4f-bb1a-b6881c7ce88d.jpg"
+      },
+      "created_at": 1765216516.303482,
+      "type": "preset"
+    },
+    {
+      "id": "944527cd-c45d-406e-9070-4295af6a8265",
+      "name": "platform flipflops",
+      "asset_type": "shoes",
+      "gender": "female",
+      "input_image": {
+        "id": "ddf734f2-868c-4b7c-9e2c-1986a213996b",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/ddf734f2-868c-4b7c-9e2c-1986a213996b.jpg"
+      },
+      "created_at": 1765216516.278151,
+      "type": "preset"
+    },
+    {
+      "id": "e916cfb9-e401-4ce8-bf1f-74f71b2b4d5d",
+      "name": "platform boots",
+      "asset_type": "shoes",
+      "gender": "female",
+      "input_image": {
+        "id": "cd91b632-18ff-4884-8c90-52d88bc9df5b",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/cd91b632-18ff-4884-8c90-52d88bc9df5b.jpg"
+      },
+      "created_at": 1765216516.277682,
+      "type": "preset"
+    },
+    {
+      "id": "ea91766e-24cf-4471-97ae-92fb3de1fa12",
+      "name": "knee boots",
+      "asset_type": "shoes",
+      "gender": "female",
+      "input_image": {
+        "id": "7604d489-8b41-4acf-88ac-b2c9e4a6f373",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/7604d489-8b41-4acf-88ac-b2c9e4a6f373.jpg"
+      },
+      "created_at": 1765216516.265514,
+      "type": "preset"
+    },
+    {
+      "id": "9a8e288f-ea08-4e4b-82a5-c3b42fcaf607",
+      "name": "high sneakers",
+      "asset_type": "shoes",
+      "gender": "female",
+      "input_image": {
+        "id": "38710d00-4c57-4b99-aff4-3067c0c5f0a2",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/38710d00-4c57-4b99-aff4-3067c0c5f0a2.jpg"
+      },
+      "created_at": 1765216516.26429,
+      "type": "preset"
+    },
+    {
+      "id": "afc2f73f-34a8-4e3b-b1d5-bfda773d3826",
+      "name": "High Leather Buckle Boots",
+      "asset_type": "shoes",
+      "gender": "female",
+      "input_image": {
+        "id": "ddb7e29b-ce10-4d06-8306-259f29f87cf3",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/ddb7e29b-ce10-4d06-8306-259f29f87cf3.jpg"
+      },
+      "created_at": 1765216516.263681,
+      "type": "preset"
+    },
+    {
+      "id": "af32095c-5c73-41d0-aba0-708461a2d671",
+      "name": "bow black kitten heels",
+      "asset_type": "shoes",
+      "gender": "female",
+      "input_image": {
+        "id": "42751081-9327-4db7-a83e-a0574b75ce6e",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/42751081-9327-4db7-a83e-a0574b75ce6e.jpg"
+      },
+      "created_at": 1765216516.22569,
+      "type": "preset"
+    },
+    {
+      "id": "22adca37-d0ce-4305-8509-79308b781a0f",
+      "name": "Black Studded Clogs",
+      "asset_type": "shoes",
+      "gender": "female",
+      "input_image": {
+        "id": "096d669d-9948-4a66-ae39-885a58f37f74",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/096d669d-9948-4a66-ae39-885a58f37f74.jpg"
+      },
+      "created_at": 1765216516.221244,
+      "type": "preset"
+    },
+    {
+      "id": "e6c5aca4-309c-49e7-8c18-517c7cc2a588",
+      "name": "Black Platform Heel Boots",
+      "asset_type": "shoes",
+      "gender": "female",
+      "input_image": {
+        "id": "58b78695-4de6-4f49-8b40-51c0db6236b8",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/58b78695-4de6-4f49-8b40-51c0db6236b8.jpg"
+      },
+      "created_at": 1765216516.217755,
+      "type": "preset"
+    },
+    {
+      "id": "a95c1af6-129e-47db-b6e0-e8288c37e401",
+      "name": "Beige–Black Strap Stiletto Heels",
+      "asset_type": "shoes",
+      "gender": "female",
+      "input_image": {
+        "id": "84be38ef-a62c-4591-bd81-471799659e5b",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/84be38ef-a62c-4591-bd81-471799659e5b.jpg"
+      },
+      "created_at": 1765216516.206845,
+      "type": "preset"
+    }
+  ]
+}

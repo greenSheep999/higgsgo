@@ -1,0 +1,43 @@
+{
+  "alias": "grok-video-edit",
+  "jobSetType": "grok_video_edit",
+  "endpoint": "/jobs/v2/grok_video_edit",
+  "version": "v2",
+  "output": "video",
+  "realCost": 16,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "prompt": "a red apple",
+      "medias": [
+        {
+          "role": "video",
+          "data": {
+            "id": "8235ebbe-9335-4cd3-a0ef-eaf934f129bb",
+            "type": "video_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemqwvSqMuSk4JKHFXcZz57wm/8235ebbe-9335-4cd3-a0ef-eaf934f129bb.mp4"
+          }
+        },
+        {
+          "role": "video",
+          "data": {
+            "id": "8235ebbe-9335-4cd3-a0ef-eaf934f129bb",
+            "type": "video_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemqwvSqMuSk4JKHFXcZz57wm/8235ebbe-9335-4cd3-a0ef-eaf934f129bb.mp4"
+          }
+        }
+      ],
+      "resolution": "720p"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "6d26d48f-45ec-423e-9159-7c35f87c3671",
+    "jobId": "ac988d49-7eba-4863-b29d-bc680128c7bf",
+    "cost": 1600
+  },
+  "generatedAt": "2026-07-04T07:18:30.607Z"
+}

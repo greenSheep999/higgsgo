@@ -1,0 +1,25 @@
+{
+  "alias": "recraft-v4",
+  "jobSetType": "recraft_v4_1",
+  "endpoint": "/jobs/v2/recraft_v4_1",
+  "version": "v2",
+  "output": "image",
+  "realCost": 1.25,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "aspect_ratio": "1:1",
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "dbc5855d-39c6-4cd4-a157-0f43fb22a3a4",
+    "jobId": "b32cb898-e655-4c56-94ff-e193c9c72b5a",
+    "cost": 125
+  },
+  "generatedAt": "2026-07-01T04:53:21.525Z"
+}

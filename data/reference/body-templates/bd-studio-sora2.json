@@ -1,0 +1,31 @@
+{
+  "alias": "bd-studio-sora2",
+  "jobSetType": "bd_studio_sora2",
+  "endpoint": "/jobs/v2/bd_studio_sora2",
+  "version": "v2",
+  "output": "video",
+  "realCost": 10,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "9:16",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "720p"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "4e00ce33-c880-4c47-9d50-83ef541178a8",
+    "jobId": "38fd9612-95c1-42e8-997d-bde6d0f61233",
+    "cost": 1000
+  },
+  "generatedAt": "2026-07-01T13:52:27.631Z"
+}

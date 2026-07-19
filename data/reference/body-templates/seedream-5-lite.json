@@ -1,0 +1,26 @@
+{
+  "alias": "seedream-5-lite",
+  "jobSetType": "seedream_v5_lite",
+  "endpoint": "/jobs/v2/seedream_v5_lite",
+  "version": "v2",
+  "output": "image",
+  "realCost": 1,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "aspect_ratio": "1:1",
+      "quality": "high",
+      "seed": 12345,
+      "batch_size": 1,
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "dbc5855d-39c6-4cd4-a157-0f43fb22a3a4",
+    "jobId": "fa6b7250-73c8-4d87-b4aa-a907d0dc7160",
+    "cost": 100
+  },
+  "generatedAt": "2026-07-01T04:53:05.806Z"
+}

@@ -1,0 +1,106 @@
+{
+  "alias": "seedance",
+  "jobSetType": "seedance",
+  "endpoint": "/jobs/seedance",
+  "version": "v1-hyphen",
+  "output": "video",
+  "catalogRefs": {
+    "motion_id": "catalogs/motions.json"
+  },
+  "exampleBody": {
+    "params": {
+      "prompt": "",
+      "prompts": [],
+      "enhance_prompt": true,
+      "width": 1024,
+      "height": 1024,
+      "duration": 5,
+      "resolution": "480",
+      "seed": null,
+      "camera_fixed": false,
+      "model": "seedance_pro",
+      "input_image": {
+        "id": "b6452943-894e-4080-99c5-4d91fc81aacb",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/b6452943-894e-4080-99c5-4d91fc81aacb.jpg",
+        "type": "media_input"
+      },
+      "clean_input_image": null,
+      "draw_input_image": null,
+      "motion_id": null,
+      "motion": null,
+      "is_draw": false,
+      "application": null
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false,
+    "id": "7fcea673-6f9e-4abe-91d6-98c719853e84",
+    "status": "completed",
+    "result": {
+      "type": "video",
+      "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_062233_7fcea673-6f9e-4abe-91d6-98c719853e84.mp4"
+    },
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_062233_7fcea673-6f9e-4abe-91d6-98c719853e84.mp4"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_062233_7fcea673-6f9e-4abe-91d6-98c719853e84.mp4"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "board_ids": [],
+    "published_at": null,
+    "meta": {
+      "duration": 5
+    },
+    "created_at": 1782973353.821745,
+    "user_id": "user_3Flevg5z3r1kTApnx5j83ZABPoE",
+    "trace_id": "7fcea673-6f9e-4abe-91d6-98c719853e84",
+    "job_set_type": "seedance",
+    "job_set_id": "f3f368da-27ea-47f4-9d08-b566e01a0f1b",
+    "job_set_parent_id": null,
+    "job_set_client_meta": null,
+    "user": {
+      "id": "user_3Flevg5z3r1kTApnx5j83ZABPoE",
+      "full_name": "deconstructivistworm1673",
+      "username": "deconstructivistworm1673",
+      "avatar_url": null
+    },
+    "folder_ids": [],
+    "is_favourite": false,
+    "is_viewed": false
+  },
+  "exampleResponse": {
+    "jobId": "7fcea673-6f9e-4abe-91d6-98c719853e84"
+  },
+  "generatedAt": "2026-07-02T06:27:12.584Z",
+  "bestPracticeBody": {
+    "params": {
+      "prompt": ".",
+      "width": 512,
+      "height": 512,
+      "duration": 5,
+      "seed": 12345,
+      "model": "seedance_pro",
+      "input_image": {
+        "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+        "note": "Small red apple, 512x512. Safe default for image inputs."
+      },
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "resolution": "480",
+      "input_images": []
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "model enum: seedance_pro|seedance_lite|seedance_pro_fast. resolution literal: 480|720|1080 (no p)."
+}

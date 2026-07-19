@@ -1,0 +1,96 @@
+{
+  "alias": "topaz-video",
+  "jobSetType": "topaz_video",
+  "endpoint": "/jobs/topaz-video",
+  "version": "v1-hyphen",
+  "output": "video",
+  "realCost": null,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "output_width": 1024,
+      "output_height": 1024,
+      "enhancement": {
+        "model": "iris-3",
+        "params": {
+          "compression": 0.5,
+          "details": 0.5,
+          "preblur": 0,
+          "blur": 0,
+          "noise": 0,
+          "halo": 0,
+          "grain": {
+            "strength": 0,
+            "size": 0.05
+          }
+        },
+        "astra_params": null
+      },
+      "frame_interpolation": {
+        "model": "apo-8",
+        "fps": 30,
+        "slowmo": 1
+      },
+      "input_video": {
+        "id": "8235ebbe-9335-4cd3-a0ef-eaf934f129bb",
+        "type": "video_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemqwvSqMuSk4JKHFXcZz57wm/8235ebbe-9335-4cd3-a0ef-eaf934f129bb.mp4"
+      }
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "0443ba86-8ae7-4436-a243-87636a6a241b",
+    "jobId": "255dbca2-5e57-4849-a24e-c931e6b109b8"
+  },
+  "generatedAt": "2026-07-04T07:18:30.609Z",
+  "bestPracticeBody": {
+    "params": {
+      "input_video": {
+        "id": "bfbb9d8b-e9f8-4036-8576-79bbd431148b",
+        "type": "video_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/bfbb9d8b-e9f8-4036-8576-79bbd431148b.mp4",
+        "note": "Short real-scene mp4, 1MB, IP-check-cleared."
+      },
+      "width": 1024,
+      "height": 1024,
+      "output_width": 1024,
+      "output_height": 1024,
+      "enhancement": {
+        "model": "iris-3",
+        "params": {
+          "compression": 0.5,
+          "details": 0.5,
+          "preblur": 0,
+          "blur": 0,
+          "noise": 0,
+          "halo": 0,
+          "grain": {
+            "strength": 0,
+            "size": 0.05
+          }
+        }
+      },
+      "frame_interpolation": {
+        "model": "apo-8",
+        "params": {},
+        "fps": 30,
+        "slowmo": 1
+      },
+      "prompt": ".",
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "resolution": "1k",
+      "input_images": [],
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "enhancement.model enum: iris-3/prob-4/ahq-12/rhea-1/slp-2.5/gh...; grain is an object with {strength,size}. frame_interpolation.model: apo-8|chr-2."
+}

@@ -1,0 +1,24 @@
+{
+  "alias": "ms-image",
+  "jobSetType": "ms_image",
+  "endpoint": "/jobs/v2/ms_image",
+  "version": "v2",
+  "output": "image",
+  "realCost": 4,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "dbc5855d-39c6-4cd4-a157-0f43fb22a3a4",
+    "jobId": "959e328b-8cac-415a-873e-16a55e2e77fc",
+    "cost": 400
+  },
+  "generatedAt": "2026-07-01T05:01:49.368Z"
+}

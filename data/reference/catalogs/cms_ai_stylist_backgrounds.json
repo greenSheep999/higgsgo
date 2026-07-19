@@ -1,0 +1,149 @@
+{
+  "total": 13,
+  "cursor": null,
+  "items": [
+    {
+      "id": "4b10c8e3-55ab-4c2d-85a2-40c3ae419f83",
+      "name": "Field",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-backgrounds/06a84604-895b-4411-bfc8-601c482d9e17.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1440
+      },
+      "priority": 2
+    },
+    {
+      "id": "1def1ec0-734d-42f4-9b85-d17d99e32445",
+      "name": "Brick wall",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-backgrounds/c8a2071d-5878-4a99-b35e-f5720c863c1f.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 3
+    },
+    {
+      "id": "07ae44db-36a4-4f68-a821-c8fcb629d909",
+      "name": "Garden house",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-backgrounds/36c02fbf-e928-4e2d-b6fa-25f18fbe5e26.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 4
+    },
+    {
+      "id": "cf68401a-4d9e-4be3-abce-518f05782bc6",
+      "name": "Cafe",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-backgrounds/370a8dd5-6f1f-4732-8450-2b86d0b3f1f4.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1444
+      },
+      "priority": 5
+    },
+    {
+      "id": "79f43f24-b6e9-48b7-a368-22b510095654",
+      "name": "Gallery",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-backgrounds/70d22727-981a-4e65-b9fd-496849527186.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 6
+    },
+    {
+      "id": "aa79e26d-90cf-44b1-9d65-65ca91f613e6",
+      "name": "Graffiti 1",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-backgrounds/8e6e6e3d-4faf-4a77-8f51-a2a8ddbe402e.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1440
+      },
+      "priority": 7
+    },
+    {
+      "id": "18d98787-39e5-475c-84d2-b4e534e42c71",
+      "name": "Grey room 1",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-backgrounds/3211e455-0067-4131-8ca8-0af25e8d97af.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 8
+    },
+    {
+      "id": "a21f25c8-c70b-4c1d-8b58-7afcc853df31",
+      "name": "Library 2",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-backgrounds/46347170-d079-434e-9622-7755913b3384.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1445
+      },
+      "priority": 9
+    },
+    {
+      "id": "c386eea0-d023-4a1f-a95c-a891b1cde30b",
+      "name": "Library 1",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-backgrounds/7a98644d-1f9a-4160-93f5-398506a9229c.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 10
+    },
+    {
+      "id": "59573b11-3fb6-4a23-8841-572f429c6b81",
+      "name": "Parking",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-backgrounds/72f3d879-03cf-447b-8098-aa69ca85b1f4.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 11
+    },
+    {
+      "id": "87d5537f-9385-4713-a48a-97c299ed0c26",
+      "name": "Performative cafe",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-backgrounds/8a9f8440-69e9-4a48-bdec-3a081bab3a9d.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1440
+      },
+      "priority": 12
+    },
+    {
+      "id": "55f62636-6cf4-4d9c-a995-d6dc9c4aae09",
+      "name": "Balcony",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-backgrounds/13b6e831-0b49-4829-9c7a-762b497d2996.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1440
+      },
+      "priority": 13
+    },
+    {
+      "id": "338332e5-a46c-4a09-8110-a461f425289d",
+      "name": "Beach 2",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-backgrounds/b397ae10-236c-4ecf-b4d5-6a961ac11e21.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 14
+    }
+  ]
+}

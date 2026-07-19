@@ -1,0 +1,65 @@
+{
+  "alias": "kling2-6-lipsync",
+  "jobSetType": "kling2_6_lipsync",
+  "endpoint": "/jobs/kling2-6-lipsync",
+  "version": "v1-hyphen",
+  "output": "video",
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "audio_prompt": "a red apple on a wooden table, studio photo",
+      "duration": 5,
+      "aspect_ratio": "1:1",
+      "cfg_scale": 0.5,
+      "sound": true,
+      "input_image": null,
+      "negative_prompt": null,
+      "motion": null
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false,
+    "job_set_type": "kling2_6_lipsync",
+    "job_set_id": "3b764404-87e7-4912-94dc-d0c627676ff9",
+    "job_set_parent_id": null,
+    "job_set_client_meta": null,
+    "board_ids": [],
+    "meta": {
+      "duration": 5
+    },
+    "id": "462c1d63-d72b-412b-afdb-057aca0c7768",
+    "status": "completed",
+    "ip_check_finished": null,
+    "ip_detected": null,
+    "result": null,
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_071921_462c1d63-d72b-412b-afdb-057aca0c7768.mp4"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_071921_462c1d63-d72b-412b-afdb-057aca0c7768.mp4"
+      }
+    },
+    "published_at": null,
+    "created_at": 1782976761.743592,
+    "user_id": "user_3Flevg5z3r1kTApnx5j83ZABPoE",
+    "trace_id": "462c1d63-d72b-412b-afdb-057aca0c7768",
+    "user": {
+      "id": "user_3Flevg5z3r1kTApnx5j83ZABPoE",
+      "full_name": "deconstructivistworm1673",
+      "username": "deconstructivistworm1673",
+      "avatar_url": null
+    },
+    "folder_ids": [],
+    "is_favourite": false,
+    "is_viewed": false
+  },
+  "exampleResponse": {
+    "jobId": "462c1d63-d72b-412b-afdb-057aca0c7768"
+  },
+  "generatedAt": "2026-07-02T09:15:10.319Z"
+}

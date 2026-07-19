@@ -1,0 +1,49 @@
+{
+  "alias": "clipify",
+  "jobSetType": "clipify",
+  "endpoint": "/jobs/v2/clipify",
+  "version": "v2",
+  "output": "image",
+  "realCost": 7.84,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      "clips_num": 10,
+      "clip_aspect": "9:16",
+      "subtitle_highlight_hex": "#FFE84D",
+      "subtitle_position": "bottom",
+      "subtitle_font": "notosans",
+      "subtitle_case": "as-is",
+      "track_face_crop": true
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "dc1078d7-1290-476c-bc52-a13b49643aa0",
+    "jobId": "ccaadd6b-4234-428a-b92a-5227a662d8d6",
+    "cost": 784
+  },
+  "generatedAt": "2026-07-04T12:35:13.501Z",
+  "bestPracticeBody": {
+    "params": {
+      "urls": [
+        "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+      ],
+      "prompt": ".",
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "resolution": "720p",
+      "width": 1024,
+      "height": 1024,
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "input_images": []
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "urls array of source videos to compile."
+}

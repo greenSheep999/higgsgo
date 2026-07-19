@@ -1,0 +1,19 @@
+{
+  "alias": "cinematic-studio-video-3-5",
+  "jobSetType": "cinematic_studio_video_3_5",
+  "endpoint": "/jobs/v2/cinematic_studio_video_3_5",
+  "version": "v2",
+  "output": "video",
+  "realCost": 75,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {},
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "932a555e-467c-491f-820f-2d8b92d47f3b",
+    "cost": 7500
+  },
+  "generatedAt": "2026-07-04T07:18:59.171Z"
+}

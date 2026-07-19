@@ -1,0 +1,28 @@
+{
+  "alias": "llm-text",
+  "jobSetType": "llm_text",
+  "endpoint": "/jobs/v2/llm_text",
+  "version": "v2",
+  "output": "text",
+  "realCost": null,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {},
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "932a555e-467c-491f-820f-2d8b92d47f3b",
+    "cost": null
+  },
+  "generatedAt": "2026-07-04T07:18:59.169Z",
+  "bestPracticeBody": {
+    "params": {
+      "model": "gpt-4o-mini",
+      "prompt": "."
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "Free-pool text generation, no catalog needed."
+}

@@ -1,0 +1,23 @@
+{
+  "alias": "imagegen-2",
+  "jobSetType": "imagegen_2_0",
+  "endpoint": "/jobs/v2/imagegen_2_0",
+  "version": "v2",
+  "output": "image",
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "dbc5855d-39c6-4cd4-a157-0f43fb22a3a4",
+    "jobId": "ddbf007c-8adf-407d-8647-deb9684b5238",
+    "cost": 50
+  },
+  "generatedAt": "2026-07-01T04:48:30.333Z"
+}

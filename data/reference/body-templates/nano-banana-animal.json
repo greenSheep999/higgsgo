@@ -1,0 +1,28 @@
+{
+  "alias": "nano-banana-animal",
+  "jobSetType": "nano_banana_animal",
+  "endpoint": "/jobs/nano-banana-animal",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": null,
+  "catalogRefs": {
+    "preset_id": "spa-only-presets.json → nano_banana_animal"
+  },
+  "bestPracticeBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "input_image": {
+        "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+        "note": "Small red apple, 512x512. Safe default for image inputs."
+      },
+      "preset_id": "<SPA-only>"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "preset_id is animal-specific SPA-only. All generic /styles + /soul-v2/presets + /motions uuids rejected.",
+  "sourceOfPreset": "Open /apps/nano-banana-animal, upload image, click an animal preset, capture preset_id from POST body."
+}

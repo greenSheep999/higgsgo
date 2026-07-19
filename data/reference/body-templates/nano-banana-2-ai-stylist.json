@@ -1,0 +1,49 @@
+{
+  "alias": "nano-banana-2-ai-stylist",
+  "jobSetType": "nano_banana_2_ai_stylist",
+  "endpoint": "/jobs/nano-banana-2-ai-stylist",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": 2,
+  "catalogRefs": {
+    "outfit_preset_ids": "catalogs/outfits_ai_stylist_collage.json (asset_type=collage best)"
+  },
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "input_image": {
+        "id": "32a9b95e-f582-498e-8e4c-8dd4ae137065",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/32a9b95e-f582-498e-8e4c-8dd4ae137065.jpg"
+      },
+      "outfit_preset_ids": [
+        "cbadf332-fc78-4ac3-8f23-b4f5e0dbdcbd"
+      ]
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "cost": 200
+  },
+  "generatedAt": "2026-07-01T12:04:59.256Z",
+  "bestPracticeBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "input_image": {
+        "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+        "note": "Small red apple, 512x512. Safe default for image inputs."
+      },
+      "outfit_preset_ids": [
+        "cbadf332-fc78-4ac3-8f23-b4f5e0dbdcbd"
+      ]
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "outfit_preset_ids uses collage type by default; other categories in catalogs/outfits_ai_stylist_*.json."
+}

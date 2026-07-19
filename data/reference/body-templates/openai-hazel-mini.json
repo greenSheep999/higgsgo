@@ -1,0 +1,28 @@
+{
+  "alias": "openai-hazel-mini",
+  "jobSetType": "openai_hazel_mini",
+  "endpoint": "/jobs/openai-hazel-mini",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": 0.75,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple",
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "width": 1024,
+      "height": 1024,
+      "input_images": [],
+      "use_unlim": false
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "8f16a6f6-8fb6-4b44-868c-6aa45e6c74f8",
+    "jobId": "eb741c5c-a11d-4e4e-92e6-0428372d4458",
+    "cost": 75
+  },
+  "generatedAt": "2026-07-04T07:18:30.611Z"
+}

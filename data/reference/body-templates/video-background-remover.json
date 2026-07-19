@@ -1,0 +1,41 @@
+{
+  "alias": "video-background-remover",
+  "jobSetType": "video_background_remover",
+  "endpoint": "/jobs/v2/video_background_remover",
+  "version": "v2",
+  "output": "video",
+  "realCost": 1,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k",
+      "medias": [
+        {
+          "role": "video",
+          "data": {
+            "id": "7fff21a9-b2e1-419e-8633-296b11fb37a5",
+            "type": "video_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemqwvSqMuSk4JKHFXcZz57wm/7fff21a9-b2e1-419e-8633-296b11fb37a5.mp4"
+          }
+        }
+      ]
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "f160ea75-2a13-4723-8134-8c95214e13c6",
+    "jobId": "34dde09f-ac4e-49e8-ba24-a2940f7503ab",
+    "cost": 100
+  },
+  "generatedAt": "2026-07-02T06:38:18.732Z"
+}

@@ -379,6 +379,8 @@ function Playground() {
                 <ParamForm
                   params={selectedModel.required_params}
                   values={values}
+                  exampleBodyJSON={selectedModel.example_body_json}
+                  enums={selectedModel.enums}
                   onChange={(k, v) =>
                     setValues((prev) => ({ ...prev, [k]: v }))
                   }

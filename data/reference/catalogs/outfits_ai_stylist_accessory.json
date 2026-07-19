@@ -1,0 +1,189 @@
+{
+  "user_cursor": null,
+  "preset_cursor": null,
+  "has_more": false,
+  "items": [
+    {
+      "id": "bd5f526e-825b-4115-9ece-e7a2d8cccf82",
+      "name": "White Polka-Dot Sheer Scarf",
+      "asset_type": "accessory",
+      "gender": "female",
+      "input_image": {
+        "id": "f2091f7d-a7ad-4285-8168-683cd6d43079",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/f2091f7d-a7ad-4285-8168-683cd6d43079.jpg"
+      },
+      "created_at": 1765216516.315145,
+      "type": "preset"
+    },
+    {
+      "id": "a0284a4a-70f7-4ed9-aae8-88874d86443a",
+      "name": "Union Jack Knit Beanie",
+      "asset_type": "accessory",
+      "gender": "female",
+      "input_image": {
+        "id": "b1e550b8-0f2f-45c1-b4ac-5aa39223c88d",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/b1e550b8-0f2f-45c1-b4ac-5aa39223c88d.jpg"
+      },
+      "created_at": 1765216516.302133,
+      "type": "preset"
+    },
+    {
+      "id": "701976df-6dca-4e38-8f48-6d2c1e3a7802",
+      "name": "Silver Heart Drop Earrings",
+      "asset_type": "accessory",
+      "gender": "female",
+      "input_image": {
+        "id": "4d73860c-37a7-4fe3-a2ee-c2e5765e9e9b",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/4d73860c-37a7-4fe3-a2ee-c2e5765e9e9b.jpg"
+      },
+      "created_at": 1765216516.289224,
+      "type": "preset"
+    },
+    {
+      "id": "2cb95b10-bea9-4bbf-9f5e-55d482800976",
+      "name": "Navy Embroidered Beanie",
+      "asset_type": "accessory",
+      "gender": "female",
+      "input_image": {
+        "id": "20ee4ff4-ea61-485e-987c-58d95462c0ae",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/20ee4ff4-ea61-485e-987c-58d95462c0ae.jpg"
+      },
+      "created_at": 1765216516.27193,
+      "type": "preset"
+    },
+    {
+      "id": "04ca2930-a458-4764-9a64-df937f9c6442",
+      "name": "Light Blue Hobo Bag",
+      "asset_type": "accessory",
+      "gender": "female",
+      "input_image": {
+        "id": "8133ce0c-22fa-4a63-90aa-93aabe1c8957",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/8133ce0c-22fa-4a63-90aa-93aabe1c8957.jpg"
+      },
+      "created_at": 1765216516.267657,
+      "type": "preset"
+    },
+    {
+      "id": "1bf9c5ab-dfa1-4605-8cc2-e4014d830d77",
+      "name": "Faux Fur Trapper Hat",
+      "asset_type": "accessory",
+      "gender": "female",
+      "input_image": {
+        "id": "8aed370e-feb2-4352-99ec-c36fa2214ce8",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/8aed370e-feb2-4352-99ec-c36fa2214ce8.jpg"
+      },
+      "created_at": 1765216516.253977,
+      "type": "preset"
+    },
+    {
+      "id": "e79a9288-fa8b-40d1-9069-600de18a0668",
+      "name": "Double-Studded Punk Belt",
+      "asset_type": "accessory",
+      "gender": "female",
+      "input_image": {
+        "id": "f2f1207d-e813-48e7-9392-0a5dd5dab85b",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/f2f1207d-e813-48e7-9392-0a5dd5dab85b.jpg"
+      },
+      "created_at": 1765216516.250019,
+      "type": "preset"
+    },
+    {
+      "id": "a1a074e0-52f7-4d6c-b5d1-12a317bd0b59",
+      "name": "Classic Black Beret",
+      "asset_type": "accessory",
+      "gender": "female",
+      "input_image": {
+        "id": "75eac5ab-3a1b-41eb-b4d4-e2a805592c0e",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/75eac5ab-3a1b-41eb-b4d4-e2a805592c0e.jpg"
+      },
+      "created_at": 1765216516.235132,
+      "type": "preset"
+    },
+    {
+      "id": "f7c5a749-7537-4280-ab4c-7bc5a1c7d7da",
+      "name": "Brown Faux Fur Leopard Bag",
+      "asset_type": "accessory",
+      "gender": "female",
+      "input_image": {
+        "id": "63b072a1-50fb-402c-a489-e84ea67ba63e",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/63b072a1-50fb-402c-a489-e84ea67ba63e.jpg"
+      },
+      "created_at": 1765216516.229094,
+      "type": "preset"
+    },
+    {
+      "id": "54055830-4979-48e0-ae6f-27f8748f439c",
+      "name": "Black Slim Oval Sunglasses",
+      "asset_type": "accessory",
+      "gender": "female",
+      "input_image": {
+        "id": "19c17c95-087c-4318-b3ff-08c9bfd09bb5",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/19c17c95-087c-4318-b3ff-08c9bfd09bb5.jpg"
+      },
+      "created_at": 1765216516.219529,
+      "type": "preset"
+    },
+    {
+      "id": "2bfa3bf2-80a4-41e1-9252-f146ad3e5281",
+      "name": "Black Ruffled Glam Bag",
+      "asset_type": "accessory",
+      "gender": "female",
+      "input_image": {
+        "id": "5774b135-ca78-4094-8975-c6fd8bce4bd4",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/5774b135-ca78-4094-8975-c6fd8bce4bd4.jpg"
+      },
+      "created_at": 1765216516.218242,
+      "type": "preset"
+    },
+    {
+      "id": "9922556f-fa3c-4580-9562-c7e545fc6bf4",
+      "name": "Black Mini Shoulder Bag",
+      "asset_type": "accessory",
+      "gender": "female",
+      "input_image": {
+        "id": "1cb698d3-a059-4279-88a7-7735863138db",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/1cb698d3-a059-4279-88a7-7735863138db.jpg"
+      },
+      "created_at": 1765216516.216372,
+      "type": "preset"
+    },
+    {
+      "id": "2ec4a17d-80f1-4fc1-b065-87b03078bcc2",
+      "name": "Black Hobo Bag with Metal Accent",
+      "asset_type": "accessory",
+      "gender": "female",
+      "input_image": {
+        "id": "92fce9c1-f7e0-4cd3-a6f5-a1636f33db1d",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/92fce9c1-f7e0-4cd3-a6f5-a1636f33db1d.jpg"
+      },
+      "created_at": 1765216516.211846,
+      "type": "preset"
+    },
+    {
+      "id": "62880eab-ce5b-4bb4-bd1c-e1918cad4fb4",
+      "name": "Glasses",
+      "asset_type": "accessory",
+      "gender": "female",
+      "input_image": {
+        "id": "90550d0d-e4a1-4f1c-bc6c-9ece12ea7951",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/90550d0d-e4a1-4f1c-bc6c-9ece12ea7951.webp"
+      },
+      "created_at": 1764805428.021268,
+      "type": "preset"
+    }
+  ]
+}

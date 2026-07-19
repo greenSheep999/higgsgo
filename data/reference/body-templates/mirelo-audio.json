@@ -1,0 +1,23 @@
+{
+  "alias": "mirelo-audio",
+  "jobSetType": "mirelo_text_to_audio",
+  "endpoint": "/jobs/v2/mirelo_text_to_audio",
+  "version": "v2",
+  "output": "audio",
+  "realCost": 1.25,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "duration": 5
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "f160ea75-2a13-4723-8134-8c95214e13c6",
+    "jobId": "04c0722f-763c-42b0-b5a4-a6600c9cfd6f",
+    "cost": 125
+  },
+  "generatedAt": "2026-07-01T07:13:10.251Z"
+}

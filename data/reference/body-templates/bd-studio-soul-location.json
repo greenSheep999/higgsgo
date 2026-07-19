@@ -1,0 +1,36 @@
+{
+  "alias": "bd-studio-soul-location",
+  "jobSetType": "bd_studio_soul_location",
+  "endpoint": "/jobs/v2/bd_studio_soul_location",
+  "version": "v2",
+  "output": "image",
+  "realCost": 0.12,
+  "catalogRefs": {
+    "style_id": "catalogs/soul_v2_presets.json"
+  },
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "width": 512,
+      "height": 512,
+      "batch_size": 1,
+      "seed": 12345,
+      "style_id": "3d31cca4-4808-4dda-9f6f-3d1532a372ae",
+      "style": {
+        "id": "3d31cca4-4808-4dda-9f6f-3d1532a372ae",
+        "name": "Location",
+        "url": "https://cdn.higgsfield.ai/soul-cinematic-style/8ea830be-845d-48f2-b487-401c8bbb5ef1.webp",
+        "strength": 1
+      }
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "111655f9-2a2f-4d0a-8218-09b3d9db72fc",
+    "jobId": "1d785455-a76f-441b-a664-afb313d5ab7c",
+    "cost": 12
+  },
+  "generatedAt": "2026-07-04T12:44:56.322Z",
+  "fixedAt": "2026-07-06 — added missing `prompt` field per 422 discovery"
+}

@@ -1,0 +1,78 @@
+{
+  "alias": "image2video",
+  "jobSetType": "image2video",
+  "endpoint": "/jobs/image2video",
+  "version": "v1-hyphen",
+  "output": "video",
+  "realCost": null,
+  "catalogRefs": {
+    "motion_id": "catalogs/motions.json"
+  },
+  "exampleBody": {
+    "params": {
+      "prompt": ".",
+      "input_image": {
+        "id": "2f9f510d-e747-4344-8ab7-2e5ba73581e8",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/2f9f510d-e747-4344-8ab7-2e5ba73581e8.jpg"
+      },
+      "seed": 12345,
+      "steps": 20,
+      "guide_scale": 6,
+      "frames": 49,
+      "width": 512,
+      "height": 512,
+      "strength": 1,
+      "model": "standard",
+      "motion_id": "bbab2a35-ccba-45df-8c37-8ea2bd9e395a",
+      "motion": {
+        "id": "bbab2a35-ccba-45df-8c37-8ea2bd9e395a",
+        "url": "<placeholder>",
+        "name": "Raven Transition"
+      },
+      "enhance_prompt": false,
+      "guide_end": 1,
+      "is_chain": false,
+      "chain_sample": null,
+      "input_image_end": null,
+      "product_placement_sample": null,
+      "input_audio": null,
+      "input_video": null,
+      "enable_color_aligning": false,
+      "lipsync_quality": "high"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "a84e62aa-08eb-497b-adf4-13e4fbfe7f32",
+    "jobId": "e0e6a935-8bec-435e-baba-59666b28fe8d"
+  },
+  "generatedAt": "2026-07-04T13:09:44.459Z",
+  "bestPracticeBody": {
+    "params": {
+      "prompt": ".",
+      "width": 1024,
+      "height": 1024,
+      "seed": 12345,
+      "frames": 49,
+      "input_image": {
+        "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+        "note": "Small red apple, 512x512. Safe default for image inputs."
+      },
+      "motion_id": "bbab2a35-ccba-45df-8c37-8ea2bd9e395a",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "resolution": "720p",
+      "input_images": []
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "motion_id from catalogs/motions.json."
+}

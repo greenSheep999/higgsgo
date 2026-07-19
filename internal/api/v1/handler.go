@@ -170,6 +170,15 @@ func modelView(m *domain.ModelSpec) map[string]any {
 	if tags == nil {
 		tags = []string{}
 	}
+	// Enums drives the WebUI's schema-driven form: when the user selects
+	// a parameter with a known catalog (style_id, motion_id, voice_id,
+	// preset_id, ...), the SPA renders a <select> populated from this
+	// map instead of a free-text input. Emit an empty map when the model
+	// has none so the SPA can `.length ?? 0` without branching.
+	enums := m.Enums
+	if enums == nil {
+		enums = map[string][]string{}
+	}
 	return map[string]any{
 		"id":                     m.Alias,
 		"object":                 "model",
@@ -180,6 +189,7 @@ func modelView(m *domain.ModelSpec) map[string]any {
 		"media_role":             m.MediaRole,
 		"app_slug":               m.ApplicationSlug,
 		"example_body_json":      m.ExampleBodyJSON,
+		"enums":                  enums,
 		"est_cost":               float64(m.EstCostHundredths) / 100.0,
 		"required_params":        required,
 		"unstable":               m.Unstable,

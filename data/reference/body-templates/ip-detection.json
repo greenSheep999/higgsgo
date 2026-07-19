@@ -1,0 +1,41 @@
+{
+  "alias": "ip-detection",
+  "jobSetType": "ip_detection",
+  "endpoint": "/jobs/ip-detection",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": 0,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k",
+      "medias": [
+        {
+          "role": "image",
+          "data": {
+            "id": "fba7ea13-ec5f-4802-9451-6071878e70c4",
+            "type": "media_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/fba7ea13-ec5f-4802-9451-6071878e70c4.jpg"
+          }
+        }
+      ]
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "4e00ce33-c880-4c47-9d50-83ef541178a8",
+    "jobId": "97d06e46-a3d3-4569-8a92-6adeda25832f",
+    "cost": null
+  },
+  "generatedAt": "2026-07-01T17:20:10.693Z"
+}

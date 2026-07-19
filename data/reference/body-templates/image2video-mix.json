@@ -1,0 +1,94 @@
+{
+  "alias": "image2video-mix",
+  "jobSetType": "image2video_mix",
+  "endpoint": "/jobs/image2video-mix",
+  "version": "v1-hyphen",
+  "output": "video",
+  "realCost": null,
+  "catalogRefs": {
+    "motions": "catalogs/motions.json (array of {type:motion, value:uuid, strength:float})"
+  },
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple",
+      "input_image": {
+        "id": "6eda47d6-2d77-4ed9-a0cd-193ed09bb3d4",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fleo1ZMHh8NQFg6x7hLauN5L87/6eda47d6-2d77-4ed9-a0cd-193ed09bb3d4.jpg"
+      },
+      "seed": 12345,
+      "steps": 20,
+      "guide_scale": 6,
+      "frames": 49,
+      "width": 512,
+      "height": 512,
+      "motions": [
+        {
+          "type": "motion",
+          "value": "bbab2a35-ccba-45df-8c37-8ea2bd9e395a",
+          "url": "<placeholder>",
+          "name": "Raven Transition",
+          "strength": 1
+        },
+        {
+          "type": "motion",
+          "value": "bbab2a35-ccba-45df-8c37-8ea2bd9e395a",
+          "url": "<placeholder>",
+          "name": "Raven Transition",
+          "strength": 1
+        }
+      ],
+      "enhance_prompt": false,
+      "guide_end": 1,
+      "model": "standard",
+      "input_image_end": null,
+      "input_audio": null,
+      "input_video": null,
+      "enable_color_aligning": true
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "38a41515-c3ac-40f5-8176-7c27fc0f916e",
+    "jobId": "05f125c4-6003-4601-a156-7223e61043cf"
+  },
+  "generatedAt": "2026-07-04T12:35:13.501Z",
+  "bestPracticeBody": {
+    "params": {
+      "prompt": ".",
+      "width": 1024,
+      "height": 1024,
+      "seed": 12345,
+      "frames": 49,
+      "input_image": {
+        "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+        "note": "Small red apple, 512x512. Safe default for image inputs."
+      },
+      "motions": [
+        {
+          "type": "motion",
+          "value": "bbab2a35-ccba-45df-8c37-8ea2bd9e395a",
+          "strength": 1
+        },
+        {
+          "type": "motion",
+          "value": "bbab2a35-ccba-45df-8c37-8ea2bd9e395a",
+          "strength": 1
+        }
+      ],
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "resolution": "720p",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "input_images": []
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "frames: literal 49|81. motions[].value: motion uuid from catalogs/motions.json. motions[].type: motion|reference. strength: float 0-1."
+}

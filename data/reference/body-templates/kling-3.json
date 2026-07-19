@@ -1,0 +1,32 @@
+{
+  "alias": "kling-3",
+  "jobSetType": "kling3_0",
+  "endpoint": "/jobs/v2/kling3_0",
+  "version": "v2",
+  "output": "video",
+  "realCost": 10,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k",
+      "mode": "std"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "f160ea75-2a13-4723-8134-8c95214e13c6",
+    "jobId": "3027148e-be36-4331-be03-67e01b7cc8cd",
+    "cost": 1000
+  },
+  "generatedAt": "2026-07-01T07:03:43.866Z"
+}

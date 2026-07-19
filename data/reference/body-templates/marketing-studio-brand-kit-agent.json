@@ -1,0 +1,38 @@
+{
+  "alias": "marketing-studio-brand-kit-agent",
+  "jobSetType": "marketing_studio_brand_kit_agent",
+  "endpoint": "/jobs/v2/marketing_studio_brand_kit_agent",
+  "version": "v2",
+  "output": "image",
+  "realCost": null,
+  "catalogRefs": {
+    "brand_kit_id": "catalogs/marketing_brand_kits.json (must be user-scraped first)"
+  },
+  "exampleBody": {
+    "params": {
+      "brand_kit_id": "00000000-0000-0000-0000-000000000000"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "b9f5db90-70f1-458e-8b2b-88ca67772854",
+    "jobId": "568a0ca4-be78-41b0-8d03-02e7bcd64998",
+    "cost": null
+  },
+  "generatedAt": "2026-07-04T13:09:44.463Z",
+  "bestPracticeBody": {
+    "params": {
+      "brand_kit_id": "<create via marketing-studio-brand-kit-scrape first>",
+      "prompt": ".",
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "resolution": "1k"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "brand_kit_id must come from a completed marketing-studio-brand-kit-scrape job."
+}

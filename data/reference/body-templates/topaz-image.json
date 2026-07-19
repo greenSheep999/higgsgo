@@ -1,0 +1,43 @@
+{
+  "alias": "topaz-image",
+  "jobSetType": "topaz_image",
+  "endpoint": "/jobs/topaz-image",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": 2,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k",
+      "input_image": {
+        "id": "89025cb7-71ee-4979-a964-306b15956753",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemqwvSqMuSk4JKHFXcZz57wm/89025cb7-71ee-4979-a964-306b15956753.jpg"
+      },
+      "output_width": 1024,
+      "output_height": 1024,
+      "face_enhancement": false,
+      "face_enhancement_creativity": 0,
+      "face_enhancement_strength": 0,
+      "model": "Standard V2",
+      "sharpen": 0,
+      "denoise": 0
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "f160ea75-2a13-4723-8134-8c95214e13c6",
+    "jobId": "1416e871-366c-418e-bb83-9da9cef78684"
+  },
+  "generatedAt": "2026-07-01T10:10:23.320Z"
+}

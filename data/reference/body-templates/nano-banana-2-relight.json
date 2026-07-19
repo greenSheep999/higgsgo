@@ -1,0 +1,61 @@
+{
+  "alias": "nano-banana-2-relight",
+  "jobSetType": "nano_banana_2_relight",
+  "endpoint": "/jobs/nano-banana-2-relight",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": 2,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 512,
+      "height": 288,
+      "aspect_ratio": "16:9",
+      "resolution": "4k",
+      "batch_size": 1,
+      "input_image": {
+        "id": "af1765e7-7d8e-4db2-bbbd-0d7125dcdfd0",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3G2S2COZYUws8l5Zikjzkf7JALQ/af1765e7-7d8e-4db2-bbbd-0d7125dcdfd0.jpg"
+      },
+      "application": {
+        "slug": "relight",
+        "name": "Relight",
+        "url": "https://cdn.higgsfield.ai/application_main/ff6c6ba0-3c47-416a-a473-e2b2bd425160.mp4"
+      },
+      "surface": null,
+      "light_source": "mdl",
+      "light_quality": "soft",
+      "color": "#ffffff",
+      "brightness": 50
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "32ab20ef-73ff-420e-9ea9-b320939185ab",
+    "jobId": "6c962fe4-2bcd-46e3-aa79-7567ebaba9bc",
+    "cost": 200
+  },
+  "generatedAt": "2026-07-04T12:44:56.322Z",
+  "bestPracticeBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "input_image": {
+        "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+        "note": "Small red apple, 512x512. Safe default for image inputs."
+      },
+      "light_source": "mdl",
+      "light_quality": "soft",
+      "color": "#ffffff",
+      "brightness": 50
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false,
+    "application_slug": "relight"
+  },
+  "bestPracticeHint": "light_source enum: mdl/mdr/mul/mur/fml/fmr/fdl/fdr (~26 values). light_quality: hard|sharp|soft. brightness: int 0-100."
+}

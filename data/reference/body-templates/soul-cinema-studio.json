@@ -1,0 +1,26 @@
+{
+  "alias": "soul-cinema-studio",
+  "jobSetType": "soul_cinema_studio",
+  "endpoint": "/jobs/v2/soul_cinema_studio",
+  "version": "v2",
+  "output": "image",
+  "realCost": 0.12,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "seed": 12345,
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "dbc5855d-39c6-4cd4-a157-0f43fb22a3a4",
+    "jobId": "7b7db301-d11b-44a2-8e8e-6b6bfeafe4b6",
+    "cost": 12
+  },
+  "generatedAt": "2026-07-01T04:56:12.252Z"
+}

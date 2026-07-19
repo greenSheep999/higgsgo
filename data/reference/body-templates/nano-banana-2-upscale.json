@@ -1,0 +1,63 @@
+{
+  "alias": "nano-banana-2-upscale",
+  "jobSetType": "nano_banana_2_upscale",
+  "endpoint": "/jobs/nano-banana-2-upscale",
+  "version": "v1-hyphen",
+  "output": "image",
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 2048,
+      "height": 2048,
+      "resolution": "2k",
+      "input_images": [
+        {
+          "id": "61372888-8512-4c14-9dd9-35a8452996fd",
+          "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/61372888-8512-4c14-9dd9-35a8452996fd.jpg",
+          "type": "media_input"
+        }
+      ],
+      "aspect_ratio": "1:1"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false,
+    "job_set_type": "nano_banana_2_upscale",
+    "job_set_id": "24d8ed7e-2070-4318-be44-c813acb1f6c5",
+    "job_set_parent_id": null,
+    "job_set_client_meta": null,
+    "board_ids": [],
+    "meta": {},
+    "id": "f78dbc19-224b-4b11-be68-8d6966d8ac01",
+    "status": "completed",
+    "ip_check_finished": null,
+    "ip_detected": null,
+    "result": null,
+    "results": {
+      "raw": {
+        "type": "image",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/hf_20260702_062236_f78dbc19-224b-4b11-be68-8d6966d8ac01.png"
+      },
+      "min": {
+        "type": "image",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/hf_20260702_062236_f78dbc19-224b-4b11-be68-8d6966d8ac01_min.webp"
+      }
+    },
+    "published_at": null,
+    "created_at": 1782973356.941539,
+    "user_id": "user_3FlemB1FjVfHVUkDiMl0K3vzPjb",
+    "trace_id": "f78dbc19-224b-4b11-be68-8d6966d8ac01",
+    "user": {
+      "id": "user_3FlemB1FjVfHVUkDiMl0K3vzPjb",
+      "full_name": "etherealwater1959",
+      "username": "etherealwater1959",
+      "avatar_url": null
+    },
+    "folder_ids": [],
+    "is_favourite": false,
+    "is_viewed": false
+  },
+  "exampleResponse": {
+    "jobId": "f78dbc19-224b-4b11-be68-8d6966d8ac01"
+  },
+  "generatedAt": "2026-07-02T06:27:18.777Z"
+}

@@ -1,0 +1,40 @@
+{
+  "alias": "speech2text",
+  "jobSetType": "speech2text",
+  "endpoint": "/jobs/v2/speech2text",
+  "version": "v2",
+  "output": "audio",
+  "realCost": 0.05,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "input_audio": {
+        "id": "d661b113-d200-44dd-a1c7-6a7ace160b14",
+        "type": "audio_input",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3FlemqwvSqMuSk4JKHFXcZz57wm/acd6b4b5-e53a-4e3e-842f-3be4b043829c_sfx.wav",
+        "duration": 3.72
+      }
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "ab46818d-2234-49ae-971e-29404977d204",
+    "jobId": "6ef725e7-4e15-47dd-b5cb-ee95166e23d2",
+    "cost": 5
+  },
+  "generatedAt": "2026-07-04T07:18:30.610Z",
+  "bestPracticeBody": {
+    "params": {
+      "input_audio": {
+        "id": "3f1f2e27-8d0c-44bd-83f1-72e0de3ef9f0",
+        "type": "audio_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/3f1f2e27-8d0c-44bd-83f1-72e0de3ef9f0.mp3",
+        "note": "Silence + tone .mp3."
+      }
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "Upload an audio via /audio, then reference it via {id,type:audio_input,url}."
+}

@@ -1,0 +1,163 @@
+{
+  "user_cursor": null,
+  "preset_cursor": null,
+  "has_more": false,
+  "items": [
+    {
+      "id": "b9ed5992-ceb1-4dbb-9caf-ad0f80627480",
+      "name": "zipped cropped leather jacket",
+      "asset_type": "outwear",
+      "gender": "female",
+      "input_image": {
+        "id": "4b08c3eb-a77f-42c9-bdb1-8e8e27bab6de",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/4b08c3eb-a77f-42c9-bdb1-8e8e27bab6de.jpg"
+      },
+      "created_at": 1765216516.32182,
+      "type": "preset"
+    },
+    {
+      "id": "59bad612-5f5a-4c1b-8fe7-9e93f822d9e3",
+      "name": "white cardigan",
+      "asset_type": "outwear",
+      "gender": "female",
+      "input_image": {
+        "id": "931902f3-2bd2-4258-980f-1f00583498d7",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/931902f3-2bd2-4258-980f-1f00583498d7.jpg"
+      },
+      "created_at": 1765216516.30863,
+      "type": "preset"
+    },
+    {
+      "id": "8599a2b3-b721-42b5-bdf5-9954c6e33fc6",
+      "name": "two piece cropped pink tweed and denim jacket",
+      "asset_type": "outwear",
+      "gender": "female",
+      "input_image": {
+        "id": "5032c362-f189-43e9-a7b4-ede7382b3267",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/5032c362-f189-43e9-a7b4-ede7382b3267.jpg"
+      },
+      "created_at": 1765216516.301649,
+      "type": "preset"
+    },
+    {
+      "id": "15c37225-0b58-4f03-aec8-09e71e768981",
+      "name": "short and fitted white coat",
+      "asset_type": "outwear",
+      "gender": "female",
+      "input_image": {
+        "id": "6ba25f77-a52f-495f-9da9-8d87f3a42306",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/6ba25f77-a52f-495f-9da9-8d87f3a42306.jpg"
+      },
+      "created_at": 1765216516.288317,
+      "type": "preset"
+    },
+    {
+      "id": "896d8f7e-a519-461c-b717-d56318a8b115",
+      "name": "polkadot sporty jacket",
+      "asset_type": "outwear",
+      "gender": "female",
+      "input_image": {
+        "id": "ae8d82cf-2e3f-4254-a4ff-35b17dd3fc31",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/ae8d82cf-2e3f-4254-a4ff-35b17dd3fc31.jpg"
+      },
+      "created_at": 1765216516.278946,
+      "type": "preset"
+    },
+    {
+      "id": "5ca9b35b-af78-4f48-a758-1d29f79153fe",
+      "name": "long neck cropped coat",
+      "asset_type": "outwear",
+      "gender": "female",
+      "input_image": {
+        "id": "57b200dd-43d7-4666-b1a3-8560a757d24f",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/57b200dd-43d7-4666-b1a3-8560a757d24f.jpg"
+      },
+      "created_at": 1765216516.268526,
+      "type": "preset"
+    },
+    {
+      "id": "4bc8f3d3-9756-475e-a152-d9bf49d9aa59",
+      "name": "fitted leather jacket",
+      "asset_type": "outwear",
+      "gender": "female",
+      "input_image": {
+        "id": "a9b5da8f-5f1e-47af-83a7-4e6b8c48e8db",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/a9b5da8f-5f1e-47af-83a7-4e6b8c48e8db.jpg"
+      },
+      "created_at": 1765216516.255519,
+      "type": "preset"
+    },
+    {
+      "id": "214034b2-3876-4f95-80ab-1210296dae51",
+      "name": "faux fur coat",
+      "asset_type": "outwear",
+      "gender": "female",
+      "input_image": {
+        "id": "c1a04923-7784-4664-95b1-3ecc9c230d75",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/c1a04923-7784-4664-95b1-3ecc9c230d75.jpg"
+      },
+      "created_at": 1765216516.252505,
+      "type": "preset"
+    },
+    {
+      "id": "6a6ff5ca-2cdc-4b7f-a960-62eaebdc32a2",
+      "name": "cable-knit padded vest with a hood.",
+      "asset_type": "outwear",
+      "gender": "female",
+      "input_image": {
+        "id": "a98d6d0c-6b25-431a-a5c5-282b4eaa3574",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/a98d6d0c-6b25-431a-a5c5-282b4eaa3574.jpg"
+      },
+      "created_at": 1765216516.232302,
+      "type": "preset"
+    },
+    {
+      "id": "56f33af3-544d-4e12-a593-9b22c1d138a8",
+      "name": "brown cropped coat",
+      "asset_type": "outwear",
+      "gender": "female",
+      "input_image": {
+        "id": "adb4ebd1-0380-44e3-866e-1e3d5d47dd70",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/adb4ebd1-0380-44e3-866e-1e3d5d47dd70.jpg"
+      },
+      "created_at": 1765216516.228643,
+      "type": "preset"
+    },
+    {
+      "id": "4856ff5f-adc1-4ead-92df-6263da8a370b",
+      "name": "blue checked zip hoodie",
+      "asset_type": "outwear",
+      "gender": "female",
+      "input_image": {
+        "id": "4a9e8f7e-b263-480a-97c3-7ae056e69b88",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/4a9e8f7e-b263-480a-97c3-7ae056e69b88.jpg"
+      },
+      "created_at": 1765216516.222306,
+      "type": "preset"
+    },
+    {
+      "id": "61289bf1-d517-4ebb-94aa-0239cc7ac328",
+      "name": "aipped slim denim jacket",
+      "asset_type": "outwear",
+      "gender": "female",
+      "input_image": {
+        "id": "99302336-f0ca-45f6-b935-657ba0c49c61",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/99302336-f0ca-45f6-b935-657ba0c49c61.jpg"
+      },
+      "created_at": 1765216516.204336,
+      "type": "preset"
+    }
+  ]
+}

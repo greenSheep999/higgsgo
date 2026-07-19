@@ -1,0 +1,63 @@
+{
+  "alias": "video-deflicker",
+  "jobSetType": "video_deflicker",
+  "endpoint": "/jobs/video-deflicker",
+  "version": "v1-hyphen",
+  "output": "video",
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "duration": null,
+      "input_video": {
+        "id": "08b5fcad-bc75-4ecd-9856-d281d15d8e75",
+        "type": "video_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemqwvSqMuSk4JKHFXcZz57wm/08b5fcad-bc75-4ecd-9856-d281d15d8e75.mp4"
+      }
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false,
+    "job_set_type": "video_deflicker",
+    "job_set_id": "4eeb6d44-ebde-4a6f-af24-033adbb7059f",
+    "job_set_parent_id": null,
+    "job_set_client_meta": null,
+    "board_ids": [],
+    "meta": {
+      "duration": null
+    },
+    "id": "767b623a-9e33-4644-b2ba-a6409ebfa6d5",
+    "status": "completed",
+    "ip_check_finished": null,
+    "ip_detected": null,
+    "result": null,
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3FlemqwvSqMuSk4JKHFXcZz57wm/hf_20260701_235649_767b623a-9e33-4644-b2ba-a6409ebfa6d5.mp4"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://cdn.higgsfield.ai/user_3FlemqwvSqMuSk4JKHFXcZz57wm/hf_20260701_235649_767b623a-9e33-4644-b2ba-a6409ebfa6d5_min.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3FlemqwvSqMuSk4JKHFXcZz57wm/hf_20260701_235649_767b623a-9e33-4644-b2ba-a6409ebfa6d5_thumbnail_min.webp"
+      }
+    },
+    "published_at": null,
+    "created_at": 1782950209.119247,
+    "user_id": "user_3FlemqwvSqMuSk4JKHFXcZz57wm",
+    "trace_id": "767b623a-9e33-4644-b2ba-a6409ebfa6d5",
+    "user": {
+      "id": "user_3FlemqwvSqMuSk4JKHFXcZz57wm",
+      "full_name": "magrittelightning1656",
+      "username": "magrittelightning1656",
+      "avatar_url": null
+    },
+    "folder_ids": [],
+    "is_favourite": false,
+    "is_viewed": false
+  },
+  "exampleResponse": {
+    "jobId": "767b623a-9e33-4644-b2ba-a6409ebfa6d5"
+  },
+  "generatedAt": "2026-07-02T06:16:39.069Z"
+}

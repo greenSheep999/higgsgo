@@ -1,0 +1,18 @@
+{
+  "characters": [
+    {
+      "id": "d833d942-d8ff-478a-b3ce-fd13bebf9988",
+      "type": "media_input",
+      "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/d833d942-d8ff-478a-b3ce-fd13bebf9988.jpg",
+      "width": 1400,
+      "height": 1911
+    },
+    {
+      "id": "8025bc4b-735d-4aec-9785-82b4a791a89e",
+      "type": "media_input",
+      "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/8025bc4b-735d-4aec-9785-82b4a791a89e.jpg",
+      "width": 1528,
+      "height": 2048
+    }
+  ]
+}

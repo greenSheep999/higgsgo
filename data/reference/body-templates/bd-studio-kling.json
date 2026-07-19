@@ -1,0 +1,32 @@
+{
+  "alias": "bd-studio-kling",
+  "jobSetType": "bd_studio_kling",
+  "endpoint": "/jobs/v2/bd_studio_kling",
+  "version": "v2",
+  "output": "video",
+  "realCost": 8.75,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k",
+      "mode": "std"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "4e00ce33-c880-4c47-9d50-83ef541178a8",
+    "jobId": "5104acc1-23a2-4833-8975-16914765a7fd",
+    "cost": 875
+  },
+  "generatedAt": "2026-07-01T13:51:13.747Z"
+}

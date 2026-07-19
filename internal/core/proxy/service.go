@@ -597,16 +597,51 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 	return resp, nil
 }
 
-// buildBody assembles the payload dispatched to higgsfield. We start from
-// the example params encoded in the ModelSpec (future work — for now empty)
-// and merge UserParams on top.
+// buildBody assembles the payload dispatched to higgsfield.
+//
+// Layering order (later wins):
+//  1. spec.ExampleBodyJSON — the on-disk body template captured from a
+//     real successful upstream call. Provides sane defaults for every
+//     param the model needs (seed, strength, style_id, aspect_ratio,
+//     resolution, ...). When the template is missing (older loader /
+//     model without a template file), we start with an empty map.
+//  2. req.UserParams — caller-supplied overrides. These flow into the
+//     nested params object and shadow template values verbatim; the
+//     caller can also inject top-level keys (rarely needed).
+//  3. Media injection — the pre-uploaded image/video/audio is spliced
+//     into either params.medias[] or params.input_image based on
+//     spec.MediaRole, replacing any placeholder from the template.
+//  4. Hard defaults — use_unlim / use_seedream_bonus / application_slug.
+//     These are always the higgsgo-owned values regardless of template.
+//
+// Callers that want the raw pass-through behaviour (no template merge)
+// can zero out spec.ExampleBodyJSON before passing spec in — but every
+// production path benefits from defaults because they close the "422
+// missing param X" holes the WebUI cannot signal in advance.
 func buildBody(spec *domain.ModelSpec, req GenerationRequest) map[string]any {
-	params := make(map[string]any)
-	// Merge user-supplied params first.
+	top := map[string]any{}
+	// Seed from the template. On any parse error we fall back to an
+	// empty top-level object so pre-template behaviour is preserved.
+	if spec != nil && spec.ExampleBodyJSON != "" {
+		var tmpl map[string]any
+		if err := json.Unmarshal([]byte(spec.ExampleBodyJSON), &tmpl); err == nil {
+			top = tmpl
+		}
+	}
+	// Extract or create the nested params object. Templates always wrap
+	// params under "params"; a broken template that lacks it degrades
+	// to the empty-map path so we don't send garbage upstream.
+	params, ok := top["params"].(map[string]any)
+	if !ok {
+		params = make(map[string]any)
+		top["params"] = params
+	}
+	// Merge user-supplied params on top of the template defaults.
 	for k, v := range req.UserParams {
 		params[k] = v
 	}
-	// Inject media if provided and the model wants it.
+	// Inject media if provided and the model wants it. The template may
+	// carry an example media reference; user-provided media replaces it.
 	if req.Media != nil && req.Media.PreUploadedID != "" {
 		mediaObj := map[string]any{
 			"id":   req.Media.PreUploadedID,
@@ -620,18 +655,14 @@ func buildBody(spec *domain.ModelSpec, req GenerationRequest) map[string]any {
 			}
 		case "input_image", "":
 			// Default: flat input_image when spec doesn't say otherwise.
-			if _, ok := params["input_image"]; !ok {
-				params["input_image"] = mediaObj
-			}
+			params["input_image"] = mediaObj
 		}
 	}
-	// Top-level fields (application_slug for nano_banana_2 family).
-	top := map[string]any{
-		"params":             params,
-		"use_unlim":          false,
-		"use_seedream_bonus": false,
-	}
-	if spec.ApplicationSlug != "" {
+	// Hard top-level defaults. These are higgsgo-owned so we always
+	// stamp them last, overriding whatever the template carried.
+	top["use_unlim"] = false
+	top["use_seedream_bonus"] = false
+	if spec != nil && spec.ApplicationSlug != "" {
 		top["application_slug"] = spec.ApplicationSlug
 	}
 	return top

@@ -1,0 +1,25 @@
+{
+  "alias": "bytedance-image-upscale",
+  "jobSetType": "bytedance_image_upscale",
+  "endpoint": "/jobs/v2/bytedance_image_upscale",
+  "version": "v2",
+  "output": "image",
+  "realCost": 2,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 512,
+      "height": 512,
+      "medias": [],
+      "resolution": "2k"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "4bd253a2-fd08-4df6-92ca-86979ee2ee53",
+    "jobId": "090fe8d8-6021-48c6-abb5-fe987cfa4172",
+    "cost": 200
+  },
+  "generatedAt": "2026-07-04T12:44:56.321Z"
+}

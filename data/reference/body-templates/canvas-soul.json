@@ -1,0 +1,66 @@
+{
+  "alias": "canvas-soul",
+  "jobSetType": "canvas_soul",
+  "endpoint": "/jobs/canvas-soul",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": null,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "prompt": "a red apple",
+      "batch_size": 4,
+      "seed": 166853,
+      "quality": "720p",
+      "input_image": {
+        "id": "26d9d0fd-c545-4ee7-b8f4-8683fd8415d0",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/26d9d0fd-c545-4ee7-b8f4-8683fd8415d0.jpg"
+      },
+      "mask_input_image": null,
+      "combined_image": {
+        "id": "26d9d0fd-c545-4ee7-b8f4-8683fd8415d0",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/26d9d0fd-c545-4ee7-b8f4-8683fd8415d0.jpg"
+      }
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "ea91c975-a16f-4c0f-b321-d39abbf9307f",
+    "jobId": "d5609f24-309c-47ca-855c-6b240c30be00"
+  },
+  "generatedAt": "2026-07-04T07:18:30.610Z",
+  "bestPracticeBody": {
+    "params": {
+      "prompt": ".",
+      "width": 1024,
+      "height": 1024,
+      "input_image": {
+        "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+        "note": "Small red apple, 512x512. Safe default for image inputs."
+      },
+      "combined_image": {
+        "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+        "note": "Small red apple, 512x512. Safe default for image inputs."
+      },
+      "batch_size": 4,
+      "aspect_ratio": "1:1",
+      "resolution": "1k",
+      "input_images": [],
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "batch_size must be literal 4."
+}

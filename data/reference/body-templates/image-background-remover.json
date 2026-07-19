@@ -1,0 +1,40 @@
+{
+  "alias": "image-background-remover",
+  "jobSetType": "image_background_remover",
+  "endpoint": "/jobs/v2/image_background_remover",
+  "version": "v2",
+  "output": "image",
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k",
+      "medias": [
+        {
+          "role": "image",
+          "data": {
+            "id": "26d9d0fd-c545-4ee7-b8f4-8683fd8415d0",
+            "type": "media_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/26d9d0fd-c545-4ee7-b8f4-8683fd8415d0.jpg"
+          }
+        }
+      ]
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "4e00ce33-c880-4c47-9d50-83ef541178a8",
+    "jobId": "b4c12a1d-8413-4a14-a102-2361fd4c4d79",
+    "cost": 100
+  },
+  "generatedAt": "2026-07-01T14:50:07.427Z"
+}

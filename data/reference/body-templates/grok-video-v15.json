@@ -1,0 +1,61 @@
+{
+  "alias": "grok-video-v15",
+  "jobSetType": "grok_video_v15",
+  "endpoint": "/jobs/v2/grok_video_v15",
+  "version": "v2",
+  "output": "video",
+  "realCost": 12.5,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 512,
+      "height": 512,
+      "prompt": ".",
+      "medias": [
+        {
+          "role": "start_image",
+          "data": {
+            "id": "c29e656d-0023-42f5-bb7b-9410ef986a52",
+            "type": "media_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlQTUannEi3WCzRe7MZjeR8qSD/c29e656d-0023-42f5-bb7b-9410ef986a52.jpg"
+          }
+        }
+      ],
+      "duration": 5,
+      "resolution": "480p",
+      "aspect_ratio": "1:1"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "4d66a3a7-02a5-45c2-a9f2-ba38b57344d5",
+    "jobId": "98ca0fe7-e927-40c1-bc50-4f5cad6e880a",
+    "cost": 1250
+  },
+  "generatedAt": "2026-07-04T13:09:44.460Z",
+  "bestPracticeBody": {
+    "params": {
+      "prompt": ".",
+      "width": 512,
+      "height": 512,
+      "medias": [
+        {
+          "role": "start_image",
+          "data": {
+            "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+            "type": "media_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+            "note": "Small red apple, 512x512. Safe default for image inputs."
+          }
+        }
+      ],
+      "duration": 5,
+      "resolution": "480p",
+      "aspect_ratio": "1:1"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "medias[].role: 'start_image' (not 'image')."
+}

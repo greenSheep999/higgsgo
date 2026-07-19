@@ -1,0 +1,32 @@
+{
+  "alias": "nano-banana-2-skin-enhancer",
+  "jobSetType": "nano_banana_2_skin_enhancer",
+  "endpoint": "/jobs/nano-banana-2-skin-enhancer",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": 4,
+  "catalogRefs": {
+    "preset_id": "server/data/spa-only-presets.json \u2192 nano_banana_2_skin_enhancer.candidates[]",
+    "application_slug": "literal \"skin-enhancer\" (body top-level)"
+  },
+  "bestPracticeBody": {
+    "params": {
+      "width": 1024,
+      "height": 576,
+      "output_width": 1024,
+      "output_height": 576,
+      "input_image": {
+        "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+        "note": "Small red apple, 512x512. Safe default for image inputs."
+      },
+      "preset_id": "0ed5bcd5-0963-4483-90ea-54c359720727"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false,
+    "application_slug": "skin-enhancer"
+  },
+  "bestPracticeHint": "Verified via SPA capture 2026-07-06. preset_id options: Soft skin=0ed5bcd5-0963-4483-90ea-54c359720727, Realistic skin=d4138357-912a-47c7-9b12-f3d3ab1c2338, Imperfect skin=fbb56f37-0249-4021-ba92-17e22665b154. output_width+output_height required.",
+  "sourceOfPreset": "Open Chrome devtools on /apps/skin-enhancer, upload an image, click a preset card, observe the POST body preset_id in Network tab."
+}

@@ -1,0 +1,37 @@
+{
+  "alias": "reve",
+  "jobSetType": "reve",
+  "endpoint": "/jobs/reve",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": 1,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [
+        {
+          "id": "3267a19f-addc-49ac-8292-f1acf5e1c63b",
+          "type": "media_input",
+          "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/3267a19f-addc-49ac-8292-f1acf5e1c63b.jpg"
+        }
+      ],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "4e00ce33-c880-4c47-9d50-83ef541178a8",
+    "jobId": "d03437d8-9139-4470-82c9-41cc93b8f075",
+    "cost": 100
+  },
+  "generatedAt": "2026-07-01T16:34:31.863Z"
+}

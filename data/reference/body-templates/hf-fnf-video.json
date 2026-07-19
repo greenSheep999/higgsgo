@@ -1,0 +1,38 @@
+{
+  "alias": "hf-fnf-video",
+  "jobSetType": "hf_fnf_video",
+  "endpoint": "/jobs/v2/hf_fnf_video",
+  "version": "v2",
+  "output": "video",
+  "realCost": 30,
+  "catalogRefs": {
+    "reference_elements": "catalogs/reference_elements.json (must be user-created; empty by default)"
+  },
+  "exampleBody": {
+    "params": {
+      "width": 512,
+      "height": 288,
+      "prompt": ".",
+      "genre": "auto",
+      "medias": [],
+      "duration": 5,
+      "resolution": "720p",
+      "aspect_ratio": "16:9",
+      "generate_audio": false,
+      "multi_shots": false,
+      "multi_shot_mode": "custom",
+      "multi_prompt": [],
+      "speedramp": "auto",
+      "reference_elements": [],
+      "prompt_language": "en"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "58dec016-f005-4d6f-b4a4-5374d34ee727",
+    "jobId": "fde6d2d1-27fc-44c0-a4d7-222fdd6ea2b7",
+    "cost": 3000
+  },
+  "generatedAt": "2026-07-04T14:54:04.410Z"
+}

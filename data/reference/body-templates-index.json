@@ -1,0 +1,861 @@
+{
+  "generatedAt": "2026-07-04T16:39:46.598Z",
+  "models": {
+    "ai-influencer": {
+      "jst": "ai_influencer",
+      "endpoint": "/jobs/ai-influencer",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "autosprite": {
+      "jst": "autosprite",
+      "endpoint": "/jobs/v2/autosprite",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "bd-studio-kling": {
+      "jst": "bd_studio_kling",
+      "endpoint": "/jobs/v2/bd_studio_kling",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 8.75
+    },
+    "bd-studio-sora2": {
+      "jst": "bd_studio_sora2",
+      "endpoint": "/jobs/v2/bd_studio_sora2",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 10
+    },
+    "bd-studio-soul-location": {
+      "jst": "bd_studio_soul_location",
+      "endpoint": "/jobs/v2/bd_studio_soul_location",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "style_id"
+      ],
+      "cost": 0.12
+    },
+    "brain-activity": {
+      "jst": "brain_activity",
+      "endpoint": "/jobs/v2/brain_activity",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": null
+    },
+    "bytedance-image-upscale": {
+      "jst": "bytedance_image_upscale",
+      "endpoint": "/jobs/v2/bytedance_image_upscale",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "canvas": {
+      "jst": "canvas",
+      "endpoint": "/jobs/canvas",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": null
+    },
+    "canvas-soul": {
+      "jst": "canvas_soul",
+      "endpoint": "/jobs/canvas-soul",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": null
+    },
+    "character-sheet": {
+      "jst": "character_sheet",
+      "endpoint": "/jobs/v2/character_sheet",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "cinematic-soul-location": {
+      "jst": "cinematic_studio_soul_location",
+      "endpoint": "/jobs/v2/cinematic_studio_soul_location",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 0.12
+    },
+    "cinematic-studio-2-5": {
+      "jst": "cinematic_studio_2_5",
+      "endpoint": "?",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "reference_elements"
+      ],
+      "cost": 2
+    },
+    "cinematic-studio-2-5-edit": {
+      "jst": "cinematic_studio_2_5_edit",
+      "endpoint": "/jobs/v2/cinematic_studio_2_5_edit",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "cinematic-studio-3-0": {
+      "jst": "cinematic_studio_3_0",
+      "endpoint": "/jobs/v2/cinematic_studio_3_0",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 52.5
+    },
+    "cinematic-studio-3-0-image-edit": {
+      "jst": "cinematic_studio_3_0_image_edit",
+      "endpoint": "/jobs/v2/cinematic_studio_3_0_image_edit",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "cinematic-studio-image": {
+      "jst": "cinematic_studio_image",
+      "endpoint": "/jobs/v2/cinematic_studio_image",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "camera_model_id",
+        "camera_lens_id",
+        "camera_focal_length_id"
+      ],
+      "cost": 2
+    },
+    "cinematic-studio-image-grid": {
+      "jst": "cinematic_studio_image_grid",
+      "endpoint": "/jobs/v2/cinematic_studio_image_grid",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "camera_model_id",
+        "camera_lens_id",
+        "camera_focal_length_id",
+        "camera_aperture_id",
+        "reference_elements"
+      ],
+      "cost": 2
+    },
+    "cinematic-studio-video": {
+      "jst": "cinematic_studio_video_v2",
+      "endpoint": "/jobs/v2/cinematic_studio_video_v2",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 7.5
+    },
+    "cinematic-studio-video-3-5": {
+      "jst": "cinematic_studio_video_3_5",
+      "endpoint": "/jobs/v2/cinematic_studio_video_3_5",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 75
+    },
+    "clipify": {
+      "jst": "clipify",
+      "endpoint": "/jobs/v2/clipify",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 7.84
+    },
+    "color-grading-lut": {
+      "jst": "color_grading_lut",
+      "endpoint": "/jobs/v2/color_grading_lut",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": null
+    },
+    "flux-2": {
+      "jst": "flux_2",
+      "endpoint": "/jobs/flux-2",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 1
+    },
+    "gpt-image": {
+      "jst": "gpt_image_2",
+      "endpoint": "/jobs/v2/gpt_image_2",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 0.5
+    },
+    "grok-image": {
+      "jst": "grok_image",
+      "endpoint": "/jobs/v2/grok_image",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 1
+    },
+    "grok-video": {
+      "jst": "grok_video",
+      "endpoint": "/jobs/v2/grok_video",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 7.5
+    },
+    "grok-video-edit": {
+      "jst": "grok_video_edit",
+      "endpoint": "/jobs/v2/grok_video_edit",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 16
+    },
+    "grok-video-v15": {
+      "jst": "grok_video_v15",
+      "endpoint": "/jobs/v2/grok_video_v15",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 12.5
+    },
+    "happy-horse-video": {
+      "jst": "happy_horse_video",
+      "endpoint": "/jobs/v2/happy_horse_video",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 12.5
+    },
+    "headshot": {
+      "jst": "headshot",
+      "endpoint": "/jobs/v2/headshot",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 1
+    },
+    "hf-fnf-video": {
+      "jst": "hf_fnf_video",
+      "endpoint": "/jobs/v2/hf_fnf_video",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "reference_elements"
+      ],
+      "cost": 30
+    },
+    "image-auto": {
+      "jst": "image_auto",
+      "endpoint": "/jobs/v2/image_auto",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "image-background-remover": {
+      "jst": "image_background_remover",
+      "endpoint": "/jobs/v2/image_background_remover",
+      "hasCatalogRefs": false,
+      "catalogFields": []
+    },
+    "image-decompose": {
+      "jst": "image_decompose",
+      "endpoint": "/jobs/v2/image_decompose",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 1
+    },
+    "image2video": {
+      "jst": "image2video",
+      "endpoint": "/jobs/image2video",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "motion_id"
+      ],
+      "cost": null
+    },
+    "image2video-mix": {
+      "jst": "image2video_mix",
+      "endpoint": "/jobs/image2video-mix",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "motions"
+      ],
+      "cost": null
+    },
+    "imagegen-2": {
+      "jst": "imagegen_2_0",
+      "endpoint": "/jobs/v2/imagegen_2_0",
+      "hasCatalogRefs": false,
+      "catalogFields": []
+    },
+    "inworld-text-to-speech": {
+      "jst": "inworld_text_to_speech",
+      "endpoint": "/jobs/v2/inworld_text_to_speech",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "voice"
+      ],
+      "cost": 2
+    },
+    "ip-detection": {
+      "jst": "ip_detection",
+      "endpoint": "/jobs/ip-detection",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 0
+    },
+    "kling": {
+      "jst": "kling",
+      "endpoint": "/jobs/kling",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "motion_id"
+      ]
+    },
+    "kling-2.6": {
+      "jst": "kling2_6",
+      "endpoint": "/jobs/kling2-6",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 10
+    },
+    "kling-3": {
+      "jst": "kling3_0",
+      "endpoint": "/jobs/v2/kling3_0",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 10
+    },
+    "kling-3-turbo": {
+      "jst": "kling3_0_turbo",
+      "endpoint": "/jobs/v2/kling3_0_turbo",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 7.5
+    },
+    "kling-o3-flf": {
+      "jst": "kling_o3_flf",
+      "endpoint": "/jobs/v2/kling_o3_flf",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 6.25
+    },
+    "kling-o3-image-reference": {
+      "jst": "kling_o3_image_reference",
+      "endpoint": "/jobs/v2/kling_o3_image_reference",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "kling_element_ids"
+      ],
+      "cost": 6.25
+    },
+    "kling-omni-flf": {
+      "jst": "kling_omni_flf",
+      "endpoint": "/jobs/kling-omni-flf",
+      "hasCatalogRefs": false,
+      "catalogFields": []
+    },
+    "kling-omni-image": {
+      "jst": "kling_omni_image",
+      "endpoint": "/jobs/kling-omni-image",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 0.5
+    },
+    "kling-omni-image-reference": {
+      "jst": "kling_omni_image_reference",
+      "endpoint": "/jobs/kling-omni-image-reference",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 10
+    },
+    "kling-transition": {
+      "jst": "kling_transition",
+      "endpoint": "/jobs/kling-transition",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "motion_id"
+      ],
+      "cost": 6
+    },
+    "kling2-6-lipsync": {
+      "jst": "kling2_6_lipsync",
+      "endpoint": "/jobs/kling2-6-lipsync",
+      "hasCatalogRefs": false,
+      "catalogFields": []
+    },
+    "kling2-6-motion-control": {
+      "jst": "kling2_6_motion_control",
+      "endpoint": "/jobs/v2/kling2_6_motion_control",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 10.01
+    },
+    "llm-text": {
+      "jst": "llm_text",
+      "endpoint": "/jobs/v2/llm_text",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": null
+    },
+    "marketing-studio-brand-kit-agent": {
+      "jst": "marketing_studio_brand_kit_agent",
+      "endpoint": "/jobs/v2/marketing_studio_brand_kit_agent",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "brand_kit_id"
+      ],
+      "cost": null
+    },
+    "marketing-studio-brand-kit-scrape": {
+      "jst": "marketing_studio_brand_kit_scrape",
+      "endpoint": "/jobs/v2/marketing_studio_brand_kit_scrape",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "brand_kit_id"
+      ],
+      "cost": null
+    },
+    "marketing-studio-hook": {
+      "jst": "marketing_studio_hook",
+      "endpoint": "/jobs/v2/marketing_studio_hook",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "reference_elements"
+      ],
+      "cost": 20
+    },
+    "marketing-studio-image": {
+      "jst": "marketing_studio_image",
+      "endpoint": "/jobs/v2/marketing_studio_image",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "marketing-studio-video": {
+      "jst": "marketing_studio_video",
+      "endpoint": "/jobs/v2/marketing_studio_video",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "reference_elements",
+        "avatars",
+        "products"
+      ],
+      "cost": 25
+    },
+    "minimax-hailuo": {
+      "jst": "minimax_hailuo",
+      "endpoint": "/jobs/minimax-hailuo",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 3
+    },
+    "minimax-hailuo-draw": {
+      "jst": "minimax_hailuo_draw",
+      "endpoint": "/jobs/minimax-hailuo-draw",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": null
+    },
+    "mirelo-audio": {
+      "jst": "mirelo_text_to_audio",
+      "endpoint": "/jobs/v2/mirelo_text_to_audio",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 1.25
+    },
+    "mockup-studio": {
+      "jst": "mockup_studio",
+      "endpoint": "/jobs/v2/mockup_studio",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 0.5
+    },
+    "ms-image": {
+      "jst": "ms_image",
+      "endpoint": "/jobs/v2/ms_image",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 4
+    },
+    "nano-banana": {
+      "jst": "nano_banana",
+      "endpoint": "/jobs/nano-banana",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 1
+    },
+    "nano-banana-2": {
+      "jst": "nano_banana_2",
+      "endpoint": "/jobs/nano-banana-2",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "nano-banana-2-ai-stylist": {
+      "jst": "nano_banana_2_ai_stylist",
+      "endpoint": "/jobs/nano-banana-2-ai-stylist",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "outfit_preset_ids"
+      ],
+      "cost": 2
+    },
+    "nano-banana-2-lite": {
+      "jst": "nano_banana_2_lite",
+      "endpoint": "/jobs/v2/nano_banana_2_lite",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 1
+    },
+    "nano-banana-2-product-placement": {
+      "jst": "nano_banana_2_product_placement",
+      "endpoint": "/jobs/nano-banana-2-product-placement",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "nano-banana-2-relight": {
+      "jst": "nano_banana_2_relight",
+      "endpoint": "/jobs/nano-banana-2-relight",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "nano-banana-2-shots": {
+      "jst": "nano_banana_2_shots",
+      "endpoint": "/jobs/nano-banana-2-shots",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 4
+    },
+    "nano-banana-2-upscale": {
+      "jst": "nano_banana_2_upscale",
+      "endpoint": "/jobs/nano-banana-2-upscale",
+      "hasCatalogRefs": false,
+      "catalogFields": []
+    },
+    "nano-banana-2-zooms": {
+      "jst": "nano_banana_2_zooms",
+      "endpoint": "/jobs/nano-banana-2-zooms",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 4
+    },
+    "nano-banana-flash": {
+      "jst": "nano_banana_flash",
+      "endpoint": "/jobs/v2/nano_banana_flash",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 1.5
+    },
+    "next-shots": {
+      "jst": "next_shots",
+      "endpoint": "/jobs/v2/next_shots",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "openai-hazel": {
+      "jst": "openai_hazel",
+      "endpoint": "/jobs/openai-hazel",
+      "hasCatalogRefs": false,
+      "catalogFields": []
+    },
+    "openai-hazel-mini": {
+      "jst": "openai_hazel_mini",
+      "endpoint": "/jobs/openai-hazel-mini",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 0.75
+    },
+    "outpaint": {
+      "jst": "outpaint",
+      "endpoint": "/jobs/v2/outpaint",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "qwen-camera-control": {
+      "jst": "qwen_camera_control",
+      "endpoint": "/jobs/qwen-camera-control",
+      "hasCatalogRefs": false,
+      "catalogFields": []
+    },
+    "recraft-v4": {
+      "jst": "recraft_v4_1",
+      "endpoint": "/jobs/v2/recraft_v4_1",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 1.25
+    },
+    "reframe": {
+      "jst": "reframe",
+      "endpoint": "/jobs/v2/reframe",
+      "hasCatalogRefs": false,
+      "catalogFields": []
+    },
+    "reve": {
+      "jst": "reve",
+      "endpoint": "/jobs/reve",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 1
+    },
+    "sam-3-video": {
+      "jst": "sam_3_video",
+      "endpoint": "/jobs/v2/sam_3_video",
+      "hasCatalogRefs": false,
+      "catalogFields": []
+    },
+    "seedance": {
+      "jst": "seedance",
+      "endpoint": "/jobs/seedance",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "motion_id"
+      ]
+    },
+    "seedance-1.5": {
+      "jst": "seedance1_5",
+      "endpoint": "/jobs/v2/seedance1_5",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2.4
+    },
+    "seedance-2-0-mini": {
+      "jst": "seedance_2_0_mini",
+      "endpoint": "/jobs/v2/seedance_2_0_mini",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "reference_elements"
+      ]
+    },
+    "seedance-draw": {
+      "jst": "seedance_draw",
+      "endpoint": "/jobs/seedance-draw",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": null
+    },
+    "seedream": {
+      "jst": "seedream",
+      "endpoint": "/jobs/seedream",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 1
+    },
+    "seedream-5-lite": {
+      "jst": "seedream_v5_lite",
+      "endpoint": "/jobs/v2/seedream_v5_lite",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 1
+    },
+    "seedream-v4-5": {
+      "jst": "seedream_v4_5",
+      "endpoint": "/jobs/seedream-v4-5",
+      "hasCatalogRefs": false,
+      "catalogFields": []
+    },
+    "sonilo-music": {
+      "jst": "sonilo_music",
+      "endpoint": "/jobs/v2/sonilo_music",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 0.32
+    },
+    "soul-cast-edit": {
+      "jst": "soul_cast_edit",
+      "endpoint": "/jobs/v2/soul_cast_edit",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "soul-cinema-studio": {
+      "jst": "soul_cinema_studio",
+      "endpoint": "/jobs/v2/soul_cinema_studio",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 0.12
+    },
+    "soul-cinematic": {
+      "jst": "soul_cinematic",
+      "endpoint": "/jobs/v2/soul_cinematic",
+      "hasCatalogRefs": false,
+      "catalogFields": []
+    },
+    "soul-location": {
+      "jst": "soul_location",
+      "endpoint": "/jobs/v2/soul_location",
+      "hasCatalogRefs": false,
+      "catalogFields": []
+    },
+    "soul-location-edit": {
+      "jst": "soul_location_edit",
+      "endpoint": "/jobs/v2/soul_location_edit",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "speech2text": {
+      "jst": "speech2text",
+      "endpoint": "/jobs/v2/speech2text",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 0.05
+    },
+    "sync-so": {
+      "jst": "sync_so",
+      "endpoint": "/jobs/sync-so",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 3.6
+    },
+    "text2image": {
+      "jst": "text2image",
+      "endpoint": "/jobs/text2image",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "style_id"
+      ],
+      "cost": null
+    },
+    "text2image-gpt": {
+      "jst": "text2image_gpt",
+      "endpoint": "/jobs/text2image-gpt",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 1
+    },
+    "text2image-soul-v2": {
+      "jst": "text2image_soul_v2",
+      "endpoint": "/jobs/v2/text2image_soul_v2",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "style_id"
+      ],
+      "cost": 0
+    },
+    "text2speech-v2": {
+      "jst": "text2speech_v2",
+      "endpoint": "/jobs/v2/text2speech_v2",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "voice_type",
+        "voice_id"
+      ],
+      "cost": 0.15
+    },
+    "topaz-image": {
+      "jst": "topaz_image",
+      "endpoint": "/jobs/topaz-image",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "topaz-image-generative": {
+      "jst": "topaz_image_generative",
+      "endpoint": "/jobs/topaz-image-generative",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "topaz-video": {
+      "jst": "topaz_video",
+      "endpoint": "/jobs/topaz-video",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": null
+    },
+    "veo-3.1-lite": {
+      "jst": "veo3_1_lite",
+      "endpoint": "/jobs/v2/veo3_1_lite",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 8
+    },
+    "veo-gemini-omni": {
+      "jst": "gemini_omni",
+      "endpoint": "/jobs/v2/gemini_omni",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 24
+    },
+    "video-background-remover": {
+      "jst": "video_background_remover",
+      "endpoint": "/jobs/v2/video_background_remover",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 1
+    },
+    "video-deflicker": {
+      "jst": "video_deflicker",
+      "endpoint": "/jobs/video-deflicker",
+      "hasCatalogRefs": false,
+      "catalogFields": []
+    },
+    "video-upscale": {
+      "jst": "video_upscale",
+      "endpoint": "/jobs/video-upscale",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 2
+    },
+    "viral-transform-image": {
+      "jst": "viral_transform_image",
+      "endpoint": "/jobs/viral-transform-image",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 1
+    },
+    "viral-transform-video": {
+      "jst": "viral_transform_video",
+      "endpoint": "/jobs/viral-transform-video",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 8
+    },
+    "wan2-2-image": {
+      "jst": "wan2_2_image",
+      "endpoint": "/jobs/wan2-2-image",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 0.5
+    },
+    "wan2-2-video": {
+      "jst": "wan2_2_video",
+      "endpoint": "/jobs/wan2-2-video",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 10
+    },
+    "wan2-5-speak": {
+      "jst": "wan2_5_speak",
+      "endpoint": "/jobs/wan2-5-speak",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 6.25
+    },
+    "wan2-5-video": {
+      "jst": "wan2_5_video",
+      "endpoint": "/jobs/wan2-5-video",
+      "hasCatalogRefs": true,
+      "catalogFields": [
+        "motion_id"
+      ],
+      "cost": 13
+    },
+    "wan2-6": {
+      "jst": "wan2_6",
+      "endpoint": "/jobs/wan2-6",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 13
+    },
+    "wan2-7": {
+      "jst": "wan2_7",
+      "endpoint": "/jobs/v2/wan2_7",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 7.5
+    },
+    "watermark": {
+      "jst": "watermark",
+      "endpoint": "/jobs/watermark",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": null
+    },
+    "z-image": {
+      "jst": "z_image",
+      "endpoint": "/jobs/z-image",
+      "hasCatalogRefs": false,
+      "catalogFields": [],
+      "cost": 0.15
+    }
+  }
+}

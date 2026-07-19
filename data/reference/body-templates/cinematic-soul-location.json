@@ -1,0 +1,25 @@
+{
+  "alias": "cinematic-soul-location",
+  "jobSetType": "cinematic_studio_soul_location",
+  "endpoint": "/jobs/v2/cinematic_studio_soul_location",
+  "version": "v2",
+  "output": "image",
+  "realCost": 0.12,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "dbc5855d-39c6-4cd4-a157-0f43fb22a3a4",
+    "jobId": "54eb513b-e108-4463-b0a7-160b54d0e6c4",
+    "cost": 12
+  },
+  "generatedAt": "2026-07-01T04:55:52.509Z"
+}

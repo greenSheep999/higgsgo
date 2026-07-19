@@ -1,0 +1,845 @@
+{
+  "items": [
+    {
+      "id": "e8b08616-2146-4f0e-a288-23c40d187e2d",
+      "name": "New",
+      "presets": [
+        {
+          "id": "3f90dc5b-f474-4259-95c4-d29fbd6be645",
+          "name": "Flight mode",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/91490e65-80c2-42a0-bbec-971392a77462.webp",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Airports, terminals — everything designed to feel like you're traveling. Modern architecture, clean lines, and a subtle “main character leaves town” aura.",
+          "pinned_at": null
+        },
+        {
+          "id": "26241c54-ed78-4ea7-b1bf-d881737c9feb",
+          "name": "Sunset beach",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/71d9f310-f966-41ec-a009-a87167bcbebe.webp",
+            "type": "static",
+            "width": 500,
+            "height": 750
+          },
+          "category": null,
+          "description": "Golden-hour dreams. The sky melts from purple to peach while you pose like you don’t know the sun’s watching. Glowy skin, backlit outlines, and luxury vacation stillness.",
+          "pinned_at": null
+        },
+        {
+          "id": "de0118ba-7c27-49f7-9841-38abe2aae8e1",
+          "name": "Mt. Fuji",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/7bc1844f-33b1-4578-b25c-2c8ab373e350.webp",
+            "type": "static",
+            "width": 500,
+            "height": 666
+          },
+          "category": null,
+          "description": "Postcard surrealism. Crystal-blue skies, iconic mountain symmetry, and convenience store drama.",
+          "pinned_at": null
+        },
+        {
+          "id": "a13917c7-02a4-450f-b007-e72d53151980",
+          "name": "Street view",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/1c59f291-cf9d-45c1-92b0-53768f372d0e.webp",
+            "type": "static",
+            "width": 500,
+            "height": 666
+          },
+          "category": null,
+          "description": "",
+          "pinned_at": null
+        },
+        {
+          "id": "36061eb7-4907-4cba-afb1-47afcf699873",
+          "name": "Gallery",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/88d27015-a635-4c0f-bf47-19f7c280a659.webp",
+            "type": "static",
+            "width": 500,
+            "height": 666
+          },
+          "category": null,
+          "description": "Neutral walls, high taste. This preset frames your subject like a work of art — minimal, polished, and modern.",
+          "pinned_at": null
+        },
+        {
+          "id": "d3e2b71d-b24b-462e-bd96-12f7a22b5142",
+          "name": "Crossing the street",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/9ef39e1b-693e-4560-89e0-6dfb670f42ea.webp",
+            "type": "static",
+            "width": 500,
+            "height": 666
+          },
+          "category": null,
+          "description": "Boss walk energy. Overhead angles, harsh midday shadows, and that perfect step mid-cross. Looks stolen from a fashion mag.",
+          "pinned_at": null
+        },
+        {
+          "id": "6fb3e1f5-d721-4523-ac38-9902f2b2b850",
+          "name": "Library",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/4d95d3b1-0db6-4125-a0d7-ba9ba770872f.webp",
+            "type": "static",
+            "width": 500,
+            "height": 666
+          },
+          "category": null,
+          "description": "Soft indoor lighting meets cozy academia. Perfect for quiet power, timeless knits, and capturing the stillness of thought between the shelves.",
+          "pinned_at": null
+        },
+        {
+          "id": "bab6e4bd-9093-4bb5-a371-01ef6cbd58ad",
+          "name": "Escalator",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/c23eef21-0f45-4e93-8818-1da4a3061d01.webp",
+            "type": "static",
+            "width": 500,
+            "height": 666
+          },
+          "category": null,
+          "description": "Gliding style in motion. This preset captures that effortless  mall paparazzi look — structured outfits, steel gradients, and motion frozen in frame.",
+          "pinned_at": null
+        },
+        {
+          "id": "bc00b419-f8ca-4887-a990-e2760c3cb761",
+          "name": "Sunbathing",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/97b9e378-ad9d-415e-b3f4-f4c8890dfb60.webp",
+            "type": "static",
+            "width": 500,
+            "height": 375
+          },
+          "category": null,
+          "description": "Clear turquoise water, woven bags, towel texture, and heat-soaked skin.",
+          "pinned_at": null
+        },
+        {
+          "id": "d2e8ba04-9935-4dee-8bc4-39ac789746fc",
+          "name": "Subway",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/af958840-be6d-4444-b441-22b7e1891f5d.webp",
+            "type": "static",
+            "width": 500,
+            "height": 500
+          },
+          "category": null,
+          "description": "",
+          "pinned_at": null
+        }
+      ]
+    },
+    {
+      "id": "85e3c8de-82b6-4298-868f-286c2342f36c",
+      "name": "TikTok Core",
+      "presets": [
+        {
+          "id": "ca4e6ad3-3e93-4e03-81a0-d1722d2c128b",
+          "name": "DigitalCam",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/0e82377e-e3dd-48a8-94fd-04a4ed038be4.webp",
+            "type": "static",
+            "width": 500,
+            "height": 750
+          },
+          "category": null,
+          "description": "Harsh flash, timestamp corner, and raw textures. Feels like 2007 captured forever",
+          "pinned_at": null
+        },
+        {
+          "id": "3f90dc5b-f474-4259-95c4-d29fbd6be645",
+          "name": "Flight mode",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/91490e65-80c2-42a0-bbec-971392a77462.webp",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Airports, terminals — everything designed to feel like you're traveling. Modern architecture, clean lines, and a subtle “main character leaves town” aura.",
+          "pinned_at": null
+        },
+        {
+          "id": "26241c54-ed78-4ea7-b1bf-d881737c9feb",
+          "name": "Sunset beach",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/71d9f310-f966-41ec-a009-a87167bcbebe.webp",
+            "type": "static",
+            "width": 500,
+            "height": 750
+          },
+          "category": null,
+          "description": "Golden-hour dreams. The sky melts from purple to peach while you pose like you don’t know the sun’s watching. Glowy skin, backlit outlines, and luxury vacation stillness.",
+          "pinned_at": null
+        },
+        {
+          "id": "a13917c7-02a4-450f-b007-e72d53151980",
+          "name": "Street view",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/1c59f291-cf9d-45c1-92b0-53768f372d0e.webp",
+            "type": "static",
+            "width": 500,
+            "height": 666
+          },
+          "category": null,
+          "description": "",
+          "pinned_at": null
+        },
+        {
+          "id": "07a85fb3-4407-4122-a4eb-42124e57734c",
+          "name": "CCTV",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/ed84e65b-1c57-4ce2-bef0-8e98c9e6667f.webp",
+            "type": "static",
+            "width": 500,
+            "height": 750
+          },
+          "category": null,
+          "description": "Grainy surveillance vibe. Raw, unfiltered and highly realistic",
+          "pinned_at": null
+        },
+        {
+          "id": "f96913e8-2fcf-4358-8545-75dd6c34c518",
+          "name": "Bimbocore",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/fb283ea7-2fdb-4b50-acd3-f38d83d2c93e.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 225
+          },
+          "category": null,
+          "description": "Hyperfeminine overload: glossed lips, tiny skirts, and confidence cranked to 100. Plastic fantastic, but make it powerful",
+          "pinned_at": null
+        },
+        {
+          "id": "6b9e6b4d-325a-4a78-a0fb-a00ddf612380",
+          "name": "Y2K",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/75e73009-dd0c-4b9d-b0ef-93544b7e4491.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Gloss, glitter, and baby tees. A shiny reboot of early 2000s maximalism—flip phones and all",
+          "pinned_at": null
+        },
+        {
+          "id": "cbefda85-0f76-49bd-82d7-9bcd65be00ca",
+          "name": "Y2K Posters",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/a8d0899d-ec67-49a4-af7f-5fcf0a8f27be.webp",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Chrome text, airbrushed skin, and floating objects. Early internet meets teen bedroom wall",
+          "pinned_at": null
+        }
+      ]
+    },
+    {
+      "id": "dc0c3570-a007-431f-a7f7-e265fc5e579b",
+      "name": "Instagram Aesthetics",
+      "presets": [
+        {
+          "id": "1b798b54-03da-446a-93bf-12fcba1050d7",
+          "name": "iPhone",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/9627c330-e5e0-428d-8414-aeae83d57819.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 225
+          },
+          "category": null,
+          "description": "Natural light, casual framing, soft HDR glow. Looks real, but a little better",
+          "pinned_at": null
+        },
+        {
+          "id": "1cb4b936-77bf-4f9a-9039-f3d349a4cdbe",
+          "name": "Realistic",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/acf8f24d-f567-4b7a-bede-aa63cb7c90dd.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 169
+          },
+          "category": null,
+          "description": "No filters, just flawless clarity. Light, pores, fabric—everything exactly as it is, but better",
+          "pinned_at": null
+        },
+        {
+          "id": "26241c54-ed78-4ea7-b1bf-d881737c9feb",
+          "name": "Sunset beach",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/71d9f310-f966-41ec-a009-a87167bcbebe.webp",
+            "type": "static",
+            "width": 500,
+            "height": 750
+          },
+          "category": null,
+          "description": "Golden-hour dreams. The sky melts from purple to peach while you pose like you don’t know the sun’s watching. Glowy skin, backlit outlines, and luxury vacation stillness.",
+          "pinned_at": null
+        },
+        {
+          "id": "07a85fb3-4407-4122-a4eb-42124e57734c",
+          "name": "CCTV",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/ed84e65b-1c57-4ce2-bef0-8e98c9e6667f.webp",
+            "type": "static",
+            "width": 500,
+            "height": 750
+          },
+          "category": null,
+          "description": "Grainy surveillance vibe. Raw, unfiltered and highly realistic",
+          "pinned_at": null
+        },
+        {
+          "id": "3f90dc5b-f474-4259-95c4-d29fbd6be645",
+          "name": "Flight mode",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/91490e65-80c2-42a0-bbec-971392a77462.webp",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Airports, terminals — everything designed to feel like you're traveling. Modern architecture, clean lines, and a subtle “main character leaves town” aura.",
+          "pinned_at": null
+        }
+      ]
+    },
+    {
+      "id": "12d829f1-b1f3-4033-8d8b-b51568230a42",
+      "name": "Camera Presets",
+      "presets": [
+        {
+          "id": "1b798b54-03da-446a-93bf-12fcba1050d7",
+          "name": "iPhone",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/9627c330-e5e0-428d-8414-aeae83d57819.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 225
+          },
+          "category": null,
+          "description": "Natural light, casual framing, soft HDR glow. Looks real, but a little better",
+          "pinned_at": null
+        },
+        {
+          "id": "ca4e6ad3-3e93-4e03-81a0-d1722d2c128b",
+          "name": "DigitalCam",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/0e82377e-e3dd-48a8-94fd-04a4ed038be4.webp",
+            "type": "static",
+            "width": 500,
+            "height": 750
+          },
+          "category": null,
+          "description": "Harsh flash, timestamp corner, and raw textures. Feels like 2007 captured forever",
+          "pinned_at": null
+        },
+        {
+          "id": "26241c54-ed78-4ea7-b1bf-d881737c9feb",
+          "name": "Sunset beach",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/71d9f310-f966-41ec-a009-a87167bcbebe.webp",
+            "type": "static",
+            "width": 500,
+            "height": 750
+          },
+          "category": null,
+          "description": "Golden-hour dreams. The sky melts from purple to peach while you pose like you don’t know the sun’s watching. Glowy skin, backlit outlines, and luxury vacation stillness.",
+          "pinned_at": null
+        },
+        {
+          "id": "07a85fb3-4407-4122-a4eb-42124e57734c",
+          "name": "CCTV",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/ed84e65b-1c57-4ce2-bef0-8e98c9e6667f.webp",
+            "type": "static",
+            "width": 500,
+            "height": 750
+          },
+          "category": null,
+          "description": "Grainy surveillance vibe. Raw, unfiltered and highly realistic",
+          "pinned_at": null
+        },
+        {
+          "id": "181b3796-008a-403b-b31e-a9b760219f17",
+          "name": "2000s Cam",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/acc02fcd-ce68-4019-b517-089025455ed6.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 225
+          },
+          "category": null,
+          "description": "Low-rise everything, rhinestones, and visible thongs. Nostalgia wrapped in early paparazzi glam",
+          "pinned_at": null
+        },
+        {
+          "id": "cc4e7248-dcfe-4c93-b264-2ab418a7556b",
+          "name": "Fisheye",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/cacbe40f-8551-481a-a8f3-57692fc4ba4d.webp",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Exaggerated depth and playful proportions. Face or object up close, background stretched to infinity",
+          "pinned_at": null
+        },
+        {
+          "id": "294bb3ee-eaef-4d2a-93e3-164268803db4",
+          "name": "360 cam",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/a8951200-becf-4fa3-b41b-3a58e7ebcd72.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Wrap-around perspective with immersive distortion. Captures everything-warped, wide, and wonderfully weird",
+          "pinned_at": null
+        }
+      ]
+    },
+    {
+      "id": "314e2026-6db4-492d-b80b-f2091a855011",
+      "name": "Beauty",
+      "presets": [
+        {
+          "id": "1b798b54-03da-446a-93bf-12fcba1050d7",
+          "name": "iPhone",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/9627c330-e5e0-428d-8414-aeae83d57819.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 225
+          },
+          "category": null,
+          "description": "Natural light, casual framing, soft HDR glow. Looks real, but a little better",
+          "pinned_at": null
+        },
+        {
+          "id": "f5c094c7-4671-4d86-90d2-369c8fdbd7a5",
+          "name": "90s Grain",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/a5c20546-38eb-4d61-8eb2-5290908d55bc.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 225
+          },
+          "category": null,
+          "description": "Warm tones, film texture, and a soft blur—retro mood in every pixel",
+          "pinned_at": null
+        },
+        {
+          "id": "ca4e6ad3-3e93-4e03-81a0-d1722d2c128b",
+          "name": "DigitalCam",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/0e82377e-e3dd-48a8-94fd-04a4ed038be4.webp",
+            "type": "static",
+            "width": 500,
+            "height": 750
+          },
+          "category": null,
+          "description": "Harsh flash, timestamp corner, and raw textures. Feels like 2007 captured forever",
+          "pinned_at": null
+        },
+        {
+          "id": "26241c54-ed78-4ea7-b1bf-d881737c9feb",
+          "name": "Sunset beach",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/71d9f310-f966-41ec-a009-a87167bcbebe.webp",
+            "type": "static",
+            "width": 500,
+            "height": 750
+          },
+          "category": null,
+          "description": "Golden-hour dreams. The sky melts from purple to peach while you pose like you don’t know the sun’s watching. Glowy skin, backlit outlines, and luxury vacation stillness.",
+          "pinned_at": null
+        },
+        {
+          "id": "07a85fb3-4407-4122-a4eb-42124e57734c",
+          "name": "CCTV",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/ed84e65b-1c57-4ce2-bef0-8e98c9e6667f.webp",
+            "type": "static",
+            "width": 500,
+            "height": 750
+          },
+          "category": null,
+          "description": "Grainy surveillance vibe. Raw, unfiltered and highly realistic",
+          "pinned_at": null
+        },
+        {
+          "id": "181b3796-008a-403b-b31e-a9b760219f17",
+          "name": "2000s Cam",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/acc02fcd-ce68-4019-b517-089025455ed6.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 225
+          },
+          "category": null,
+          "description": "Low-rise everything, rhinestones, and visible thongs. Nostalgia wrapped in early paparazzi glam",
+          "pinned_at": null
+        },
+        {
+          "id": "cc4e7248-dcfe-4c93-b264-2ab418a7556b",
+          "name": "Fisheye",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/cacbe40f-8551-481a-a8f3-57692fc4ba4d.webp",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Exaggerated depth and playful proportions. Face or object up close, background stretched to infinity",
+          "pinned_at": null
+        },
+        {
+          "id": "294bb3ee-eaef-4d2a-93e3-164268803db4",
+          "name": "360 cam",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/a8951200-becf-4fa3-b41b-3a58e7ebcd72.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Wrap-around perspective with immersive distortion. Captures everything-warped, wide, and wonderfully weird",
+          "pinned_at": null
+        }
+      ]
+    },
+    {
+      "id": "a1d40724-6e24-4501-b946-695809b3e6c8",
+      "name": "Mood",
+      "presets": [
+        {
+          "id": "de0118ba-7c27-49f7-9841-38abe2aae8e1",
+          "name": "Mt. Fuji",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/7bc1844f-33b1-4578-b25c-2c8ab373e350.webp",
+            "type": "static",
+            "width": 500,
+            "height": 666
+          },
+          "category": null,
+          "description": "Postcard surrealism. Crystal-blue skies, iconic mountain symmetry, and convenience store drama.",
+          "pinned_at": null
+        },
+        {
+          "id": "a13917c7-02a4-450f-b007-e72d53151980",
+          "name": "Street view",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/1c59f291-cf9d-45c1-92b0-53768f372d0e.webp",
+            "type": "static",
+            "width": 500,
+            "height": 666
+          },
+          "category": null,
+          "description": "",
+          "pinned_at": null
+        },
+        {
+          "id": "40ff999c-f576-443c-b5b3-c7d1391a666e",
+          "name": "Spotlight",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/47181b3d-429b-4f87-bb7c-2c5ca96da893.webp",
+            "type": "static",
+            "width": 500,
+            "height": 750
+          },
+          "category": null,
+          "description": "Direct light creating high-contrast drama, paparazzi flash, and instant icon energy",
+          "pinned_at": null
+        },
+        {
+          "id": "ba3d7634-447e-455c-98e3-63705d5403b8",
+          "name": "Sand",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/665ca5a4-e1e7-4fed-8d53-01177ae0518d.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 225
+          },
+          "category": null,
+          "description": "Sculptural silhouettes in windswept dunes. Neutral tones, survivalist edge-high fashion lost in a dust storm",
+          "pinned_at": null
+        },
+        {
+          "id": "0fe8ad66-ff61-411f-9186-b392e140b18c",
+          "name": "Foggy Morning",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/3cbfe1d2-421e-421a-b7bd-dbee471a1d65.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 225
+          },
+          "category": null,
+          "description": "Muted colors, blurred horizons, and quiet light. Dreamlike stillness in early hours",
+          "pinned_at": null
+        },
+        {
+          "id": "0c636e12-3411-4a65-8d86-67858caf2fa7",
+          "name": "Avant-garde",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/62cfc3fb-bb46-4977-9fbb-cee0b68504d4.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 456
+          },
+          "category": null,
+          "description": "Sculptural beauty, unexpected forms. A look that speaks in bold shapes and silent statements",
+          "pinned_at": null
+        },
+        {
+          "id": "7f21e7bd-4df6-4cef-a9a9-9746bceaea1d",
+          "name": "Fairycore",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/a9f12667-0dd4-452e-b704-4ac8f29a69d9.webp",
+            "type": "static",
+            "width": 500,
+            "height": 500
+          },
+          "category": null,
+          "description": "Glittery woodland fantasy. Soft pastels, magical sparkles, enchanted innocence",
+          "pinned_at": null
+        },
+        {
+          "id": "53bdadfa-8eb6-4eaa-8923-ebece4faa91c",
+          "name": "Rainy Day",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/dfa98f2e-9b22-4272-a030-a5296b3b9b6a.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Moody skies, reflections in wet pavement, soft sweaters. A slow, cinematic quiet",
+          "pinned_at": null
+        },
+        {
+          "id": "d8a35238-ba42-48a0-a76a-186a97734b9d",
+          "name": "Overexposed",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/e668934b-9b36-4263-86e0-cdd58f7c267b.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 169
+          },
+          "category": null,
+          "description": "Washed-out whites, crushed detail, and intense brightness. A raw visual effect that feels accidental, emotional, and unfiltered",
+          "pinned_at": null
+        }
+      ]
+    },
+    {
+      "id": "82ec3d37-c49f-4028-a813-2b6fc8173c1d",
+      "name": "Surreal",
+      "presets": [
+        {
+          "id": "de0118ba-7c27-49f7-9841-38abe2aae8e1",
+          "name": "Mt. Fuji",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/7bc1844f-33b1-4578-b25c-2c8ab373e350.webp",
+            "type": "static",
+            "width": 500,
+            "height": 666
+          },
+          "category": null,
+          "description": "Postcard surrealism. Crystal-blue skies, iconic mountain symmetry, and convenience store drama.",
+          "pinned_at": null
+        },
+        {
+          "id": "4b66c2db-8166-4293-b1aa-5269c9effb07",
+          "name": "Nail Check",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/dc1274f0-b58d-4603-9f01-97337e512cac.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Close-up hands showing off nail art, rings, and textures. Precision beauty with attitude",
+          "pinned_at": null
+        },
+        {
+          "id": "70fbb531-5ee2-492e-8c53-5dbd6923e8c2",
+          "name": "Giant Accessory",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/f66daa40-480f-49f1-90ed-6b2af23a4554.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "One item exaggerated to surreal scale—bags, bows, or earrings blown up for visual drama",
+          "pinned_at": null
+        },
+        {
+          "id": "b3c8075a-cb4c-42de-b8b3-7099dd2df672",
+          "name": "Creatures",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/ce4416fd-37a7-42fe-af0d-10167d2cfa0a.webp",
+            "type": "static",
+            "width": 500,
+            "height": 375
+          },
+          "category": null,
+          "description": "Animalistic details fused with human edge, strange, eerie and beautiful",
+          "pinned_at": null
+        },
+        {
+          "id": "30458874-d9c0-4d5a-b2b7-597e0eee2404",
+          "name": "Shoe Check",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/55009845-16f0-43b0-a395-48c2bbe1f4d8.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "A visual trend where the focus is on footwear, often captured from a top-down or ground-level angle",
+          "pinned_at": null
+        }
+      ]
+    },
+    {
+      "id": "59da38eb-b0a4-4f24-adb8-021bdc238d12",
+      "name": "Graphic Art",
+      "presets": [
+        {
+          "id": "82edba1e-b093-4484-a25e-9276e0454999",
+          "name": "Invertethereal",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/5a70012c-02c4-45aa-934b-768587a2d0e4.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Negative tones and ghostly hues. Dreamlike, eerie, and light turned inside out",
+          "pinned_at": null
+        },
+        {
+          "id": "2fcf02e2-919a-4642-8b31-d58bde5e6bd9",
+          "name": "Mixed Media",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/ca50ff8d-ed44-4043-b1ec-1c62247d4e44.webp",
+            "type": "static",
+            "width": 500,
+            "height": 666
+          },
+          "category": null,
+          "description": "Layers of photo, paint, text, and texture. A visual collage with chaotic elegance",
+          "pinned_at": null
+        },
+        {
+          "id": "7fa63380-64b7-48b1-b684-4c9ef37560a9",
+          "name": "Paper Face",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/51362a07-60b0-4270-9125-03dea74ed03e.webp",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "A face collaged from torn paper, textures, and cutouts-raw edges meet artistic expression. Mixed media magic with a surreal twist",
+          "pinned_at": null
+        },
+        {
+          "id": "facaafeb-4ab5-4384-92a1-b4086180e9ac",
+          "name": "2000s Fashion",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/12160548-47c0-4652-9e2e-3fc9fb413d47.webp",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Flashy fits, shiny textures, and Y2K icons—low-rise, high-attitude, totally throwback",
+          "pinned_at": null
+        },
+        {
+          "id": "62355e77-7096-45ae-9bea-e7c5b88c3b70",
+          "name": "Glitch",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/bed53d7d-3061-4666-bcd6-2ad890387f97.webp",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Pixel drag, color distortion, and digital noise. Beautiful errors in motion",
+          "pinned_at": null
+        },
+        {
+          "id": "12eda704-18e5-4783-aa0f-deba5296cc83",
+          "name": "Long legs",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/69a45320-c6ad-4242-8154-915121f42937.webp",
+            "type": "static",
+            "width": 500,
+            "height": 276
+          },
+          "category": null,
+          "description": "Elongated limbs and stretched proportions. Stylized drama with a runway edge",
+          "pinned_at": null
+        },
+        {
+          "id": "88126a43-86fb-4047-a2d6-c9146d6ca6ce",
+          "name": "Duplicate",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/0f7a191d-93ea-40a5-ad16-ca2b85fdd753.jpg",
+            "type": "static",
+            "width": 300,
+            "height": 169
+          },
+          "category": null,
+          "description": "Echoed figures, mirrored forms, or repeated poses-surreal symmetry that bends perception",
+          "pinned_at": null
+        },
+        {
+          "id": "b9e2d7dc-78e6-4f7d-95dd-b62690e7b200",
+          "name": "Artwork",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/40243714-8b1c-44bc-87f2-ef3aacc2daf9.webp",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Framed moments with painterly depth. A still life of emotion, texture, and light",
+          "pinned_at": null
+        },
+        {
+          "id": "0b4dac9a-f73a-4e5b-a5a7-1a40ee40d6ac",
+          "name": "Graffiti",
+          "media": {
+            "url": "https://cdn.higgsfield.ai/soul-style/65d773e0-b947-4edc-982e-493ce1f04dc3.webp",
+            "type": "static",
+            "width": 300,
+            "height": 400
+          },
+          "category": null,
+          "description": "Spray textures, bold lines, and rebellious color. Raw energy in every frame",
+          "pinned_at": null
+        }
+      ]
+    }
+  ]
+}

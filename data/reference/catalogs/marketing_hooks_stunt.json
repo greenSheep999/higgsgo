@@ -1,0 +1,54 @@
+{
+  "cursor": null,
+  "has_more": false,
+  "items": [
+    {
+      "id": "3d45fb46-254f-4c83-9685-8e3d28945a67",
+      "type": "stunt",
+      "name": "Product Hit",
+      "prompt": "Object flies into frame, hits subject. Brief reaction → pivot to product.",
+      "job_id": null,
+      "job_status": null,
+      "is_pinned": false,
+      "thumbnail_url": "https://cdn.higgsfield.ai/marketing_studio_setup/672b7bc8-fd7e-48ef-954f-f194b83eb1ba.webp",
+      "video_url": "https://cdn.higgsfield.ai/marketing_studio_setup/0376d63f-7fcb-4622-bdd0-4dc700d44cc6.mp4",
+      "source": "preset"
+    },
+    {
+      "id": "d50eb41c-fcfa-4f4d-93aa-473cdc6bc3b2",
+      "type": "stunt",
+      "name": "Random Object Mic",
+      "prompt": "During a casual vlog, a random absurd object falls into the person's hand from above, and they immediately use it as a microphone to continue a completely serious product review.",
+      "job_id": null,
+      "job_status": null,
+      "is_pinned": false,
+      "thumbnail_url": "https://cdn.higgsfield.ai/marketing_studio_setup/e30feee4-f9b5-4e9e-8967-d9d6ff34acd4.webp",
+      "video_url": "https://cdn.higgsfield.ai/marketing_studio_setup/381965b9-5d4b-4e6a-a9a1-be94a6cbb66d.mp4",
+      "source": "preset"
+    },
+    {
+      "id": "31976cc7-e597-4be2-9753-4a80153b0cc7",
+      "type": "stunt",
+      "name": "Blizzard",
+      "prompt": "A cozy indoor scene is suddenly hit by a violent, impossible blizzard; chaos fills the room but the product remains intact and functioning, and once the storm stops, the product is still working.",
+      "job_id": null,
+      "job_status": null,
+      "is_pinned": false,
+      "thumbnail_url": "https://cdn.higgsfield.ai/marketing_studio_setup/677036e5-bd7f-4258-8429-5a98a93569c4.webp",
+      "video_url": "https://cdn.higgsfield.ai/marketing_studio_setup/b46b6584-a4c7-4228-8b51-927e1aebcfed.mp4",
+      "source": "preset"
+    },
+    {
+      "id": "5443eff1-d940-4ad3-9413-957bb048a6b0",
+      "type": "stunt",
+      "name": "Product Dodge",
+      "prompt": "Suddenly, a product flies into a person's face; he quickly bends down to avoid a collision, and in the next frame he stands up straight and already holds the product in his hands and begins to review as if nothing had happened.",
+      "job_id": null,
+      "job_status": null,
+      "is_pinned": false,
+      "thumbnail_url": "https://cdn.higgsfield.ai/marketing_studio_setup/af91a3e3-6667-404d-ab20-ba653178661b.webp",
+      "video_url": "https://cdn.higgsfield.ai/marketing_studio_setup/81a3aed0-6db5-4c8f-9f56-8aab62e81b22.mp4",
+      "source": "preset"
+    }
+  ]
+}

@@ -1,0 +1,57 @@
+{
+  "alias": "marketing-studio-hook",
+  "jobSetType": "marketing_studio_hook",
+  "endpoint": "/jobs/v2/marketing_studio_hook",
+  "version": "v2",
+  "output": "image",
+  "realCost": 20,
+  "catalogRefs": {
+    "reference_elements": "catalogs/reference_elements.json (must be user-created; empty by default)"
+  },
+  "exampleBody": {
+    "params": {
+      "width": 768,
+      "height": 1024,
+      "prompt": "HOOK:\nObject flies into frame, hits subject. Brief reaction → pivot to product.",
+      "genre": "auto",
+      "medias": [],
+      "duration": 4,
+      "resolution": "720p",
+      "aspect_ratio": "3:4",
+      "generate_audio": true,
+      "multi_shots": false,
+      "multi_shot_mode": "custom",
+      "multi_prompt": [],
+      "speedramp": "auto",
+      "reference_elements": [],
+      "prompt_language": "en"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "4620289d-1d35-4ec7-a86d-82f49bac1af5",
+    "jobId": "ae743abb-ad1b-41fe-8e95-bf59afe4f1d5",
+    "cost": 2000
+  },
+  "generatedAt": "2026-07-04T14:26:46.974Z",
+  "bestPracticeBody": {
+    "params": {
+      "hook_id": "3d45fb46-254f-4c83-9685-8e3d28945a67",
+      "setting_id": "b8368076-35eb-4045-b33b-74b2646d9863",
+      "prompt": ".",
+      "width": 768,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "input_images": []
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "Requires hook_id from catalogs/marketing_hooks.json; setting_id from catalogs/marketing_settings.json."
+}

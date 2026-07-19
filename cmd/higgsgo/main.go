@@ -175,18 +175,27 @@ func run() error {
 	}
 
 	// Model registry (jsonstatic backed by data/reference/verified-models.json).
+	// body-templates + catalogs are optional; missing directories degrade
+	// gracefully to the pre-enrichment behaviour (no ExampleBodyJSON /
+	// Enums surfaced to consumers).
 	regPath := filepath.Join(cfg.Models.DataPath, "verified-models.json")
 	extraPath := filepath.Join(cfg.Models.DataPath, "model-specs-extra.json")
+	bodyTemplatesDir := filepath.Join(cfg.Models.DataPath, "body-templates")
+	catalogsDir := filepath.Join(cfg.Models.DataPath, "catalogs")
 	registry, err := jsonstatic.New(jsonstatic.Config{
-		Path:           regPath,
-		ExtraSpecsPath: extraPath,
+		Path:             regPath,
+		ExtraSpecsPath:   extraPath,
+		BodyTemplatesDir: bodyTemplatesDir,
+		CatalogsDir:      catalogsDir,
 	})
 	if err != nil {
 		return fmt.Errorf("load model registry: %w", err)
 	}
 	logger.Info("model registry loaded",
 		slog.String("path", regPath),
-		slog.String("extra_path", extraPath))
+		slog.String("extra_path", extraPath),
+		slog.String("body_templates_dir", bodyTemplatesDir),
+		slog.String("catalogs_dir", catalogsDir))
 
 	// Wire the persisted operator overrides (migration 015) into the
 	// registry, then re-Reload so the first request served post-boot

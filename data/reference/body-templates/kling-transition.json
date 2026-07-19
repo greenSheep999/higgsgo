@@ -1,0 +1,86 @@
+{
+  "alias": "kling-transition",
+  "jobSetType": "kling_transition",
+  "endpoint": "/jobs/kling-transition",
+  "version": "v1-hyphen",
+  "output": "video",
+  "realCost": 6,
+  "catalogRefs": {
+    "motion_id": "catalogs/motions.json"
+  },
+  "exampleBody": {
+    "params": {
+      "width": 512,
+      "height": 512,
+      "model": "kling-v2-5-turbo",
+      "mode": "pro",
+      "duration": 5,
+      "enhance_prompt": true,
+      "input_image": {
+        "id": "fdb0e2a0-59fb-4af9-a4b5-f2c64d36c378",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3G2S2COZYUws8l5Zikjzkf7JALQ/fdb0e2a0-59fb-4af9-a4b5-f2c64d36c378.jpg"
+      },
+      "input_image_end": {
+        "id": "fdb0e2a0-59fb-4af9-a4b5-f2c64d36c378",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3G2S2COZYUws8l5Zikjzkf7JALQ/fdb0e2a0-59fb-4af9-a4b5-f2c64d36c378.jpg"
+      },
+      "input_video": null,
+      "input_video_end": null,
+      "motion_id": "bbab2a35-ccba-45df-8c37-8ea2bd9e395a",
+      "motion": {
+        "id": "bbab2a35-ccba-45df-8c37-8ea2bd9e395a",
+        "name": "Raven Transition",
+        "url": "https://cdn.higgsfield.ai/kling_motion/ec0c8890-fe56-4d36-a6b8-5a886f4ddc59.mp4"
+      },
+      "start_input": {
+        "id": "fdb0e2a0-59fb-4af9-a4b5-f2c64d36c378",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3G2S2COZYUws8l5Zikjzkf7JALQ/fdb0e2a0-59fb-4af9-a4b5-f2c64d36c378.jpg"
+      },
+      "end_input": {
+        "id": "fdb0e2a0-59fb-4af9-a4b5-f2c64d36c378",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3G2S2COZYUws8l5Zikjzkf7JALQ/fdb0e2a0-59fb-4af9-a4b5-f2c64d36c378.jpg"
+      }
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "f5cb7768-61dd-43a8-8b5d-e39465c056c0",
+    "jobId": "dff8701e-a11c-44eb-b548-4ae8a40b535e",
+    "cost": 600
+  },
+  "generatedAt": "2026-07-04T12:35:13.501Z",
+  "bestPracticeBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "start_input": {
+        "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+        "note": "Small red apple, 512x512. Safe default for image inputs."
+      },
+      "end_input": {
+        "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+        "note": "Small red apple, 512x512. Safe default for image inputs."
+      },
+      "motion_id": "bbab2a35-ccba-45df-8c37-8ea2bd9e395a",
+      "prompt": ".",
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "720p"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "motion_id from catalogs/motions.json."
+}

@@ -1,0 +1,64 @@
+{
+  "alias": "qwen-camera-control",
+  "jobSetType": "qwen_camera_control",
+  "endpoint": "/jobs/qwen-camera-control",
+  "version": "v1-hyphen",
+  "output": "image",
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "seed": 402353,
+      "input_image": {
+        "id": "3602a43f-63e7-4a1b-a3b3-cf693920ffca",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/3602a43f-63e7-4a1b-a3b3-cf693920ffca.jpg"
+      },
+      "rotate_degree": 10,
+      "move_forward_level": 0,
+      "vertical_angle": 0,
+      "is_all_angles_dump": false
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false,
+    "job_set_type": "qwen_camera_control",
+    "job_set_id": "d6cb6802-e3ef-4b2b-9d18-d47d6a1d14ee",
+    "job_set_parent_id": null,
+    "job_set_client_meta": null,
+    "board_ids": [],
+    "meta": {},
+    "id": "786fd5e6-2818-401f-b865-49040bcb7bec",
+    "status": "completed",
+    "ip_check_finished": null,
+    "ip_detected": null,
+    "result": null,
+    "results": {
+      "raw": {
+        "type": "image",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_070453_786fd5e6-2818-401f-b865-49040bcb7bec.png"
+      },
+      "min": {
+        "type": "image",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_070453_786fd5e6-2818-401f-b865-49040bcb7bec_min.webp"
+      }
+    },
+    "published_at": null,
+    "created_at": 1782975893.483047,
+    "user_id": "user_3Flevg5z3r1kTApnx5j83ZABPoE",
+    "trace_id": "786fd5e6-2818-401f-b865-49040bcb7bec",
+    "user": {
+      "id": "user_3Flevg5z3r1kTApnx5j83ZABPoE",
+      "full_name": "deconstructivistworm1673",
+      "username": "deconstructivistworm1673",
+      "avatar_url": null
+    },
+    "folder_ids": [],
+    "is_favourite": false,
+    "is_viewed": false
+  },
+  "exampleResponse": {
+    "jobId": "786fd5e6-2818-401f-b865-49040bcb7bec"
+  },
+  "generatedAt": "2026-07-02T07:16:44.318Z"
+}

@@ -1,0 +1,84 @@
+{
+  "alias": "kling2-6-motion-control",
+  "jobSetType": "kling2_6_motion_control",
+  "endpoint": "/jobs/v2/kling2_6_motion_control",
+  "version": "v2",
+  "output": "video",
+  "realCost": 10.01,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 512,
+      "height": 512,
+      "prompt": ".",
+      "character_orientation": "image",
+      "mode": "std",
+      "duration": 10,
+      "medias": [
+        {
+          "role": "image",
+          "data": {
+            "id": "2f9f510d-e747-4344-8ab7-2e5ba73581e8",
+            "type": "media_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/2f9f510d-e747-4344-8ab7-2e5ba73581e8.jpg"
+          }
+        },
+        {
+          "role": "video",
+          "data": {
+            "id": "53bfa5d3-6475-4ab8-bfc3-b980e639ce97",
+            "type": "video_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/53bfa5d3-6475-4ab8-bfc3-b980e639ce97.mp4"
+          }
+        }
+      ]
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "2ff01961-e690-4401-ba11-3040b3599345",
+    "jobId": "fe77e6a0-8427-4f45-ad16-d20f38ef7da0",
+    "cost": 1001
+  },
+  "generatedAt": "2026-07-04T13:09:44.458Z",
+  "bestPracticeBody": {
+    "params": {
+      "prompt": ".",
+      "character_orientation": "image",
+      "mode": "std",
+      "medias": [
+        {
+          "role": "image",
+          "data": {
+            "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+            "type": "media_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+            "note": "Small red apple, 512x512. Safe default for image inputs."
+          }
+        },
+        {
+          "role": "video",
+          "data": {
+            "id": "bfbb9d8b-e9f8-4036-8576-79bbd431148b",
+            "type": "video_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/bfbb9d8b-e9f8-4036-8576-79bbd431148b.mp4",
+            "note": "Short real-scene mp4, 1MB, IP-check-cleared."
+          }
+        }
+      ],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "resolution": "720p",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "input_images": []
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "medias needs [image, video]. character_orientation: image (default). mode: std."
+}

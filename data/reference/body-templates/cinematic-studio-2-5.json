@@ -1,0 +1,34 @@
+{
+  "alias": "cinematic-studio-2-5",
+  "jobSetType": "cinematic_studio_2_5",
+  "endpoint": "?",
+  "version": null,
+  "output": "image",
+  "realCost": 2,
+  "catalogRefs": {
+    "reference_elements": "catalogs/reference_elements.json (must be user-created; empty by default)"
+  },
+  "exampleBody": {
+    "params": {
+      "prompt": ".",
+      "medias": [],
+      "mode": "auto",
+      "seed": null,
+      "width": 512,
+      "height": 288,
+      "batch_size": 1,
+      "resolution": "1k",
+      "aspect_ratio": "16:9",
+      "folder_id": null,
+      "reference_elements": []
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "db3f083a-24a3-4af1-8cf3-63c280466a95",
+    "jobId": "d6e1d369-7e72-4e9b-8abc-3d7bb845aac0",
+    "cost": 200
+  },
+  "generatedAt": "2026-07-04T13:09:44.464Z"
+}

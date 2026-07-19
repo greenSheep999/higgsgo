@@ -1,0 +1,66 @@
+{
+  "alias": "kling-omni-flf",
+  "jobSetType": "kling_omni_flf",
+  "endpoint": "/jobs/kling-omni-flf",
+  "version": "v1-hyphen",
+  "output": "video",
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "mode": "pro",
+      "width": 1024,
+      "height": 1024,
+      "duration": 5,
+      "aspect_ratio": "1:1",
+      "input_image": {
+        "id": "025c230f-e529-437f-ba77-a0cf379a2d4c",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/025c230f-e529-437f-ba77-a0cf379a2d4c.jpg",
+        "type": "media_input"
+      },
+      "input_image_end": null
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false,
+    "job_set_type": "kling_omni_flf",
+    "job_set_id": "74a3744c-688c-46d8-82c3-fcb560e6ac00",
+    "job_set_parent_id": null,
+    "job_set_client_meta": null,
+    "board_ids": [],
+    "meta": {
+      "duration": 5
+    },
+    "id": "66db98eb-f6e3-40df-a923-d3dc658939e1",
+    "status": "completed",
+    "ip_check_finished": null,
+    "ip_detected": null,
+    "result": null,
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_065438_66db98eb-f6e3-40df-a923-d3dc658939e1.mp4"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_065438_66db98eb-f6e3-40df-a923-d3dc658939e1.mp4"
+      }
+    },
+    "published_at": null,
+    "created_at": 1782975278.158707,
+    "user_id": "user_3Flevg5z3r1kTApnx5j83ZABPoE",
+    "trace_id": "66db98eb-f6e3-40df-a923-d3dc658939e1",
+    "user": {
+      "id": "user_3Flevg5z3r1kTApnx5j83ZABPoE",
+      "full_name": "deconstructivistworm1673",
+      "username": "deconstructivistworm1673",
+      "avatar_url": null
+    },
+    "folder_ids": [],
+    "is_favourite": false,
+    "is_viewed": false
+  },
+  "exampleResponse": {
+    "jobId": "66db98eb-f6e3-40df-a923-d3dc658939e1"
+  },
+  "generatedAt": "2026-07-02T06:56:44.927Z"
+}

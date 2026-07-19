@@ -1,0 +1,41 @@
+{
+  "alias": "cinematic-studio-3-0-image-edit",
+  "jobSetType": "cinematic_studio_3_0_image_edit",
+  "endpoint": "/jobs/v2/cinematic_studio_3_0_image_edit",
+  "version": "v2",
+  "output": "image",
+  "realCost": 2,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k",
+      "medias": [
+        {
+          "role": "image",
+          "data": {
+            "id": "7b0c241c-3675-47d4-be13-a2af959b7567",
+            "type": "media_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/7b0c241c-3675-47d4-be13-a2af959b7567.jpg"
+          }
+        }
+      ]
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "4e00ce33-c880-4c47-9d50-83ef541178a8",
+    "jobId": "2eae1566-d404-4b73-ae6a-2f2b85418b7c",
+    "cost": 200
+  },
+  "generatedAt": "2026-07-01T23:58:41.199Z"
+}

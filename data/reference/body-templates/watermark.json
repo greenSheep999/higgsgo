@@ -1,0 +1,50 @@
+{
+  "alias": "watermark",
+  "jobSetType": "watermark",
+  "endpoint": "/jobs/watermark",
+  "version": "v1-hyphen",
+  "output": "video",
+  "realCost": null,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "input_video": {
+        "id": "8235ebbe-9335-4cd3-a0ef-eaf934f129bb",
+        "type": "video_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemqwvSqMuSk4JKHFXcZz57wm/8235ebbe-9335-4cd3-a0ef-eaf934f129bb.mp4"
+      },
+      "object_key": "user_3FlemqwvSqMuSk4JKHFXcZz57wm/8235ebbe-9335-4cd3-a0ef-eaf934f129bb.mp4"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "c2fce9e5-7549-4fa7-bca5-ee63cde1178b",
+    "jobId": "752f7c80-ba09-4d04-b1a0-8e4876dc407a",
+    "cost": null
+  },
+  "generatedAt": "2026-07-04T07:18:30.609Z",
+  "bestPracticeBody": {
+    "params": {
+      "prompt": ".",
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "resolution": "720p",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "input_images": []
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false,
+    "input_video": {
+      "id": "bfbb9d8b-e9f8-4036-8576-79bbd431148b",
+      "type": "video_input",
+      "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/bfbb9d8b-e9f8-4036-8576-79bbd431148b.mp4",
+      "note": "Short real-scene mp4, 1MB, IP-check-cleared."
+    }
+  },
+  "bestPracticeHint": "input_video is at BODY TOP LEVEL (not in params)."
+}

@@ -1,0 +1,40 @@
+{
+  "alias": "wan2-5-video",
+  "jobSetType": "wan2_5_video",
+  "endpoint": "/jobs/wan2-5-video",
+  "version": "v1-hyphen",
+  "output": "video",
+  "realCost": 13,
+  "catalogRefs": {
+    "motion_id": "catalogs/motions.json"
+  },
+  "exampleBody": {
+    "params": {
+      "width": 512,
+      "height": 512,
+      "input_image": null,
+      "draw_input_image": null,
+      "input_audio": null,
+      "prompt": ".",
+      "negative_prompt": "\noverexposed, blurred details, subtitles, worst quality, jpeg artifacts, ugly, unnatural movement,\nunnatural motion, extra fingers, poorly drawn hands, still image, cluttered background, duplicate limbs,\nrandom text, deformed face, asymmetrical eyes, bad anatomy, multiple heads, extra limbs, morphing, face distortion\n",
+      "resolution": "720p",
+      "duration": 5,
+      "seed": -1,
+      "mode": "regular",
+      "is_draw": false,
+      "preset_family": "wan2_5_video",
+      "name": null,
+      "aspect_ratio": "16:9",
+      "motion_id": null,
+      "motion": null
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "34201c10-4836-48ad-8637-07b0f8830884",
+    "jobId": "1e885138-4398-459b-bf2f-6059867ab938",
+    "cost": 1300
+  },
+  "generatedAt": "2026-07-04T13:09:44.459Z"
+}

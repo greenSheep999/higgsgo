@@ -1,0 +1,43 @@
+{
+  "alias": "marketing-studio-brand-kit-scrape",
+  "jobSetType": "marketing_studio_brand_kit_scrape",
+  "endpoint": "/jobs/v2/marketing_studio_brand_kit_scrape",
+  "version": "v2",
+  "output": "image",
+  "realCost": null,
+  "catalogRefs": {
+    "brand_kit_id": "catalogs/marketing_brand_kits.json (must be user-scraped first)"
+  },
+  "exampleBody": {
+    "params": {
+      "brand_kit_id": "a2160eb3-7afd-4a9e-82ea-4f2bc8370937",
+      "scrap_url": "https://apple.com"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "ebc9b9f4-405d-4682-a2eb-87a19318bff8",
+    "jobId": "333c2b39-7b50-4b2e-a2b6-94aa0243346a",
+    "cost": null
+  },
+  "generatedAt": "2026-07-04T07:18:30.610Z",
+  "bestPracticeBody": {
+    "params": {
+      "scrap_url": "https://apple.com",
+      "prompt": ".",
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "resolution": "1k",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "input_images": []
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "scrap_url is any brand website — server crawls product info."
+}

@@ -1,0 +1,37 @@
+{
+  "alias": "nano-banana-2-product-placement",
+  "jobSetType": "nano_banana_2_product_placement",
+  "endpoint": "/jobs/nano-banana-2-product-placement",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": 2,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [
+        {
+          "id": "cdc6180a-e692-46df-889f-28cc00e44eec",
+          "type": "media_input",
+          "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/cdc6180a-e692-46df-889f-28cc00e44eec.jpg"
+        }
+      ],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "4e00ce33-c880-4c47-9d50-83ef541178a8",
+    "jobId": "eda7dc82-4990-44c0-a961-dda878c7d4b0",
+    "cost": 200
+  },
+  "generatedAt": "2026-07-01T14:37:03.778Z"
+}

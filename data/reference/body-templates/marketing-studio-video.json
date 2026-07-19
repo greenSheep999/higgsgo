@@ -1,0 +1,94 @@
+{
+  "alias": "marketing-studio-video",
+  "jobSetType": "marketing_studio_video",
+  "endpoint": "/jobs/v2/marketing_studio_video",
+  "version": "v2",
+  "output": "video",
+  "realCost": 25,
+  "catalogRefs": {
+    "reference_elements": "catalogs/reference_elements.json (must be user-created; empty by default)",
+    "avatars": "catalogs/marketing_avatars.json (array of {id,type,url})",
+    "products": "catalogs/marketing_products.json (user-created)"
+  },
+  "exampleBody": {
+    "params": {
+      "width": 512,
+      "height": 288,
+      "prompt": ".",
+      "genre": "auto",
+      "medias": [],
+      "duration": 5,
+      "resolution": "720p",
+      "aspect_ratio": "16:9",
+      "generate_audio": true,
+      "multi_shots": false,
+      "multi_shot_mode": "custom",
+      "multi_prompt": [],
+      "speedramp": "auto",
+      "reference_elements": [],
+      "prompt_language": "en",
+      "enhanced_prompt": null,
+      "mode": "ugc",
+      "specific_mode": "default",
+      "avatars": [],
+      "products": [],
+      "web_products": [],
+      "web_product_ids": [],
+      "web_product_type": null,
+      "storyboard_id": null,
+      "title": null,
+      "panels": [],
+      "hook": {
+        "id": "3d45fb46-254f-4c83-9685-8e3d28945a67",
+        "type": "stunt",
+        "name": "Product Hit",
+        "prompt": "Object flies into frame, hits subject. Brief reaction → pivot to product.",
+        "job_id": null,
+        "job_status": null,
+        "is_pinned": false,
+        "thumbnail_url": "https://cdn.higgsfield.ai/marketing_studio_setup/672b7bc8-fd7e-48ef-954f-f194b83eb1ba.webp",
+        "video_url": "https://cdn.higgsfield.ai/marketing_studio_setup/0376d63f-7fcb-4622-bdd0-4dc700d44cc6.mp4",
+        "source": "preset"
+      },
+      "setting": {
+        "id": "b8368076-35eb-4045-b33b-74b2646d9863",
+        "type": "realistic",
+        "name": "Bedroom",
+        "prompt": "On bed or propped against pillows, soft window light. Unmade bed, cozy textures. Relaxed morning or evening wind-down vibe — honest, low-effort feel.",
+        "job_id": null,
+        "job_status": null,
+        "is_pinned": false,
+        "thumbnail_url": "https://cdn.higgsfield.ai/marketing_studio_setup/cf6e02f7-e735-4105-8eb7-84480b0c1dd2.webp",
+        "video_url": "https://cdn.higgsfield.ai/marketing_studio_setup/d5a34b0a-de21-4e32-80d3-27732a3b34fc.mp4",
+        "source": "preset"
+      },
+      "ad_reference_id": null,
+      "ad_reference_summary": null
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "0612da4e-a1aa-49cb-af7b-6fa0557e94a7",
+    "jobId": "df8f3a38-54c6-43c0-a6b1-7d7b5f3eaa52",
+    "cost": 2500
+  },
+  "generatedAt": "2026-07-04T14:54:04.408Z",
+  "bestPracticeBody": {
+    "params": {
+      "prompt": ".",
+      "width": 512,
+      "height": 288,
+      "batch_size": 1,
+      "aspect_ratio": "16:9",
+      "resolution": "720p",
+      "duration": 5,
+      "medias": [],
+      "hook_id": "3d45fb46-254f-4c83-9685-8e3d28945a67",
+      "setting_id": "b8368076-35eb-4045-b33b-74b2646d9863"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "Alternatively, use params from a preset in catalogs/marketing_formats.json[].presets[].params (contains full body)."
+}

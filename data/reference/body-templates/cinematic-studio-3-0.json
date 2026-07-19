@@ -1,0 +1,31 @@
+{
+  "alias": "cinematic-studio-3-0",
+  "jobSetType": "cinematic_studio_3_0",
+  "endpoint": "/jobs/v2/cinematic_studio_3_0",
+  "version": "v2",
+  "output": "video",
+  "realCost": 52.5,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "480p"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "932a555e-467c-491f-820f-2d8b92d47f3b",
+    "jobId": "63a71d12-0b5c-4414-9436-d6c9e4a4269a",
+    "cost": 5250
+  },
+  "generatedAt": "2026-07-01T16:40:52.764Z"
+}

@@ -302,6 +302,16 @@ export interface PlaygroundModel {
   jst: string;
   est_cost: number;
   required_params: string[];
+  // Compact JSON of a working request body captured from a completed
+  // upstream job. When present, ParamForm can seed defaults for every
+  // param the model expects (seed, style_id, aspect_ratio, ...) instead
+  // of leaving them blank. Empty string when the model has no template.
+  example_body_json?: string;
+  // Optional enum-valued params (param name -> allowed values). Sourced
+  // from the on-disk catalogs referenced by the body template's
+  // catalogRefs. Missing entries mean the SPA falls back to free-text
+  // input for that param.
+  enums?: Record<string, string[]>;
   unstable: boolean;
   requires_paid: boolean;
   requires_unlim: boolean;
@@ -338,6 +348,10 @@ export interface PublicModel {
   // Serialized JSON of a working request body captured from a
   // completed job. Empty when the dump script didn't record one.
   example_body_json: string;
+  // Optional enum-valued params (param name -> allowed values).
+  // Sourced from body-templates + catalogs; empty when the model has no
+  // catalog-backed params.
+  enums?: Record<string, string[]>;
   est_cost: number;
   unstable: boolean;
   requires_paid: boolean;

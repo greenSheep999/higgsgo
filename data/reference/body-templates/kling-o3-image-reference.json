@@ -1,0 +1,37 @@
+{
+  "alias": "kling-o3-image-reference",
+  "jobSetType": "kling_o3_image_reference",
+  "endpoint": "/jobs/v2/kling_o3_image_reference",
+  "version": "v2",
+  "output": "video",
+  "realCost": 6.25,
+  "catalogRefs": {
+    "kling_element_ids": "catalogs/reference_elements.json (must be user-created; empty by default)"
+  },
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "prompt": "reference",
+      "aspect_ratio": "1:1",
+      "mode": "std",
+      "input_images": [
+        {
+          "id": "34270cbc-7588-4a8b-8dfb-c8c419f3ef08",
+          "type": "media_input",
+          "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/34270cbc-7588-4a8b-8dfb-c8c419f3ef08.jpg"
+        }
+      ],
+      "kling_element_ids": [
+        "08d77675-9c5a-4048-ba4d-3ccbd3d9eb87"
+      ]
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "jobId": "bc162a99-3101-4fb8-a1b8-67593547225a",
+    "cost": 625
+  },
+  "generatedAt": "2026-07-01T20:32:27.777Z"
+}

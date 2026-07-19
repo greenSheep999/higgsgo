@@ -1,0 +1,176 @@
+{
+  "user_cursor": null,
+  "preset_cursor": null,
+  "has_more": false,
+  "items": [
+    {
+      "id": "4a0f2e95-1be5-4ab5-94bc-0b943c01102d",
+      "name": "white sheer dress",
+      "asset_type": "set",
+      "gender": "female",
+      "input_image": {
+        "id": "43a19ea4-7e20-46e1-ba53-ac63f11ae7e8",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/43a19ea4-7e20-46e1-ba53-ac63f11ae7e8.jpg"
+      },
+      "created_at": 1765216516.315964,
+      "type": "preset"
+    },
+    {
+      "id": "8d5b13d1-ed55-47b2-8d9d-ba1477b70665",
+      "name": "teal short dress",
+      "asset_type": "set",
+      "gender": "female",
+      "input_image": {
+        "id": "79c931c4-ab3c-4543-aec4-199a8310d79c",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/79c931c4-ab3c-4543-aec4-199a8310d79c.jpg"
+      },
+      "created_at": 1765216516.296429,
+      "type": "preset"
+    },
+    {
+      "id": "bf9d198b-6561-44e0-b9e7-f075a7990acf",
+      "name": "sleeveless babydoll dress",
+      "asset_type": "set",
+      "gender": "female",
+      "input_image": {
+        "id": "a711b00d-1d5d-492e-9726-1856d59679a9",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/a711b00d-1d5d-492e-9726-1856d59679a9.jpg"
+      },
+      "created_at": 1765216516.29041,
+      "type": "preset"
+    },
+    {
+      "id": "5e79c60e-f02f-4bd5-b27d-a642d2227c6d",
+      "name": "sleepy stripes set",
+      "asset_type": "set",
+      "gender": "female",
+      "input_image": {
+        "id": "6008a466-9e38-46ec-9291-25e31226be13",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/6008a466-9e38-46ec-9291-25e31226be13.jpg"
+      },
+      "created_at": 1765216516.289796,
+      "type": "preset"
+    },
+    {
+      "id": "e2a7e125-e277-4739-bca6-c45cbb5c399c",
+      "name": "retro plaid babydoll dress",
+      "asset_type": "set",
+      "gender": "female",
+      "input_image": {
+        "id": "07a1b1e6-cf3f-414e-afdf-23cf5b5aea58",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/07a1b1e6-cf3f-414e-afdf-23cf5b5aea58.jpg"
+      },
+      "created_at": 1765216516.284753,
+      "type": "preset"
+    },
+    {
+      "id": "9c396b1c-0ee9-440d-afa9-ef590feb32cb",
+      "name": "retro mini dress",
+      "asset_type": "set",
+      "gender": "female",
+      "input_image": {
+        "id": "72fe1a17-364e-424b-8785-5b2b131e0428",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/72fe1a17-364e-424b-8785-5b2b131e0428.jpg"
+      },
+      "created_at": 1765216516.284235,
+      "type": "preset"
+    },
+    {
+      "id": "de3a41bd-94f7-40d6-9590-0f2a5007eaad",
+      "name": "red button up dress",
+      "asset_type": "set",
+      "gender": "female",
+      "input_image": {
+        "id": "4c20e96a-1c7b-46a9-ba44-82c4315e05e4",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/4c20e96a-1c7b-46a9-ba44-82c4315e05e4.jpg"
+      },
+      "created_at": 1765216516.282588,
+      "type": "preset"
+    },
+    {
+      "id": "46fae790-2d81-4c49-a5e1-97f28ff89fea",
+      "name": "Pyjama",
+      "asset_type": "set",
+      "gender": "female",
+      "input_image": {
+        "id": "baa1b7c3-9b72-4c7a-be7f-f7fc13d2a9e1",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/baa1b7c3-9b72-4c7a-be7f-f7fc13d2a9e1.webp"
+      },
+      "created_at": 1765216516.28074,
+      "type": "preset"
+    },
+    {
+      "id": "824dc2cc-468c-46fc-ad4e-42dd595e4076",
+      "name": "fur colar dress",
+      "asset_type": "set",
+      "gender": "female",
+      "input_image": {
+        "id": "3eef516b-fe32-46ae-9a3c-008d9f3cfd02",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/3eef516b-fe32-46ae-9a3c-008d9f3cfd02.jpg"
+      },
+      "created_at": 1765216516.256056,
+      "type": "preset"
+    },
+    {
+      "id": "d3e687ee-698d-4f6e-8f31-32cbecbbe1dc",
+      "name": "denim set",
+      "asset_type": "set",
+      "gender": "female",
+      "input_image": {
+        "id": "493ba344-343d-439b-9c9c-7bed5e66a16a",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/493ba344-343d-439b-9c9c-7bed5e66a16a.jpg"
+      },
+      "created_at": 1765216516.247841,
+      "type": "preset"
+    },
+    {
+      "id": "68553c00-7562-430a-9b0f-1738478de56b",
+      "name": "coquette sporty set",
+      "asset_type": "set",
+      "gender": "female",
+      "input_image": {
+        "id": "03f7623a-2a1c-4942-ad76-62cb972d81fe",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/03f7623a-2a1c-4942-ad76-62cb972d81fe.jpg"
+      },
+      "created_at": 1765216516.239893,
+      "type": "preset"
+    },
+    {
+      "id": "f8d2292b-24a5-44f5-b9ff-135e447b4148",
+      "name": "black ong sleeve dress",
+      "asset_type": "set",
+      "gender": "female",
+      "input_image": {
+        "id": "8c0a050c-a646-439a-8d00-f62256e74687",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/8c0a050c-a646-439a-8d00-f62256e74687.jpg"
+      },
+      "created_at": 1765216516.216887,
+      "type": "preset"
+    },
+    {
+      "id": "a124fe14-74ff-417c-b8b8-9f5955b54070",
+      "name": "90s mini dress",
+      "asset_type": "set",
+      "gender": "female",
+      "input_image": {
+        "id": "0b05df11-fd0a-4021-bb26-4ed5f56d0d5b",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/0b05df11-fd0a-4021-bb26-4ed5f56d0d5b.jpg"
+      },
+      "created_at": 1765216516.201074,
+      "type": "preset"
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "alias": "marketing-studio-image",
+  "jobSetType": "marketing_studio_image",
+  "endpoint": "/jobs/v2/marketing_studio_image",
+  "version": "v2",
+  "output": "image",
+  "realCost": 2,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [
+        {
+          "id": "39ac2d89-6eeb-4527-bdfc-67dc2a5f22db",
+          "type": "media_input",
+          "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/39ac2d89-6eeb-4527-bdfc-67dc2a5f22db.jpg"
+        }
+      ],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "4e00ce33-c880-4c47-9d50-83ef541178a8",
+    "jobId": "d867e7c0-b315-41d4-9ca1-f854c7af9085",
+    "cost": 200
+  },
+  "generatedAt": "2026-07-01T13:53:24.699Z"
+}

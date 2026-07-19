@@ -1,0 +1,1800 @@
+{
+  "items": [
+    {
+      "id": "bbab2a35-ccba-45df-8c37-8ea2bd9e395a",
+      "name": "Raven Transition",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -354,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "bbab2a35-ccba-45df-8c37-8ea2bd9e395a",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "c4dd8cc3-79a6-4366-b9a1-071ad848ddd2",
+      "name": "Air Bending",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -353,
+      "tags": [
+        "new"
+      ],
+      "preset_family": "kling",
+      "cms_id": "c4dd8cc3-79a6-4366-b9a1-071ad848ddd2",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "4678bff4-63e0-4272-a961-9b0b0c0746b1",
+      "name": "Animalization",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -352,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "4678bff4-63e0-4272-a961-9b0b0c0746b1",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "b3c9d6c2-e1c9-4d92-8853-9d2d46e4b294",
+      "name": "Water Bending",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -351,
+      "tags": [
+        "new"
+      ],
+      "preset_family": "kling",
+      "cms_id": "b3c9d6c2-e1c9-4d92-8853-9d2d46e4b294",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "70e490b9-26b7-4572-8d9c-2ac8dcc9adc0",
+      "name": "Earth Zoom Out",
+      "media": {
+        "width": 320,
+        "height": 486,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/60fe4cdc-9baf-4616-a86c-0b0a51b012d8.webp",
+        "type": "animated"
+      },
+      "priority": -350,
+      "tags": [
+        "top_choice"
+      ],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [],
+      "params": {
+        "steps": 20,
+        "frames": 81,
+        "strength": 1,
+        "guide_scale": 6
+      }
+    },
+    {
+      "id": "fb52e9a0-c6e2-498e-8adb-6611b80808e3",
+      "name": "Earth Wave",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -349,
+      "tags": [
+        "new"
+      ],
+      "preset_family": "kling",
+      "cms_id": "fb52e9a0-c6e2-498e-8adb-6611b80808e3",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "3f30deaa-dd4a-45c0-be8c-f350fc1008dc",
+      "name": "Giant Grab",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -348,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "3f30deaa-dd4a-45c0-be8c-f350fc1008dc",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "881b5e78-e585-43fb-ac73-a4207d824c88",
+      "name": "Shadow Smoke",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -347,
+      "tags": [
+        "new"
+      ],
+      "preset_family": "kling",
+      "cms_id": "881b5e78-e585-43fb-ac73-a4207d824c88",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "3afdf962-2709-44a9-a41c-6565e6998529",
+      "name": "Eyes In",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -346,
+      "tags": [],
+      "preset_family": "wan2_5_video",
+      "cms_id": "3afdf962-2709-44a9-a41c-6565e6998529",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "eeaa42bc-d607-464e-b21f-b7fb8b1cb3fc",
+      "name": "Firelava",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -345,
+      "tags": [
+        "new"
+      ],
+      "preset_family": "kling",
+      "cms_id": "eeaa42bc-d607-464e-b21f-b7fb8b1cb3fc",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "105c744b-05bf-44ae-ba34-5a7144f4ec46",
+      "name": "Splash Transition",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -345,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "105c744b-05bf-44ae-ba34-5a7144f4ec46",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "66fad309-0d8a-447c-b95e-1e29b6dd864b",
+      "name": "Flame On",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -344,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "66fad309-0d8a-447c-b95e-1e29b6dd864b",
+      "categories": [
+        "effects",
+        "viral"
+      ],
+      "params": {}
+    },
+    {
+      "id": "bc2725cf-4195-4139-881f-f01a71940bea",
+      "name": "Explosion",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -344,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "bc2725cf-4195-4139-881f-f01a71940bea",
+      "categories": [
+        "effects",
+        "viral",
+        "ugc"
+      ],
+      "params": {}
+    },
+    {
+      "id": "6641ebf5-1e07-4a8a-a435-b0ea374861e8",
+      "name": "Flame Transition",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -343,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "6641ebf5-1e07-4a8a-a435-b0ea374861e8",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "de601c08-c4cf-4eac-b1c5-a1d4040b57a6",
+      "name": "Train Rush",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -343,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "de601c08-c4cf-4eac-b1c5-a1d4040b57a6",
+      "categories": [
+        "viral",
+        "effects"
+      ],
+      "params": {}
+    },
+    {
+      "id": "f064aa72-eb21-4691-a827-5f0fa9f4246c",
+      "name": "Melt Transition",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -342,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "f064aa72-eb21-4691-a827-5f0fa9f4246c",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "3322a2db-a59b-4e77-85fd-562d417b79d6",
+      "name": "Ahegao",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -342,
+      "tags": [
+        "top_choice"
+      ],
+      "preset_family": "wan2_2_video",
+      "cms_id": "3322a2db-a59b-4e77-85fd-562d417b79d6",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "569ea796-2a19-4ccc-9281-29179e96ebf3",
+      "name": "Point Cloud",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -341,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "569ea796-2a19-4ccc-9281-29179e96ebf3",
+      "categories": [
+        "effects"
+      ],
+      "params": {}
+    },
+    {
+      "id": "7351a8ad-9754-4844-94f1-00baf293d588",
+      "name": "Mouth In",
+      "media": {
+        "width": 320,
+        "height": 568,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/de3a76d1-79c8-48c4-89ad-60d540c9dcde.webp",
+        "type": "animated"
+      },
+      "priority": -341,
+      "tags": [],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [
+        "vfx",
+        "epic_camera_control"
+      ],
+      "params": {
+        "steps": 20,
+        "frames": 81,
+        "strength": 1,
+        "guide_scale": 6
+      }
+    },
+    {
+      "id": "e43378b9-b20b-4158-a626-745bbbcacdbd",
+      "name": "Flying Cam Transition",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -341,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "e43378b9-b20b-4158-a626-745bbbcacdbd",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "7da01fad-94c9-4b53-be58-06f5d300c90d",
+      "name": "Group Photo",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -340,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "7da01fad-94c9-4b53-be58-06f5d300c90d",
+      "categories": [
+        "effects",
+        "ugc",
+        "viral"
+      ],
+      "params": {}
+    },
+    {
+      "id": "cf529456-6478-4622-a572-052f0d8ae378",
+      "name": "Handheld",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -339,
+      "tags": [],
+      "preset_family": "wan2_5_video",
+      "cms_id": "cf529456-6478-4622-a572-052f0d8ae378",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "ce0b3d96-be4c-4b2d-962a-340dd386d910",
+      "name": "Pan Right",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -338,
+      "tags": [],
+      "preset_family": "wan2_5_video",
+      "cms_id": "ce0b3d96-be4c-4b2d-962a-340dd386d910",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "c43e6d97-a55a-45d7-b5bc-b3a55d3a6e8e",
+      "name": "Static",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -337,
+      "tags": [],
+      "preset_family": "wan2_5_video",
+      "cms_id": "c43e6d97-a55a-45d7-b5bc-b3a55d3a6e8e",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "bb341c21-9548-4efb-8a91-b6202167b344",
+      "name": "Bullet Time",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -336,
+      "tags": [],
+      "preset_family": "wan2_5_video",
+      "cms_id": "bb341c21-9548-4efb-8a91-b6202167b344",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "a787450c-b2d8-4321-967a-8c302da05949",
+      "name": "Dolly Out",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -335,
+      "tags": [],
+      "preset_family": "wan2_5_video",
+      "cms_id": "a787450c-b2d8-4321-967a-8c302da05949",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "7fd00618-aa73-4fae-adb7-98ed16773eaa",
+      "name": "Through Object In",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -334,
+      "tags": [],
+      "preset_family": "wan2_5_video",
+      "cms_id": "7fd00618-aa73-4fae-adb7-98ed16773eaa",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "7c174c3f-7d11-451c-b7da-03be50f7d010",
+      "name": "Car Grip",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -333,
+      "tags": [],
+      "preset_family": "wan2_5_video",
+      "cms_id": "7c174c3f-7d11-451c-b7da-03be50f7d010",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "6f087874-24f3-4d48-9eb9-f4349ac6a105",
+      "name": "Pan Left",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -332,
+      "tags": [],
+      "preset_family": "wan2_5_video",
+      "cms_id": "6f087874-24f3-4d48-9eb9-f4349ac6a105",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "6d7fbb57-6008-4db4-a65c-56a10fc37969",
+      "name": "Dolly Left",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -331,
+      "tags": [],
+      "preset_family": "wan2_5_video",
+      "cms_id": "6d7fbb57-6008-4db4-a65c-56a10fc37969",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "510d88f9-d640-494c-b891-7446ca5cab40",
+      "name": "Through Object Out",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -330,
+      "tags": [],
+      "preset_family": "wan2_5_video",
+      "cms_id": "510d88f9-d640-494c-b891-7446ca5cab40",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "1438937c-a220-4859-93f4-f373da3f73fb",
+      "name": "Dolly In",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -329,
+      "tags": [],
+      "preset_family": "wan2_5_video",
+      "cms_id": "1438937c-a220-4859-93f4-f373da3f73fb",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "da3e5420-7d12-4654-a684-a2fe9dace6ed",
+      "name": "Vampire Transformation",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -328,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "da3e5420-7d12-4654-a684-a2fe9dace6ed",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "53f9cea8-9195-45a0-accd-36d6c6454a01",
+      "name": "Beast Appearans",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -327,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "53f9cea8-9195-45a0-accd-36d6c6454a01",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "1431d4b2-14d2-4576-876e-c8cec2f5f838",
+      "name": "Dolly Right",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -326,
+      "tags": [],
+      "preset_family": "wan2_5_video",
+      "cms_id": "1431d4b2-14d2-4576-876e-c8cec2f5f838",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "be9dae7a-1267-4cd8-8c38-76433bed104d",
+      "name": "Horned Witch",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -325,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "be9dae7a-1267-4cd8-8c38-76433bed104d",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "1b355f18-38f9-4d9e-bd25-d68f2af9c9db",
+      "name": "Ballet",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -324,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "1b355f18-38f9-4d9e-bd25-d68f2af9c9db",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "8bb14782-908c-45a5-a9a1-051a76cab9e1",
+      "name": "Devil Transformation",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -323,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "8bb14782-908c-45a5-a9a1-051a76cab9e1",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "a0bfa1b6-2dc7-4bbe-889f-fc04c27288ba",
+      "name": "Aerial Pull Out",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -322,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "a0bfa1b6-2dc7-4bbe-889f-fc04c27288ba",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "ea67acab-a7bf-4fff-b098-a0f1f1a6796c",
+      "name": "Wireframe",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -321,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "ea67acab-a7bf-4fff-b098-a0f1f1a6796c",
+      "categories": [
+        "effects"
+      ],
+      "params": {}
+    },
+    {
+      "id": "929856d2-448b-40ad-8781-297e02af0ae7",
+      "name": "I Can Fly",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -320,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "929856d2-448b-40ad-8781-297e02af0ae7",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "55d9f3d5-26cd-4300-92e6-785c25bc0f49",
+      "name": "Screamer",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -319,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "55d9f3d5-26cd-4300-92e6-785c25bc0f49",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "a312e070-ca5f-4471-8ac3-cef8a8ada3bf",
+      "name": "Crying",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -318,
+      "tags": [],
+      "preset_family": "seedance",
+      "cms_id": "a312e070-ca5f-4471-8ac3-cef8a8ada3bf",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "840c84e3-dc46-4ee6-8ad4-48c82bb6e427",
+      "name": "Fire Element",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -317,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "840c84e3-dc46-4ee6-8ad4-48c82bb6e427",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "5eb46ea4-0e07-4095-96ef-c128f15bd938",
+      "name": "Graveyard Logo",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -316,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "5eb46ea4-0e07-4095-96ef-c128f15bd938",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "7e9ac07e-703b-4b48-a466-d561d3d9c536",
+      "name": "Hand Transition",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -315,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "7e9ac07e-703b-4b48-a466-d561d3d9c536",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "fad73347-8c2d-4d96-a70a-155447406281",
+      "name": "Polygon",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -314,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "fad73347-8c2d-4d96-a70a-155447406281",
+      "categories": [
+        "effects"
+      ],
+      "params": {}
+    },
+    {
+      "id": "36718124-d743-4104-ab5c-39b7b752b32e",
+      "name": "Blood Mirror Logo",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -313,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "36718124-d743-4104-ab5c-39b7b752b32e",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "81c90748-7852-4bb1-a0ec-1649beb72024",
+      "name": "Trucksition",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -312,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "81c90748-7852-4bb1-a0ec-1649beb72024",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "3c3a1331-3524-47da-b956-688595c295b7",
+      "name": "Pizza Fall",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -311,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "3c3a1331-3524-47da-b956-688595c295b7",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "1f96bfce-ebca-4eb5-a521-0ccd4f1d73d9",
+      "name": "Cyborg",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -310,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "1f96bfce-ebca-4eb5-a521-0ccd4f1d73d9",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "f078c9d9-366a-4cbb-a89a-c5b5aec660d1",
+      "name": "Yacht",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -309,
+      "tags": [],
+      "preset_family": "seedance",
+      "cms_id": "f078c9d9-366a-4cbb-a89a-c5b5aec660d1",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "5023b9bb-d528-48cd-add8-622e2999d7c6",
+      "name": "Super Fast Run",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -308,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "5023b9bb-d528-48cd-add8-622e2999d7c6",
+      "categories": [
+        "effects",
+        "action_movement"
+      ],
+      "params": {}
+    },
+    {
+      "id": "a3469020-4d6e-4073-93c1-33202c5147f0",
+      "name": "Red Carpet",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -307,
+      "tags": [],
+      "preset_family": "seedance",
+      "cms_id": "a3469020-4d6e-4073-93c1-33202c5147f0",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "76629ef1-ca01-481d-8874-e561a105a86c",
+      "name": "Mummy",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -306,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "76629ef1-ca01-481d-8874-e561a105a86c",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "8aa315fa-5e47-424a-9f90-0f29be169398",
+      "name": "Scarecrow Scream",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -305,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "8aa315fa-5e47-424a-9f90-0f29be169398",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "222b3cfc-5e24-44ee-b7f5-94deb2d2b514",
+      "name": "Rapid Zoom Out",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -304,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "222b3cfc-5e24-44ee-b7f5-94deb2d2b514",
+      "categories": [
+        "camera_control"
+      ],
+      "params": {}
+    },
+    {
+      "id": "804cfc3a-e251-4ddf-86d4-46066d0ff7be",
+      "name": "Earth Element",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -303,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "804cfc3a-e251-4ddf-86d4-46066d0ff7be",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "777f1604-afee-406d-a711-bf1e0ea23c86",
+      "name": "Freezing",
+      "media": {
+        "width": 320,
+        "height": 210,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/c7dce823-4318-471c-8f29-a4407074b2ae.webp",
+        "type": "animated"
+      },
+      "priority": -302,
+      "tags": [],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [],
+      "params": {
+        "steps": 20,
+        "frames": 81,
+        "strength": 1,
+        "guide_scale": 6
+      }
+    },
+    {
+      "id": "1432efd3-9d22-46e6-a2c4-e0655c2f777e",
+      "name": "Car Ride",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -301,
+      "tags": [],
+      "preset_family": "seedance",
+      "cms_id": "1432efd3-9d22-46e6-a2c4-e0655c2f777e",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "efb77740-741f-419d-ae8d-cf487e01a6e9",
+      "name": "Smoke Transition",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -300,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "efb77740-741f-419d-ae8d-cf487e01a6e9",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "588486b6-f303-4e2a-b8b0-2b74b01a5f50",
+      "name": "Cotton Cloud",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -299,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "588486b6-f303-4e2a-b8b0-2b74b01a5f50",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "b779cfda-9624-4f61-80bc-f5d0461f3959",
+      "name": "BTS",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -298,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "b779cfda-9624-4f61-80bc-f5d0461f3959",
+      "categories": [
+        "camera_control",
+        "commercial"
+      ],
+      "params": {}
+    },
+    {
+      "id": "5f3f83b8-6a17-47ba-bcfd-f7f41d9997e3",
+      "name": "Werewolf",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -297,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "5f3f83b8-6a17-47ba-bcfd-f7f41d9997e3",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "5819f36e-5b0a-44ca-800e-98e380266b2d",
+      "name": "X-Ray",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -296,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "5819f36e-5b0a-44ca-800e-98e380266b2d",
+      "categories": [
+        "effects"
+      ],
+      "params": {}
+    },
+    {
+      "id": "94ed54b9-7db0-4778-a8ec-0729ef092b46",
+      "name": "Visor X",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -295,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "94ed54b9-7db0-4778-a8ec-0729ef092b46",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "0a8fd69f-e685-454a-8d07-c0bd8b767300",
+      "name": "Clothes Rain",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -294,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "0a8fd69f-e685-454a-8d07-c0bd8b767300",
+      "categories": [
+        "viral",
+        "commercial"
+      ],
+      "params": {}
+    },
+    {
+      "id": "38f4643a-581b-40d8-bcd6-983aecf12430",
+      "name": "Jump Transition",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -293,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "38f4643a-581b-40d8-bcd6-983aecf12430",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "75b85450-71d1-43f2-bbc0-e51157660ac4",
+      "name": "Firework",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -292,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "75b85450-71d1-43f2-bbc0-e51157660ac4",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "a8e2bc3a-e78e-42aa-a0e6-79bc01141ed3",
+      "name": "Roll Transition",
+      "media": {
+        "width": 320,
+        "height": 432,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/b40222b2-1329-4e69-b67e-f5f4c9256e29.webp",
+        "type": "animated"
+      },
+      "priority": -291,
+      "tags": [],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [],
+      "params": {
+        "steps": 20,
+        "frames": 81,
+        "strength": 1,
+        "guide_scale": 6
+      }
+    },
+    {
+      "id": "d3c3692f-1aec-4274-9aaf-5f461ad71b6a",
+      "name": "Censorship",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -290,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "d3c3692f-1aec-4274-9aaf-5f461ad71b6a",
+      "categories": [
+        "effects"
+      ],
+      "params": {}
+    },
+    {
+      "id": "bb08555e-8641-4b56-a97f-faccd1a8f615",
+      "name": "Car Mount",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -289,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "bb08555e-8641-4b56-a97f-faccd1a8f615",
+      "categories": [
+        "new"
+      ],
+      "params": {}
+    },
+    {
+      "id": "32aa3a10-5e8f-4672-bfc1-f724e3306365",
+      "name": "Ghostly Disintegration",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -288,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "32aa3a10-5e8f-4672-bfc1-f724e3306365",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "6decccbe-9440-4c4a-a70e-997f58ffb416",
+      "name": "Zombie Decay",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -287,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "6decccbe-9440-4c4a-a70e-997f58ffb416",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "77f123ef-9bdc-47a8-b5b5-bb05733956c3",
+      "name": "Helicopter Escape",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -286,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "77f123ef-9bdc-47a8-b5b5-bb05733956c3",
+      "categories": [
+        "viral",
+        "action_movement"
+      ],
+      "params": {}
+    },
+    {
+      "id": "cd5bfd11-5a1a-46e0-9294-b22b0b733b1e",
+      "name": "Face Punch",
+      "media": {
+        "width": 320,
+        "height": 242,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/4c75250f-a508-4d36-b092-25cc0837f127.webp",
+        "type": "animated"
+      },
+      "priority": -285,
+      "tags": [
+        "top_choice"
+      ],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [
+        "vfx",
+        "trending"
+      ],
+      "params": {
+        "steps": 20,
+        "frames": 81,
+        "strength": 1,
+        "guide_scale": 6
+      }
+    },
+    {
+      "id": "0bdbf318-f918-4f9b-829a-74cab681d806",
+      "name": "Arc Right",
+      "media": {
+        "width": 320,
+        "height": 424,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/f97e1093-b61a-4bbd-abed-4318fc1249e8.webp",
+        "type": "animated"
+      },
+      "priority": -284,
+      "tags": [
+        "top_choice"
+      ],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [
+        "epic_camera_control",
+        "trending"
+      ],
+      "params": {
+        "steps": 20,
+        "frames": 81,
+        "strength": 1,
+        "guide_scale": 6
+      }
+    },
+    {
+      "id": "b4ba822f-9171-4547-997e-c86de335385e",
+      "name": "Timelapse Human",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -283,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "b4ba822f-9171-4547-997e-c86de335385e",
+      "categories": [
+        "camera_control"
+      ],
+      "params": {}
+    },
+    {
+      "id": "abcf4cae-51d6-413c-95bf-a586cd48391b",
+      "name": "Glitch",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -282,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "abcf4cae-51d6-413c-95bf-a586cd48391b",
+      "categories": [
+        "effects"
+      ],
+      "params": {}
+    },
+    {
+      "id": "81f108ba-6b17-441c-a821-dd0bd540968d",
+      "name": "Morning routine",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -281,
+      "tags": [],
+      "preset_family": "seedance",
+      "cms_id": "81f108ba-6b17-441c-a821-dd0bd540968d",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "5eb82f94-2b98-4e4a-ab4b-ee6c872fb2c7",
+      "name": "FPV Drone",
+      "media": {
+        "width": 320,
+        "height": 180,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/a6bbb172-ecff-4dcb-87b2-18a87898febd.webp",
+        "type": "animated"
+      },
+      "priority": -280,
+      "tags": [],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [
+        "epic_camera_control"
+      ],
+      "params": {
+        "steps": 20,
+        "frames": 81,
+        "strength": 1,
+        "guide_scale": 6
+      }
+    },
+    {
+      "id": "5949fec9-f70e-45d5-8ab9-5544bb18dd72",
+      "name": "Multiverse",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -279,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "5949fec9-f70e-45d5-8ab9-5544bb18dd72",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "5d0eee15-569c-4006-a1c7-46d1c42d9315",
+      "name": "Drunk Master",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -278,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "5d0eee15-569c-4006-a1c7-46d1c42d9315",
+      "categories": [
+        "viral",
+        "action_movement"
+      ],
+      "params": {}
+    },
+    {
+      "id": "40a465df-3484-4130-bfd2-54f5cdcaf3bf",
+      "name": "Money Rain",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -277,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "40a465df-3484-4130-bfd2-54f5cdcaf3bf",
+      "categories": [
+        "effects",
+        "ugc"
+      ],
+      "params": {}
+    },
+    {
+      "id": "e974bca9-c9eb-4cc8-9318-5676cc110f17",
+      "name": "Building Explosion",
+      "media": {
+        "width": 320,
+        "height": 568,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/51d42294-6d2f-4e0c-8448-c3b8d4114292.webp",
+        "type": "animated"
+      },
+      "priority": -276,
+      "tags": [
+        "top_choice"
+      ],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [
+        "vfx"
+      ],
+      "params": {
+        "steps": 20,
+        "frames": 81,
+        "strength": 1,
+        "guide_scale": 6
+      }
+    },
+    {
+      "id": "2f000456-93b5-482d-acb4-831f43095efa",
+      "name": "Gorilla Transfer",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -275,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "2f000456-93b5-482d-acb4-831f43095efa",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "cb8b5135-a91c-410c-af4c-e90d28f8ac1e",
+      "name": "Atomic",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -274,
+      "tags": [
+        "top_choice"
+      ],
+      "preset_family": "minimax",
+      "cms_id": "cb8b5135-a91c-410c-af4c-e90d28f8ac1e",
+      "categories": [
+        "effects"
+      ],
+      "params": {}
+    },
+    {
+      "id": "0264d345-94c3-4cb8-849f-7e0b71d13696",
+      "name": "Flip",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -273,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "0264d345-94c3-4cb8-849f-7e0b71d13696",
+      "categories": [
+        "action_movement"
+      ],
+      "params": {}
+    },
+    {
+      "id": "4e981984-1cdc-4b96-a2b1-1a7c1ecb822d",
+      "name": "Disintegration",
+      "media": {
+        "width": 320,
+        "height": 416,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/634ede39-bc1f-4635-b4bc-eee2d87a4735.webp",
+        "type": "animated"
+      },
+      "priority": -272,
+      "tags": [
+        "top_choice"
+      ],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [
+        "vfx",
+        "trending"
+      ],
+      "params": {
+        "steps": 20,
+        "frames": 81,
+        "strength": 1,
+        "guide_scale": 6
+      }
+    },
+    {
+      "id": "cf852c5b-8e2a-45b7-807e-2a35b2636a3f",
+      "name": "Display Transition",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -271,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "cf852c5b-8e2a-45b7-807e-2a35b2636a3f",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "1df8be61-ddf7-4563-b12f-887d4c641698",
+      "name": "Hero Flight",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -270,
+      "tags": [],
+      "preset_family": "seedance",
+      "cms_id": "1df8be61-ddf7-4563-b12f-887d4c641698",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "017ae2b7-bcff-42ef-863e-6e198f96c3ec",
+      "name": "Turning Metal + Melting",
+      "media": {
+        "width": 320,
+        "height": 494,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/b3aab188-251e-4f55-a8fa-40620e3c6db6.webp",
+        "type": "animated"
+      },
+      "priority": -270,
+      "tags": [
+        "mix"
+      ],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "mix": [
+        {
+          "id": "46e23a6b-1047-40f1-9cf5-33f5f55ddf2e",
+          "name": "Turning Metal",
+          "media": {
+            "width": 320,
+            "height": 424,
+            "url": "https://d1xarpci4ikg0w.cloudfront.net/d44a136d-8b78-49c8-bf3d-889e5f30c547.webp",
+            "type": "animated"
+          }
+        },
+        {
+          "id": "d8c13031-7117-4a3d-9a30-6a00d0d408b4",
+          "name": "Melting",
+          "media": {
+            "width": 320,
+            "height": 182,
+            "url": "https://d1xarpci4ikg0w.cloudfront.net/208e5e19-956c-48a2-afb7-8ca822c29a23.webp",
+            "type": "animated"
+          }
+        }
+      ],
+      "params": {
+        "motions": [
+          {
+            "id": "46e23a6b-1047-40f1-9cf5-33f5f55ddf2e",
+            "type": "motion",
+            "strength": 0.85
+          },
+          {
+            "id": "d8c13031-7117-4a3d-9a30-6a00d0d408b4",
+            "type": "motion",
+            "strength": 0.6
+          }
+        ]
+      }
+    },
+    {
+      "id": "2ee4c224-356e-40d8-a0a7-55a03fd907d9",
+      "name": "Luminous Gaze",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -270,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "2ee4c224-356e-40d8-a0a7-55a03fd907d9",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "1422c31c-7648-4b23-94ca-de200ad1bbc6",
+      "name": "Gas Transformation",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -270,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "1422c31c-7648-4b23-94ca-de200ad1bbc6",
+      "categories": [
+        "effects"
+      ],
+      "params": {}
+    },
+    {
+      "id": "75b22ea3-edc4-4f1f-8c12-e31495350eb6",
+      "name": "CCTV",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -269,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "75b22ea3-edc4-4f1f-8c12-e31495350eb6",
+      "categories": [
+        "new"
+      ],
+      "params": {}
+    },
+    {
+      "id": "ca0568ee-6a0f-4134-a4ee-97dfe44753ba",
+      "name": "Thunder God",
+      "media": {
+        "width": 320,
+        "height": 242,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/1abf9bb7-8dfd-42b1-80a8-9ebd48e10487.webp",
+        "type": "animated"
+      },
+      "priority": -269,
+      "tags": [],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [
+        "vfx",
+        "new"
+      ],
+      "params": {
+        "steps": 20,
+        "frames": 81,
+        "strength": 1,
+        "guide_scale": 6
+      }
+    },
+    {
+      "id": "9680aaf0-c5db-4204-833f-56f825bb350b",
+      "name": "Clone Explosion",
+      "media": {
+        "width": 320,
+        "height": 424,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/1491b9b3-3824-4360-956f-fa5c4557610a.webp",
+        "type": "animated"
+      },
+      "priority": -269,
+      "tags": [],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [],
+      "params": {
+        "steps": 20,
+        "frames": 81,
+        "strength": 1,
+        "guide_scale": 6
+      }
+    },
+    {
+      "id": "0bdae83d-f241-4f8c-a925-619de6feaacd",
+      "name": "Logo Transform",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -269,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "0bdae83d-f241-4f8c-a925-619de6feaacd",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "a15c924e-281b-4d58-a103-b5eb3276799a",
+      "name": "Intermission",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -269,
+      "tags": [],
+      "preset_family": "kling",
+      "cms_id": "a15c924e-281b-4d58-a103-b5eb3276799a",
+      "categories": [],
+      "params": {}
+    },
+    {
+      "id": "ab88f36f-6f1c-4a37-b3ee-76444adbba23",
+      "name": "Eating",
+      "media": {
+        "width": 0,
+        "height": 0,
+        "url": "<placeholder>",
+        "type": "animated"
+      },
+      "priority": -269,
+      "tags": [],
+      "preset_family": "minimax",
+      "cms_id": "ab88f36f-6f1c-4a37-b3ee-76444adbba23",
+      "categories": [
+        "ugc"
+      ],
+      "params": {}
+    }
+  ],
+  "total": 420,
+  "cursor": -269
+}

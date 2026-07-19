@@ -1,0 +1,105 @@
+{
+  "total": 9,
+  "cursor": null,
+  "items": [
+    {
+      "id": "1fb0213c-63b2-4a52-ac5a-2371649e9abf",
+      "name": "Female Pose 3",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-poses/e94d39a4-d3a5-46f0-b8e2-4439c5f0b6db.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 1
+    },
+    {
+      "id": "f994e1a1-56bc-40d6-a81e-231d82ace4c6",
+      "name": "Female Pose 4",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-poses/e30c90ce-1ea7-4bcd-8d18-6f3423390af6.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 2
+    },
+    {
+      "id": "45bdd512-4d5d-4f22-b64e-187a79c8ff26",
+      "name": "Female Pose 1",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-poses/b4de6cb3-3407-43eb-b807-a11d86c65a12.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 3
+    },
+    {
+      "id": "ccde40da-2b9e-435d-a32a-b0cf76e20881",
+      "name": "Male Pose 3",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-poses/c8257e0e-5e3a-4d79-bf38-bc96428106e5.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 4
+    },
+    {
+      "id": "04c4afba-e3f8-43c5-bf57-180d035252b9",
+      "name": "Female Pose 5",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-poses/813254cb-e379-416f-928e-2fd1631ba2e6.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 5
+    },
+    {
+      "id": "2cfe38ae-31d5-401d-930c-946a6f1c3dfd",
+      "name": "Male Pose 2",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-poses/43583663-6f87-4dc7-959b-bc92804a2bd7.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 6
+    },
+    {
+      "id": "16fa997e-d0db-413e-a938-1836d0dec70a",
+      "name": "Male Pose 4",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-poses/fa6acbef-b35a-4e27-b3e6-d41147e56d18.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 7
+    },
+    {
+      "id": "058f8559-d23f-49ce-9f8e-e3ce8d9a611f",
+      "name": "Male Pose 5",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-poses/9e6403eb-20a9-4522-80d4-b2cd88e8e42d.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 8
+    },
+    {
+      "id": "962b801c-9a10-4602-b539-ef1376593ce6",
+      "name": "Female Pose 2",
+      "media": {
+        "url": "https://cdn.higgsfield.ai/ai-stylist-poses/b290f028-7daf-4ce2-bab0-7bdc5acd1e4a.webp",
+        "type": "static",
+        "width": 1080,
+        "height": 1446
+      },
+      "priority": 9
+    }
+  ]
+}

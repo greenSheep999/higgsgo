@@ -1,0 +1,42 @@
+{
+  "alias": "brain-activity",
+  "jobSetType": "brain_activity",
+  "endpoint": "/jobs/v2/brain_activity",
+  "version": "v2",
+  "output": "video",
+  "realCost": null,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "medias": [
+        {
+          "role": "video",
+          "data": {
+            "id": "8235ebbe-9335-4cd3-a0ef-eaf934f129bb",
+            "type": "video_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemqwvSqMuSk4JKHFXcZz57wm/8235ebbe-9335-4cd3-a0ef-eaf934f129bb.mp4",
+            "bucket_name": "fast-and-furious-input-prod-20250325165756276100000002",
+            "object_key": "user_3FlemqwvSqMuSk4JKHFXcZz57wm/8235ebbe-9335-4cd3-a0ef-eaf934f129bb.mp4"
+          }
+        }
+      ],
+      "video_meta": {
+        "frames_count": 300,
+        "duration": 10.01001,
+        "frame_rate": 29.97
+      },
+      "analysis": null,
+      "vertexMapUrl": null,
+      "vertexMapBinaryUrl": null,
+      "brain_example_url": "https://d1xarpci4ikg0w.cloudfront.net/brain_activity/brain_example.glb"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "47d6b09d-29f3-44fe-8d36-996d645412c2",
+    "jobId": "2dadbeb3-f572-4735-9aa4-1d07d840e557",
+    "cost": null
+  },
+  "generatedAt": "2026-07-04T07:18:30.609Z"
+}

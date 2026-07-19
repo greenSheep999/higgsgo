@@ -1,0 +1,143 @@
+{
+  "items": [
+    {
+      "id": "a5999b5a-efdb-4755-925a-e4f7057d4286",
+      "camera": {
+        "id": "e6c68875-e965-4e88-8886-09372733256a",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/fac44341-2160-45f4-b48c-f4442dd1891c.webp",
+        "name": "Premium Large Format Digital"
+      },
+      "lens": {
+        "id": "8081f915-92cb-4d44-a461-f2fe64961dbc",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/dfcecc6e-a7b4-4bd6-a4a3-a6c98f72ce1d.webp",
+        "name": "Classic Anamorphic"
+      },
+      "focal_length": {
+        "id": "aa7e3df0-c07b-452f-b772-8d689d94d198",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/c4753aba-e1d0-41b8-85bf-03b711ae8e5c.webp",
+        "name": "35"
+      },
+      "aperture": {
+        "id": "f167dab5-be1a-4936-90c7-3d5303df0fdc",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/e92bf365-50af-453b-abce-db135883d940.webp",
+        "name": "f/1.4"
+      }
+    },
+    {
+      "id": "500ef760-8179-471b-9908-d37eb28cf209",
+      "camera": {
+        "id": "b52d724b-9bb4-4ac9-8b98-86f9b78e1b1a",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/ca7e007e-ad7f-4d90-8d19-dad19bb587aa.webp",
+        "name": "Modular 8K Digital"
+      },
+      "lens": {
+        "id": "e1e0e346-1dbb-462d-a4f6-da486516df2f",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/0a8769d6-6962-4628-8c18-cac35b6234f6.webp",
+        "name": "Halation Diffusion"
+      },
+      "focal_length": {
+        "id": "aa7e3df0-c07b-452f-b772-8d689d94d198",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/c4753aba-e1d0-41b8-85bf-03b711ae8e5c.webp",
+        "name": "35"
+      },
+      "aperture": {
+        "id": "d37fe8bd-8084-42f5-af5c-841a27f0c17d",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/864125a8-1ce4-408d-a61f-fc0d5f973f91.webp",
+        "name": "f/4"
+      }
+    },
+    {
+      "id": "d273b86f-f059-4281-9216-8d3b2bd55d88",
+      "camera": {
+        "id": "440cc872-eef1-4fb5-be0a-3cf85d70fd2c",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/053f1eb0-090e-4d01-9e57-2ebc92b96466.webp",
+        "name": "Studio Digital S35"
+      },
+      "lens": {
+        "id": "e60ac33c-708a-47fd-997e-4c5ad39357ce",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/295376d1-389a-47fc-9d37-3449d9a9d675.webp",
+        "name": "Warm Cinema Prime"
+      },
+      "focal_length": {
+        "id": "aa7e3df0-c07b-452f-b772-8d689d94d198",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/c4753aba-e1d0-41b8-85bf-03b711ae8e5c.webp",
+        "name": "35"
+      },
+      "aperture": {
+        "id": "f167dab5-be1a-4936-90c7-3d5303df0fdc",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/e92bf365-50af-453b-abce-db135883d940.webp",
+        "name": "f/1.4"
+      }
+    },
+    {
+      "id": "8f74a901-416a-4fcc-af4f-fd216eecd27f",
+      "camera": {
+        "id": "472fbef9-1e4a-4bdd-8fdc-013ea76667dc",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/81cae177-2121-4e1b-88b9-d972c85235cb.webp",
+        "name": "Full-Frame Cine Digital"
+      },
+      "lens": {
+        "id": "4eebf6f1-b810-4b47-b3b8-6786789a70d5",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/df4904e7-2655-455a-a107-cda586735833.webp",
+        "name": "Swirl Bokeh Portrait"
+      },
+      "focal_length": {
+        "id": "b3d1fad7-fae0-47cd-a39f-98a61b77f6c3",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/49a934e2-f586-4b15-b21b-d194f1fdfe09.webp",
+        "name": "50"
+      },
+      "aperture": {
+        "id": "f167dab5-be1a-4936-90c7-3d5303df0fdc",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/e92bf365-50af-453b-abce-db135883d940.webp",
+        "name": "f/1.4"
+      }
+    },
+    {
+      "id": "d82aa9b1-f739-4beb-8210-0cf60d55af60",
+      "camera": {
+        "id": "15893ff5-5f1b-4094-af16-a49da2f82f60",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/256f81d1-7159-4395-856f-fcb9f49c9831.webp",
+        "name": "Classic 16mm Film"
+      },
+      "lens": {
+        "id": "1830bbbf-c817-4323-a211-d7ec17e11c03",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/25cd1827-cae6-48df-8165-7e9106d86dd2.webp",
+        "name": "Clinical Sharp Prime"
+      },
+      "focal_length": {
+        "id": "fb702acc-a73d-4688-af7a-32e40869e051",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/a953e7f2-e270-4977-bc1e-b1aae0b2f217.webp",
+        "name": "8"
+      },
+      "aperture": {
+        "id": "17bfbf6b-7f57-499e-a63f-e5b6f95d4188",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/b230da45-49b8-4d86-83fc-b8e07a629e48.webp",
+        "name": "f/11"
+      }
+    },
+    {
+      "id": "9da2721a-1237-4459-9f1f-8c5cd07f425a",
+      "camera": {
+        "id": "440cc872-eef1-4fb5-be0a-3cf85d70fd2c",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/053f1eb0-090e-4d01-9e57-2ebc92b96466.webp",
+        "name": "Studio Digital S35"
+      },
+      "lens": {
+        "id": "9d6e4f34-fd4d-46e0-a463-b9f79625add7",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/4ee34004-0d5f-4834-8498-546c88ad88a0.webp",
+        "name": "Extreme Macro"
+      },
+      "focal_length": {
+        "id": "c95a32e2-78a4-4ecc-b69e-4a2cdd240575",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/e12b2a47-b7b6-417a-bd89-89621d438979.webp",
+        "name": "14"
+      },
+      "aperture": {
+        "id": "17bfbf6b-7f57-499e-a63f-e5b6f95d4188",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/b230da45-49b8-4d86-83fc-b8e07a629e48.webp",
+        "name": "f/11"
+      }
+    }
+  ],
+  "has_more": false
+}

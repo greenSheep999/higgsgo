@@ -1,0 +1,163 @@
+{
+  "user_cursor": null,
+  "preset_cursor": null,
+  "has_more": false,
+  "items": [
+    {
+      "id": "cd101b42-8d0f-4f5c-b5a0-01fc08a25288",
+      "name": "y2k bootcut",
+      "asset_type": "bottom",
+      "gender": "female",
+      "input_image": {
+        "id": "a976e6fa-e055-4370-874f-d1c3f2539386",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/a976e6fa-e055-4370-874f-d1c3f2539386.jpg"
+      },
+      "created_at": 1765216516.319249,
+      "type": "preset"
+    },
+    {
+      "id": "470cfb3e-7796-4470-adec-2cf2ccad5108",
+      "name": "worn out denim skirt",
+      "asset_type": "bottom",
+      "gender": "female",
+      "input_image": {
+        "id": "f5a392b0-6552-4e0f-8338-a6ac4bf26ec2",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/f5a392b0-6552-4e0f-8338-a6ac4bf26ec2.jpg"
+      },
+      "created_at": 1765216516.31844,
+      "type": "preset"
+    },
+    {
+      "id": "62df8922-5175-4a95-819a-a4bf9a5557c3",
+      "name": "sporty bubble skirt",
+      "asset_type": "bottom",
+      "gender": "female",
+      "input_image": {
+        "id": "0b453f45-3d34-42d6-84e2-0aeed0a00231",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/0b453f45-3d34-42d6-84e2-0aeed0a00231.jpg"
+      },
+      "created_at": 1765216516.292358,
+      "type": "preset"
+    },
+    {
+      "id": "0d20ebd6-16d3-4cf6-ae27-fbe09a699645",
+      "name": "ruffled micro skirt",
+      "asset_type": "bottom",
+      "gender": "female",
+      "input_image": {
+        "id": "977d6224-daa7-46ce-a38b-8c2245a99f85",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/977d6224-daa7-46ce-a38b-8c2245a99f85.jpg"
+      },
+      "created_at": 1765216516.285194,
+      "type": "preset"
+    },
+    {
+      "id": "2b984551-f34d-4bb7-a0e9-0dfc58dbb1f2",
+      "name": "polkadott micro skirt",
+      "asset_type": "bottom",
+      "gender": "female",
+      "input_image": {
+        "id": "872ffb8e-e128-4b63-b4f8-2d8340d339bc",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/872ffb8e-e128-4b63-b4f8-2d8340d339bc.jpg"
+      },
+      "created_at": 1765216516.279373,
+      "type": "preset"
+    },
+    {
+      "id": "05414758-123a-40c8-a9b9-9a2d459cb79d",
+      "name": "pleated mini skirt",
+      "asset_type": "bottom",
+      "gender": "female",
+      "input_image": {
+        "id": "2625178e-3b2e-4217-be1f-ddc1b6e7c9ca",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/2625178e-3b2e-4217-be1f-ddc1b6e7c9ca.jpg"
+      },
+      "created_at": 1765216516.278561,
+      "type": "preset"
+    },
+    {
+      "id": "7a9b9f18-639c-4613-81d6-7b24b65be664",
+      "name": "plaid maxi skirt",
+      "asset_type": "bottom",
+      "gender": "female",
+      "input_image": {
+        "id": "5d05b29e-c1e0-423e-8d7c-1c77a7461464",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/5d05b29e-c1e0-423e-8d7c-1c77a7461464.jpg"
+      },
+      "created_at": 1765216516.277229,
+      "type": "preset"
+    },
+    {
+      "id": "e6e0d3f4-51f3-4811-a4c7-eada23b52239",
+      "name": "pink silk mini skirt",
+      "asset_type": "bottom",
+      "gender": "female",
+      "input_image": {
+        "id": "50aa8c7c-7fb9-437a-8033-1cfb8497ada1",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/50aa8c7c-7fb9-437a-8033-1cfb8497ada1.jpg"
+      },
+      "created_at": 1765216516.276302,
+      "type": "preset"
+    },
+    {
+      "id": "0a56405f-d7e2-4e06-a049-2a23b13faad0",
+      "name": "lace denim jeans",
+      "asset_type": "bottom",
+      "gender": "female",
+      "input_image": {
+        "id": "7780c55f-4f35-4fdc-bd36-b212c18bce41",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/7780c55f-4f35-4fdc-bd36-b212c18bce41.jpg"
+      },
+      "created_at": 1765216516.266626,
+      "type": "preset"
+    },
+    {
+      "id": "4f8323ab-855d-47d6-ae83-64f0f85bc499",
+      "name": "dark washed jeans",
+      "asset_type": "bottom",
+      "gender": "female",
+      "input_image": {
+        "id": "792e69a4-9733-4c50-82a4-267f3f6514a7",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/792e69a4-9733-4c50-82a4-267f3f6514a7.jpg"
+      },
+      "created_at": 1765216516.2468,
+      "type": "preset"
+    },
+    {
+      "id": "207459e2-f56c-4e9e-9f5e-b1b89c6c2a8a",
+      "name": "belted maxi skirt",
+      "asset_type": "bottom",
+      "gender": "female",
+      "input_image": {
+        "id": "90470c13-d680-4955-bb3d-3975bf1c7468",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/90470c13-d680-4955-bb3d-3975bf1c7468.jpg"
+      },
+      "created_at": 1765216516.207948,
+      "type": "preset"
+    },
+    {
+      "id": "3e891435-6a57-47e6-9298-67cfda5a3dbe",
+      "name": "academic pleated skirt",
+      "asset_type": "bottom",
+      "gender": "female",
+      "input_image": {
+        "id": "9dd91480-263d-465a-9e11-2d8c66be479a",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/9dd91480-263d-465a-9e11-2d8c66be479a.jpg"
+      },
+      "created_at": 1765216516.202014,
+      "type": "preset"
+    }
+  ]
+}

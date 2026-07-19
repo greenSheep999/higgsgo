@@ -1,0 +1,38 @@
+{
+  "alias": "text2speech-v2",
+  "jobSetType": "text2speech_v2",
+  "endpoint": "/jobs/v2/text2speech_v2",
+  "version": "v2",
+  "output": "audio",
+  "realCost": 0.15,
+  "catalogRefs": {
+    "voice_type": "literal enum: \"preset\" (also used with voice_id from reference_voices)",
+    "voice_id": "catalogs/reference_voices.json (model=minimax/elevenlabs, voice_type=preset)"
+  },
+  "exampleBody": {
+    "params": {
+      "prompt": "Hello, this is a test of speech synthesis.",
+      "model": "minimax",
+      "voice_type": "preset",
+      "voice_id": "f32c8f51-449e-4ddf-bdf7-1527e11df917"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "jobId": "4fb122dc-adfd-431e-8481-4a01432be5f2",
+    "cost": 15
+  },
+  "generatedAt": "2026-07-01T20:31:39.339Z",
+  "bestPracticeBody": {
+    "params": {
+      "prompt": "hello world",
+      "model": "minimax",
+      "voice_type": "preset",
+      "voice_id": "f32c8f51-449e-4ddf-bdf7-1527e11df917"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "voice_id from catalogs/reference_voices.json (paired with model=minimax/elevenlabs, voice_type=\"preset\")."
+}

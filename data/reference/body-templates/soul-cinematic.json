@@ -1,0 +1,25 @@
+{
+  "alias": "soul-cinematic",
+  "jobSetType": "soul_cinematic",
+  "endpoint": "/jobs/v2/soul_cinematic",
+  "version": "v2",
+  "output": "image",
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "seed": 12345,
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "dbc5855d-39c6-4cd4-a157-0f43fb22a3a4",
+    "jobId": "10e25898-f76e-4b7d-b143-b257e3c3e385",
+    "cost": null
+  },
+  "generatedAt": "2026-07-01T04:45:00.361Z"
+}

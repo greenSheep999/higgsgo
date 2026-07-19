@@ -1,0 +1,31 @@
+{
+  "alias": "kling-3-turbo",
+  "jobSetType": "kling3_0_turbo",
+  "endpoint": "/jobs/v2/kling3_0_turbo",
+  "version": "v2",
+  "output": "video",
+  "realCost": 7.5,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "720p"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "f160ea75-2a13-4723-8134-8c95214e13c6",
+    "jobId": "3e5af8cd-4d2a-44ea-bc39-3144239c4f4f",
+    "cost": 750
+  },
+  "generatedAt": "2026-07-01T07:04:59.815Z"
+}

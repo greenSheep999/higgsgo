@@ -1,0 +1,106 @@
+{
+  "alias": "cinematic-studio-image-grid",
+  "jobSetType": "cinematic_studio_image_grid",
+  "endpoint": "/jobs/v2/cinematic_studio_image_grid",
+  "version": "v2",
+  "output": "image",
+  "realCost": 2,
+  "catalogRefs": {
+    "camera_model_id": "catalogs/camera_settings.json → item.camera.id",
+    "camera_lens_id": "catalogs/camera_settings.json → item.lens.id",
+    "camera_focal_length_id": "catalogs/camera_settings.json → item.focal_length.id",
+    "camera_aperture_id": "catalogs/camera_settings.json → item.aperture.id",
+    "reference_elements": "catalogs/reference_elements.json (must be user-created; empty by default)"
+  },
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple grid",
+      "medias": [
+        {
+          "role": "image",
+          "data": {
+            "id": "14031291-c25e-4955-b33e-9b9e8228cd6a",
+            "type": "media_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/14031291-c25e-4955-b33e-9b9e8228cd6a.jpg"
+          }
+        }
+      ],
+      "batch_size": 1,
+      "resolution": "1k",
+      "aspect_ratio": "1:1",
+      "width": 1024,
+      "height": 1024,
+      "grid_type": "shots",
+      "grid_size": "2x2",
+      "camera_model": {
+        "id": "e6c68875-e965-4e88-8886-09372733256a",
+        "name": "Premium Large Format Digital",
+        "type": "camera",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/fac44341-2160-45f4-b48c-f4442dd1891c.webp",
+        "tag": "Film"
+      },
+      "camera_model_id": "e6c68875-e965-4e88-8886-09372733256a",
+      "camera_lens": {
+        "id": "8081f915-92cb-4d44-a461-f2fe64961dbc",
+        "name": "Classic Anamorphic",
+        "type": "lens",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/dfcecc6e-a7b4-4bd6-a4a3-a6c98f72ce1d.webp",
+        "tag": "Anamorphic"
+      },
+      "camera_lens_id": "8081f915-92cb-4d44-a461-f2fe64961dbc",
+      "camera_focal_length": {
+        "id": "aa7e3df0-c07b-452f-b772-8d689d94d198",
+        "name": "35",
+        "type": "focal_length",
+        "url": "https://cdn.higgsfield.ai/cinematic_studio_image_settings/c4753aba-e1d0-41b8-85bf-03b711ae8e5c.webp",
+        "tag": ""
+      },
+      "camera_focal_length_id": "aa7e3df0-c07b-452f-b772-8d689d94d198",
+      "camera_aperture": null,
+      "camera_aperture_id": null,
+      "folder_id": null,
+      "reference_elements": []
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "4b3d72cd-d66f-441e-8aaa-badcab31ad18",
+    "jobId": "5c553887-878d-43f4-886c-6324628afe75",
+    "cost": 200
+  },
+  "generatedAt": "2026-07-04T07:18:30.610Z",
+  "bestPracticeBody": {
+    "params": {
+      "prompt": ".",
+      "medias": [
+        {
+          "role": "image",
+          "data": {
+            "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+            "type": "media_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+            "note": "Small red apple, 512x512. Safe default for image inputs."
+          }
+        }
+      ],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "resolution": "1k",
+      "camera_model_id": "e6c68875-e965-4e88-8886-09372733256a",
+      "camera_lens_id": "8081f915-92cb-4d44-a461-f2fe64961dbc",
+      "camera_focal_length_id": "aa7e3df0-c07b-452f-b772-8d689d94d198",
+      "grid_type": "shots",
+      "grid_size": "2x2",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "input_images": []
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "camera_* ids from catalogs/camera_settings.json[i]. grid_type: freeform|shots|zooms|next_shots|prev_shots. grid_size: 2x2|3x3|4x4."
+}

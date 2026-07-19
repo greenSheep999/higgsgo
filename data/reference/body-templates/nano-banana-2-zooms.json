@@ -1,0 +1,37 @@
+{
+  "alias": "nano-banana-2-zooms",
+  "jobSetType": "nano_banana_2_zooms",
+  "endpoint": "/jobs/nano-banana-2-zooms",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": 4,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [
+        {
+          "id": "523432b4-9fac-482d-8483-eac289971a42",
+          "type": "media_input",
+          "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/523432b4-9fac-482d-8483-eac289971a42.jpg"
+        }
+      ],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "4e00ce33-c880-4c47-9d50-83ef541178a8",
+    "jobId": "6e820d67-630c-4f67-82aa-ad396c9ef08f",
+    "cost": 400
+  },
+  "generatedAt": "2026-07-01T13:59:58.325Z"
+}

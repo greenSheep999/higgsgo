@@ -1,0 +1,36 @@
+{
+  "alias": "minimax-hailuo",
+  "jobSetType": "minimax_hailuo",
+  "endpoint": "/jobs/minimax-hailuo",
+  "version": "v1-hyphen",
+  "output": "video",
+  "realCost": 3,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "512",
+      "model": "minimax",
+      "input_image": {
+        "id": "39ac2d89-6eeb-4527-bdfc-67dc2a5f22db",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/39ac2d89-6eeb-4527-bdfc-67dc2a5f22db.jpg"
+      }
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "4e00ce33-c880-4c47-9d50-83ef541178a8",
+    "jobId": "61cc1034-1105-4d41-86b4-1eda1c2ced8f"
+  },
+  "generatedAt": "2026-07-01T13:49:46.773Z"
+}

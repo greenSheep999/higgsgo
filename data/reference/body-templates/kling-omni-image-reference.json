@@ -1,0 +1,46 @@
+{
+  "alias": "kling-omni-image-reference",
+  "jobSetType": "kling_omni_image_reference",
+  "endpoint": "/jobs/kling-omni-image-reference",
+  "version": "v1-hyphen",
+  "output": "video",
+  "realCost": 10,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {},
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "f160ea75-2a13-4723-8134-8c95214e13c6",
+    "cost": 1000
+  },
+  "generatedAt": "2026-07-04T07:18:59.172Z",
+  "bestPracticeBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "prompt": ".",
+      "aspect_ratio": "1:1",
+      "input_images": [
+        {
+          "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+          "type": "media_input",
+          "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+          "note": "Small red apple, 512x512. Safe default for image inputs."
+        }
+      ],
+      "kling_element_ids": [
+        "00000000-0000-0000-0000-000000000000"
+      ],
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "720p",
+      "batch_size": 1
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "kling_element_ids from catalogs/reference_elements.json (empty by default — must be user-created)."
+}

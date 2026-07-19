@@ -1,0 +1,39 @@
+{
+  "alias": "color-grading-lut",
+  "jobSetType": "color_grading_lut",
+  "endpoint": "/jobs/v2/color_grading_lut",
+  "version": "v2",
+  "output": "image",
+  "realCost": null,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "medias": [
+        {
+          "role": "image",
+          "data": {
+            "id": "87dd3721-e6af-42a8-8273-4c432fa442a6",
+            "type": "media_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3G2SJnEes2BJTHhcTuZLIWFFFel/87dd3721-e6af-42a8-8273-4c432fa442a6.jpg"
+          }
+        },
+        {
+          "role": "image",
+          "data": {
+            "id": "87dd3721-e6af-42a8-8273-4c432fa442a6",
+            "type": "media_input",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3G2SJnEes2BJTHhcTuZLIWFFFel/87dd3721-e6af-42a8-8273-4c432fa442a6.jpg"
+          }
+        }
+      ]
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "6522633e-a2af-41f7-a4c0-1b5897f34708",
+    "jobId": "fa4fa39f-a29d-4f1f-9407-33756bc143c2",
+    "cost": null
+  },
+  "generatedAt": "2026-07-04T12:35:13.501Z"
+}

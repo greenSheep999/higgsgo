@@ -1,0 +1,101 @@
+{
+  "alias": "kling",
+  "jobSetType": "kling",
+  "endpoint": "/jobs/kling",
+  "version": "v1-hyphen",
+  "output": "video",
+  "catalogRefs": {
+    "motion_id": "catalogs/motions.json"
+  },
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "enhance_prompt": false,
+      "model": "kling-v2-1",
+      "mode": "std",
+      "duration": 5,
+      "width": 1024,
+      "height": 1024,
+      "input_image": {
+        "id": "a1ae7795-832b-4dba-9819-a2c6f608adf5",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/a1ae7795-832b-4dba-9819-a2c6f608adf5.jpg",
+        "type": "media_input"
+      },
+      "input_image_end": null,
+      "static_mask": null,
+      "dynamic_masks": null,
+      "negative_prompt": null,
+      "camera_control": null,
+      "motion_id": null,
+      "motion": null,
+      "application": null
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false,
+    "job_set_type": "kling",
+    "job_set_id": "705174e8-5bf3-4558-b3b9-96d911315bea",
+    "job_set_parent_id": null,
+    "job_set_client_meta": null,
+    "board_ids": [],
+    "meta": {
+      "duration": 5
+    },
+    "id": "818d7c63-0254-4f91-ad13-d3fde9f5ca89",
+    "status": "completed",
+    "ip_check_finished": null,
+    "ip_detected": null,
+    "result": null,
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_070159_818d7c63-0254-4f91-ad13-d3fde9f5ca89.mp4"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_070159_818d7c63-0254-4f91-ad13-d3fde9f5ca89.mp4"
+      }
+    },
+    "published_at": null,
+    "created_at": 1782975719.210416,
+    "user_id": "user_3Flevg5z3r1kTApnx5j83ZABPoE",
+    "trace_id": "818d7c63-0254-4f91-ad13-d3fde9f5ca89",
+    "user": {
+      "id": "user_3Flevg5z3r1kTApnx5j83ZABPoE",
+      "full_name": "deconstructivistworm1673",
+      "username": "deconstructivistworm1673",
+      "avatar_url": null
+    },
+    "folder_ids": [],
+    "is_favourite": false,
+    "is_viewed": false
+  },
+  "exampleResponse": {
+    "jobId": "818d7c63-0254-4f91-ad13-d3fde9f5ca89"
+  },
+  "generatedAt": "2026-07-02T07:04:16.845Z",
+  "bestPracticeBody": {
+    "params": {
+      "prompt": ".",
+      "width": 512,
+      "height": 512,
+      "model": "kling-v2-1",
+      "duration": 5,
+      "input_image": {
+        "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+        "note": "Small red apple, 512x512. Safe default for image inputs."
+      },
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "resolution": "720p",
+      "input_images": []
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "model enum: kling-v2-1|kling-v2-1-master|kling-v2-5-turbo."
+}

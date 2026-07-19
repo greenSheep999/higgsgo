@@ -1,0 +1,34 @@
+{
+  "alias": "inworld-text-to-speech",
+  "jobSetType": "inworld_text_to_speech",
+  "endpoint": "/jobs/v2/inworld_text_to_speech",
+  "version": "v2",
+  "output": "audio",
+  "realCost": 2,
+  "catalogRefs": {
+    "voice": "catalogs/reference_voices.json (inworld_text_to_speech expects a voice object)"
+  },
+  "exampleBody": {
+    "params": {
+      "prompt": "hello world this is inworld tts test",
+      "voice": "default"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "db265699-1fa8-4f20-82e6-4e674a6ec02d",
+    "jobId": "6f98bbea-8823-4bca-b67d-57eb3a61b41c",
+    "cost": 200
+  },
+  "generatedAt": "2026-07-04T12:44:56.321Z",
+  "bestPracticeBody": {
+    "params": {
+      "prompt": "hello world",
+      "voice": "6pBuGbellIksHKibt0je2n"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "voice = string id from catalogs/voices.json (also try refVoice for compatibility)."
+}

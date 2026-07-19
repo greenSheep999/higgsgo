@@ -1,0 +1,316 @@
+{
+  "generatedAt": "2026-07-04T16:37:03.189Z",
+  "fetchedByAccount": "8zucr7kiy8@hubcrypto.site",
+  "entries": {
+    "styles": {
+      "status": 200,
+      "ep": "/styles?size=100",
+      "note": "Generic style presets (VHS/Anamorphic/Super 8MM/Abstract/Cinematic). Used as style_id/preset_id in many image models.",
+      "count": 5,
+      "firstIds": [
+        "86f838ac-cbbc-4bf4-aa8a-887e0d759c3c",
+        "4ab5afe9-3a2d-443b-972c-a98abbf0587a",
+        "ff26f74a-752f-4ee4-9bb7-70affd00b587"
+      ]
+    },
+    "motions": {
+      "status": 200,
+      "ep": "/motions?size=100",
+      "note": "Kling motion preset library. Used as motion_id / kling_element_ids values.",
+      "count": 100,
+      "firstIds": [
+        "bbab2a35-ccba-45df-8c37-8ea2bd9e395a",
+        "c4dd8cc3-79a6-4366-b9a1-071ad848ddd2",
+        "4678bff4-63e0-4272-a961-9b0b0c0746b1"
+      ]
+    },
+    "soul_v2_presets": {
+      "status": 200,
+      "ep": "/soul-v2/presets?size=100",
+      "note": "Soul-v2 style presets (33 items). Used as style_id in text2image_soul_v2 and soul series.",
+      "count": 33,
+      "firstIds": [
+        "3db34ab5-3439-4317-9e03-08dc30852e69",
+        "fafd3087-0d0f-4fb1-9af6-91b7d304687c",
+        "7ee16ff3-c0b0-4f5f-a0e1-e7fc46144230"
+      ]
+    },
+    "voices": {
+      "status": 200,
+      "ep": "/voices?size=100",
+      "note": "Voice library (82 items). Used as voice_id in text2speech (Pro only).",
+      "count": 82,
+      "firstIds": [
+        "6pBuGbellIksHKibt0je2n",
+        "5PQMG2LcT1x9S85IjUxoPI",
+        "1Stcvn5jwv5sda0Z71hBSx"
+      ]
+    },
+    "reference_voices": {
+      "status": 200,
+      "ep": "/reference-elements/voices?size=100",
+      "note": "Per-model preset voices (41 items). Used as voice_id in text2speech_v2 (model=minimax/elevenlabs, voice_type=preset).",
+      "count": 41,
+      "firstIds": [
+        "f32c8f51-449e-4ddf-bdf7-1527e11df917",
+        "7e63ac18-5fcd-4aba-8078-a86d4e11c127",
+        "fa64fba4-ad02-405e-99d0-1f085d87c706"
+      ]
+    },
+    "camera_settings": {
+      "status": 200,
+      "ep": "/camera-settings/recommended",
+      "note": "6 camera/lens/focal combos. Used for camera_model_id + camera_lens_id + camera_focal_length_id in cinematic_studio_image and _grid.",
+      "count": 6,
+      "firstIds": [
+        "a5999b5a-efdb-4755-925a-e4f7057d4286",
+        "500ef760-8179-471b-9908-d37eb28cf209",
+        "d273b86f-f059-4281-9216-8d3b2bd55d88"
+      ]
+    },
+    "outfits_ai_stylist_collage": {
+      "status": 200,
+      "ep": "/outfits?app_slug=ai-stylist&gender=female&asset_type=collage&size=100",
+      "note": "ai_stylist collage outfits (female).",
+      "count": 14,
+      "firstIds": [
+        "cbadf332-fc78-4ac3-8f23-b4f5e0dbdcbd",
+        "8b48215f-47ba-4b2b-8858-ad9641343f82",
+        "96fddf56-b209-426e-9bf1-46129db8a20c"
+      ]
+    },
+    "outfits_ai_stylist_top": {
+      "status": 200,
+      "ep": "/outfits?app_slug=ai-stylist&gender=female&asset_type=top&size=100",
+      "note": "ai_stylist tops.",
+      "count": 13,
+      "firstIds": [
+        "4557ab27-c393-4577-aabc-6d415ea753bb",
+        "b267388d-628a-4cc4-8355-fcafe28dcc1d",
+        "caa8d075-f001-4d48-9b39-ac6ef1b91548"
+      ]
+    },
+    "outfits_ai_stylist_bottom": {
+      "status": 200,
+      "ep": "/outfits?app_slug=ai-stylist&gender=female&asset_type=bottom&size=100",
+      "note": "ai_stylist bottoms.",
+      "count": 12,
+      "firstIds": [
+        "cd101b42-8d0f-4f5c-b5a0-01fc08a25288",
+        "470cfb3e-7796-4470-adec-2cf2ccad5108",
+        "62df8922-5175-4a95-819a-a4bf9a5557c3"
+      ]
+    },
+    "outfits_ai_stylist_shoes": {
+      "status": 200,
+      "ep": "/outfits?app_slug=ai-stylist&gender=female&asset_type=shoes&size=100",
+      "note": "ai_stylist shoes.",
+      "count": 12,
+      "firstIds": [
+        "f720796c-9ba3-44fc-a57a-2e740360d35c",
+        "4645b639-f582-40da-8cfa-ebbd617164bd",
+        "8df48885-affc-4c01-8ca5-a942b16fe8c8"
+      ]
+    },
+    "outfits_ai_stylist_socks": {
+      "status": 200,
+      "ep": "/outfits?app_slug=ai-stylist&gender=female&asset_type=socks&size=100",
+      "note": "ai_stylist socks.",
+      "count": 11,
+      "firstIds": [
+        "7a6d14bf-3349-46ed-8105-d3900012ad0d",
+        "8b4555c9-4053-4a33-9ba3-1c0f3abf9118",
+        "c7b58f84-63d4-4bad-9167-0ebb9d28c871"
+      ]
+    },
+    "outfits_ai_stylist_set": {
+      "status": 200,
+      "ep": "/outfits?app_slug=ai-stylist&gender=female&asset_type=set&size=100",
+      "note": "ai_stylist full sets.",
+      "count": 13,
+      "firstIds": [
+        "4a0f2e95-1be5-4ab5-94bc-0b943c01102d",
+        "8d5b13d1-ed55-47b2-8d9d-ba1477b70665",
+        "bf9d198b-6561-44e0-b9e7-f075a7990acf"
+      ]
+    },
+    "outfits_ai_stylist_outwear": {
+      "status": 200,
+      "ep": "/outfits?app_slug=ai-stylist&gender=female&asset_type=outwear&size=100",
+      "note": "ai_stylist outwear.",
+      "count": 12,
+      "firstIds": [
+        "b9ed5992-ceb1-4dbb-9caf-ad0f80627480",
+        "59bad612-5f5a-4c1b-8fe7-9e93f822d9e3",
+        "8599a2b3-b721-42b5-bdf5-9954c6e33fc6"
+      ]
+    },
+    "outfits_ai_stylist_accessory": {
+      "status": 200,
+      "ep": "/outfits?app_slug=ai-stylist&gender=female&asset_type=accessory&size=100",
+      "note": "ai_stylist accessories.",
+      "count": 14,
+      "firstIds": [
+        "bd5f526e-825b-4115-9ece-e7a2d8cccf82",
+        "a0284a4a-70f7-4ed9-aae8-88874d86443a",
+        "701976df-6dca-4e38-8f48-6d2c1e3a7802"
+      ]
+    },
+    "outfits_characters": {
+      "status": 200,
+      "ep": "/outfits/characters",
+      "note": "ai_stylist character presets.",
+      "count": 2,
+      "firstIds": [
+        "d833d942-d8ff-478a-b3ce-fd13bebf9988",
+        "8025bc4b-735d-4aec-9785-82b4a791a89e"
+      ]
+    },
+    "marketing_hooks": {
+      "status": 200,
+      "ep": "/marketing-studio/setup/hooks?size=100",
+      "note": "Marketing studio hook_id catalog. Used in marketing_studio_hook and marketing_studio_video.",
+      "count": 9,
+      "firstIds": [
+        "3d45fb46-254f-4c83-9685-8e3d28945a67",
+        "75b6d501-be0e-4416-a7ed-52f04f180574",
+        "26cac2dd-99cb-4818-a678-509b0dab2c32"
+      ]
+    },
+    "marketing_hooks_subtle": {
+      "status": 200,
+      "ep": "/marketing-studio/setup/hooks?size=100&tag=subtle",
+      "note": "Marketing hooks (subtle tag).",
+      "count": 5,
+      "firstIds": [
+        "75b6d501-be0e-4416-a7ed-52f04f180574",
+        "26cac2dd-99cb-4818-a678-509b0dab2c32",
+        "8101cd3e-3cc9-4607-a171-3582daa2f6ee"
+      ]
+    },
+    "marketing_hooks_stunt": {
+      "status": 200,
+      "ep": "/marketing-studio/setup/hooks?size=100&tag=stunt",
+      "note": "Marketing hooks (stunt tag).",
+      "count": 4,
+      "firstIds": [
+        "3d45fb46-254f-4c83-9685-8e3d28945a67",
+        "d50eb41c-fcfa-4f4d-93aa-473cdc6bc3b2",
+        "31976cc7-e597-4be2-9753-4a80153b0cc7"
+      ]
+    },
+    "marketing_settings": {
+      "status": 200,
+      "ep": "/marketing-studio/setup/settings?size=100",
+      "note": "Marketing studio setting_id catalog. Used in marketing_studio_hook.setting_id.",
+      "count": 14,
+      "firstIds": [
+        "b8368076-35eb-4045-b33b-74b2646d9863",
+        "b03705e5-bbed-4d83-8d29-3bc2101cd14f",
+        "10f47b85-abd7-4899-b6b6-91ff2969d3bf"
+      ]
+    },
+    "marketing_settings_realistic": {
+      "status": 200,
+      "ep": "/marketing-studio/setup/settings?size=100&tag=realistic",
+      "note": "Marketing settings (realistic tag).",
+      "count": 8,
+      "firstIds": [
+        "b8368076-35eb-4045-b33b-74b2646d9863",
+        "10f47b85-abd7-4899-b6b6-91ff2969d3bf",
+        "6bfbe372-e50a-4900-adee-d4cbd0db8a2f"
+      ]
+    },
+    "marketing_settings_unrealistic": {
+      "status": 200,
+      "ep": "/marketing-studio/setup/settings?size=100&tag=unrealistic",
+      "note": "Marketing settings (unrealistic tag).",
+      "count": 6,
+      "firstIds": [
+        "b03705e5-bbed-4d83-8d29-3bc2101cd14f",
+        "3cf2164e-ffac-4867-9c43-1d673a5cb28a",
+        "e99c2ee8-3c4a-4697-9a58-908e73c9ad38"
+      ]
+    },
+    "marketing_formats": {
+      "status": 200,
+      "ep": "/marketing-studio/formats",
+      "note": "Marketing studio formats (13 items) \u2014 full preset body templates for marketing_studio_video.",
+      "count": 26,
+      "firstIds": []
+    },
+    "marketing_avatars": {
+      "status": 200,
+      "ep": "/marketing-studio/avatars?size=100",
+      "note": "Marketing studio avatar_id catalog.",
+      "count": 40,
+      "firstIds": [
+        "672be390-36ab-4d79-bb95-ff562a57c79c",
+        "35cd52c0-e92b-44b1-b56d-b4ea5e609c00",
+        "44ee57aa-d1f4-4a0a-a55f-cdf9dacee265"
+      ]
+    },
+    "marketing_products": {
+      "status": 200,
+      "ep": "/marketing-studio/products?size=100",
+      "note": "Marketing studio user products (may be empty until user scrapes).",
+      "count": 0,
+      "firstIds": []
+    },
+    "marketing_brand_kits": {
+      "status": 200,
+      "ep": "/marketing-studio/brand-kits?size=100",
+      "note": "Marketing studio brand_kit_id catalog (needs prior scrape).",
+      "count": 0,
+      "firstIds": []
+    },
+    "reference_elements": {
+      "status": 200,
+      "ep": "/reference-elements?size=100",
+      "note": "kling_element_ids catalog (user-created reference elements).",
+      "count": 0,
+      "firstIds": []
+    },
+    "cms_ai_stylist_backgrounds": {
+      "status": 200,
+      "ep": "/ai-stylist/backgrounds?size=100",
+      "host": "cms",
+      "note": "ai_stylist backgrounds (CMS domain).",
+      "count": 13,
+      "firstIds": [
+        "4b10c8e3-55ab-4c2d-85a2-40c3ae419f83",
+        "1def1ec0-734d-42f4-9b85-d17d99e32445",
+        "07ae44db-36a4-4f68-a821-c8fcb629d909"
+      ]
+    },
+    "cms_ai_stylist_poses": {
+      "status": 200,
+      "ep": "/ai-stylist/poses?size=100",
+      "host": "cms",
+      "note": "ai_stylist poses (CMS domain).",
+      "count": 9,
+      "firstIds": [
+        "1fb0213c-63b2-4a52-ac5a-2371649e9abf",
+        "f994e1a1-56bc-40d6-a81e-231d82ace4c6",
+        "45bdd512-4d5d-4f22-b64e-187a79c8ff26"
+      ]
+    },
+    "soul_v1_presets": {
+      "status": 200,
+      "ep": "/soul/presets?size=100",
+      "note": "soul-v1 style catalog (106 presets). Used as style_id in text2image_soul.",
+      "count": 106
+    },
+    "soul_v1_categories": {
+      "status": 200,
+      "ep": "/soul/preset-categories",
+      "note": "soul-v1 categories + nested presets."
+    },
+    "cms_soul_styles": {
+      "status": 200,
+      "ep": "/soul-styles?size=100",
+      "host": "cms",
+      "note": "CMS soul-styles (100 items with descriptions)."
+    }
+  }
+}

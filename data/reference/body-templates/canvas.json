@@ -1,0 +1,57 @@
+{
+  "alias": "canvas",
+  "jobSetType": "canvas",
+  "endpoint": "/jobs/canvas",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": null,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "prompt": "a red apple",
+      "batch_size": 4,
+      "seed": 94335,
+      "is_face": false,
+      "input_image": {
+        "id": "2a17cf90-776e-4063-bf28-88b9e636ea12",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemB1FjVfHVUkDiMl0K3vzPjb/2a17cf90-776e-4063-bf28-88b9e636ea12.jpg"
+      },
+      "mask_input_image": null,
+      "object_input_image": null,
+      "quality": null
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "0d22f1a5-c6f4-4b80-b215-d1e31f50d1ff",
+    "jobId": "73c8226c-2bd7-4330-9a19-2bcf3bc1fe2e"
+  },
+  "generatedAt": "2026-07-04T07:18:30.611Z",
+  "bestPracticeBody": {
+    "params": {
+      "prompt": ".",
+      "width": 1024,
+      "height": 1024,
+      "input_image": {
+        "id": "201ffddc-6cb0-4080-8db6-eb617e77a408",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+        "note": "Small red apple, 512x512. Safe default for image inputs."
+      },
+      "batch_size": 4,
+      "aspect_ratio": "1:1",
+      "resolution": "1k",
+      "input_images": [],
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "batch_size: literal 4."
+}

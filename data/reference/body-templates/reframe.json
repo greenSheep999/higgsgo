@@ -1,0 +1,73 @@
+{
+  "alias": "reframe",
+  "jobSetType": "reframe",
+  "endpoint": "/jobs/v2/reframe",
+  "version": "v2",
+  "output": "video",
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "aspect_ratio": "1:1",
+      "mode": "std",
+      "duration": 11,
+      "resolution": "480p",
+      "medias": [
+        {
+          "data": {
+            "id": "1f90b3eb-d9bf-465e-98a3-e74ada158127",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/1f90b3eb-d9bf-465e-98a3-e74ada158127.mp4",
+            "type": "video_input"
+          },
+          "role": "video"
+        }
+      ],
+      "folder_id": null
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false,
+    "job_set_type": "reframe",
+    "job_set_id": "377aecff-cb48-4064-a3be-192efb6e2792",
+    "job_set_parent_id": null,
+    "job_set_client_meta": null,
+    "board_ids": [],
+    "meta": {},
+    "id": "4af53531-a872-4157-906c-adf7ac7f384f",
+    "status": "completed",
+    "ip_check_finished": true,
+    "ip_detected": false,
+    "result": null,
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_094826_4af53531-a872-4157-906c-adf7ac7f384f.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_094826_4af53531-a872-4157-906c-adf7ac7f384f_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_094826_4af53531-a872-4157-906c-adf7ac7f384f.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_094826_4af53531-a872-4157-906c-adf7ac7f384f_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "published_at": null,
+    "created_at": 1782985706.511528,
+    "user_id": "user_3Flevg5z3r1kTApnx5j83ZABPoE",
+    "trace_id": "4af53531-a872-4157-906c-adf7ac7f384f",
+    "cluster_hash": "8a5c84d9d8d1db5371ae2d075bc79a0c",
+    "representation": null,
+    "user": {
+      "id": "user_3Flevg5z3r1kTApnx5j83ZABPoE",
+      "full_name": "deconstructivistworm1673",
+      "username": "deconstructivistworm1673",
+      "avatar_url": null
+    },
+    "folder_ids": [],
+    "is_favourite": false,
+    "is_viewed": false
+  },
+  "exampleResponse": {
+    "jobId": "4af53531-a872-4157-906c-adf7ac7f384f"
+  },
+  "generatedAt": "2026-07-02T09:53:12.206Z"
+}

@@ -1,0 +1,101 @@
+{
+  "items": [
+    {
+      "id": "86f838ac-cbbc-4bf4-aa8a-887e0d759c3c",
+      "name": "VHS",
+      "media": {
+        "width": 960,
+        "height": 720,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/b605e844-3d92-479c-9fc6-f46b663cf094.png",
+        "type": "animated"
+      },
+      "priority": -254,
+      "tags": [],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [],
+      "params": {
+        "steps": 30,
+        "strength": 0.85
+      }
+    },
+    {
+      "id": "4ab5afe9-3a2d-443b-972c-a98abbf0587a",
+      "name": "Anamorphic",
+      "media": {
+        "width": 720,
+        "height": 720,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/845e8b95-a354-4b40-aeeb-b4a9a72a5ebb.png",
+        "type": "animated"
+      },
+      "priority": -251,
+      "tags": [],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [],
+      "params": {
+        "steps": 30,
+        "strength": 0.85
+      }
+    },
+    {
+      "id": "ff26f74a-752f-4ee4-9bb7-70affd00b587",
+      "name": "Super 8MM",
+      "media": {
+        "width": 576,
+        "height": 720,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/44593059-fc54-4b63-a3b8-e83f43e9a59f.png",
+        "type": "animated"
+      },
+      "priority": -249,
+      "tags": [],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [],
+      "params": {
+        "steps": 30,
+        "strength": 0.85
+      }
+    },
+    {
+      "id": "3322e053-d52b-4e2f-94b7-af2816918f71",
+      "name": "Abstract",
+      "media": {
+        "width": 1280,
+        "height": 953,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/9a751035-fbef-466c-97b3-c70734248c88.png",
+        "type": "animated"
+      },
+      "priority": -238,
+      "tags": [],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [],
+      "params": {
+        "steps": 30,
+        "strength": 0.85
+      }
+    },
+    {
+      "id": "08981cf3-dc2c-4e72-8a24-e2e8548b5a25",
+      "name": "Cinematic",
+      "media": {
+        "width": 1280,
+        "height": 720,
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/22dcbb80-f5cb-4dd0-bf04-60ddcb9da97c.png",
+        "type": "animated"
+      },
+      "priority": -234,
+      "tags": [],
+      "preset_family": "higgsfield",
+      "cms_id": null,
+      "categories": [],
+      "params": {
+        "steps": 30,
+        "strength": 0.85
+      }
+    }
+  ],
+  "total": 5,
+  "cursor": null
+}

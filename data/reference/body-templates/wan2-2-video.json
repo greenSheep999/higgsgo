@@ -1,0 +1,35 @@
+{
+  "alias": "wan2-2-video",
+  "jobSetType": "wan2_2_video",
+  "endpoint": "/jobs/wan2-2-video",
+  "version": "v1-hyphen",
+  "output": "video",
+  "realCost": 10,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k",
+      "input_image": {
+        "id": "a2cb271c-469a-4d08-bbbb-ef3f6b9b769e",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemqwvSqMuSk4JKHFXcZz57wm/a2cb271c-469a-4d08-bbbb-ef3f6b9b769e.jpg"
+      }
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "f160ea75-2a13-4723-8134-8c95214e13c6",
+    "jobId": "f53b35fc-b5fd-4f1c-a1a6-8d0679f15831"
+  },
+  "generatedAt": "2026-07-01T10:18:52.075Z"
+}

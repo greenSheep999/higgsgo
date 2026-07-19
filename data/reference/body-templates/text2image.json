@@ -1,0 +1,37 @@
+{
+  "alias": "text2image",
+  "jobSetType": "text2image",
+  "endpoint": "/jobs/text2image",
+  "version": "v1-hyphen",
+  "output": "image",
+  "realCost": null,
+  "catalogRefs": {
+    "style_id": "catalogs/styles.json"
+  },
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple",
+      "width": 512,
+      "height": 512,
+      "steps": 4,
+      "batch_size": 1,
+      "seed": 757055,
+      "strength": 1,
+      "quality": null,
+      "enhance_prompt": false,
+      "style": {
+        "id": "86f838ac-cbbc-4bf4-aa8a-887e0d759c3c",
+        "url": "https://d1xarpci4ikg0w.cloudfront.net/b605e844-3d92-479c-9fc6-f46b663cf094.png",
+        "name": "VHS"
+      },
+      "style_id": "86f838ac-cbbc-4bf4-aa8a-887e0d759c3c"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "07f05925-dc7a-45fd-9ec0-9a13f731af15",
+    "jobId": "7bb73b1c-be97-4c9e-9a84-7e5615632fdf"
+  },
+  "generatedAt": "2026-07-04T12:44:56.320Z"
+}

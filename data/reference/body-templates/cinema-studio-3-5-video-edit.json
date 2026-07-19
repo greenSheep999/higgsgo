@@ -1,0 +1,34 @@
+{
+  "alias": "cinema-studio-3-5-video-edit",
+  "jobSetType": "cinema_studio_3_5_video_edit",
+  "endpoint": "/jobs/v2/cinema_studio_3_5_video_edit",
+  "version": "v2",
+  "output": "video",
+  "realCost": null,
+  "catalogRefs": {
+    "parent_job_id": "spa-only-presets.json → cinema_studio_3_5_video_edit (must be completed cinematic_studio_video_3_5 job in same account)",
+    "target_artifact_id": "spa-only-presets.json → cinema_studio_3_5_video_edit (SPA-generated artifact uuid tied to that parent)",
+    "edit_mode": "literal enum: insert_after|replace"
+  },
+  "bestPracticeBody": {
+    "params": {
+      "parent_job_id": "<same-account completed cinematic_studio_video_3_5 job id>",
+      "target_artifact_id": "<SPA-generated artifact uuid>",
+      "edit_mode": "insert_after",
+      "prompt": "next shot",
+      "width": 1024,
+      "height": 576,
+      "batch_size": 1,
+      "aspect_ratio": "16:9",
+      "resolution": "720p",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "input_images": []
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "Requires prior cinematic_studio_video_3_5 completion. target_artifact_id is NOT the job_id/job_set_id — it is a separate SPA-emitted uuid.",
+  "sourceOfPreset": "Complete cinematic_studio_video_3_5 in SPA → open the result → click \"edit\" or scene divider → capture target_artifact_id from POST body."
+}

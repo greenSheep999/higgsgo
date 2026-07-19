@@ -1,0 +1,75 @@
+{
+  "alias": "seedance-2-0-mini",
+  "jobSetType": "seedance_2_0_mini",
+  "endpoint": "/jobs/v2/seedance_2_0_mini",
+  "version": "v2",
+  "output": "video",
+  "catalogRefs": {
+    "reference_elements": "catalogs/reference_elements.json (must be user-created; empty by default)"
+  },
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "genre": "auto",
+      "medias": [],
+      "duration": 15,
+      "resolution": "480p",
+      "aspect_ratio": "1:1",
+      "generate_audio": false,
+      "multi_shots": false,
+      "multi_shot_mode": "custom",
+      "multi_prompt": [],
+      "speedramp": "auto",
+      "reference_elements": [],
+      "prompt_language": "en"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false,
+    "job_set_type": "seedance_2_0_mini",
+    "job_set_id": "787d5d46-b8ea-4697-adee-24f3b8e45913",
+    "job_set_parent_id": null,
+    "job_set_client_meta": null,
+    "board_ids": [],
+    "meta": {},
+    "id": "61bfd4b2-35f0-4042-8df5-679461223b53",
+    "status": "completed",
+    "ip_check_finished": true,
+    "ip_detected": false,
+    "result": null,
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_022733_61bfd4b2-35f0-4042-8df5-679461223b53.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_022733_61bfd4b2-35f0-4042-8df5-679461223b53_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_022733_61bfd4b2-35f0-4042-8df5-679461223b53.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3Flevg5z3r1kTApnx5j83ZABPoE/hf_20260702_022733_61bfd4b2-35f0-4042-8df5-679461223b53_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "published_at": null,
+    "created_at": 1782959253.208846,
+    "user_id": "user_3Flevg5z3r1kTApnx5j83ZABPoE",
+    "trace_id": "61bfd4b2-35f0-4042-8df5-679461223b53",
+    "cluster_hash": "01f15d454229e79a75b354b2cb268d1c",
+    "representation": null,
+    "user": {
+      "id": "user_3Flevg5z3r1kTApnx5j83ZABPoE",
+      "full_name": "deconstructivistworm1673",
+      "username": "deconstructivistworm1673",
+      "avatar_url": null
+    },
+    "folder_ids": [],
+    "is_favourite": false,
+    "is_viewed": false
+  },
+  "exampleResponse": {
+    "jobId": "61bfd4b2-35f0-4042-8df5-679461223b53"
+  },
+  "generatedAt": "2026-07-02T06:16:42.323Z"
+}

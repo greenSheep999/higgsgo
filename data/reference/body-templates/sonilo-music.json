@@ -1,0 +1,23 @@
+{
+  "alias": "sonilo-music",
+  "jobSetType": "sonilo_music",
+  "endpoint": "/jobs/v2/sonilo_music",
+  "version": "v2",
+  "output": "audio",
+  "realCost": 0.32,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "duration": 5
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "f160ea75-2a13-4723-8134-8c95214e13c6",
+    "jobId": "1696277f-fdc0-419d-b02e-959086afe204",
+    "cost": 32
+  },
+  "generatedAt": "2026-07-01T07:12:59.092Z"
+}

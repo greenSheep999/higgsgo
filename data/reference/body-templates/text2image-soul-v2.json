@@ -1,0 +1,41 @@
+{
+  "alias": "text2image-soul-v2",
+  "jobSetType": "text2image_soul_v2",
+  "endpoint": "/jobs/v2/text2image_soul_v2",
+  "version": "v2",
+  "output": "image",
+  "realCost": 0,
+  "catalogRefs": {
+    "style_id": "catalogs/soul_v2_presets.json"
+  },
+  "exampleBody": {
+    "params": {
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "seed": 12345,
+      "prompt": "a portrait, cinematic lighting",
+      "style_id": "3db34ab5-3439-4317-9e03-08dc30852e69"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "jobId": "e1c2761b-1378-4f10-96d2-1f76d02126a7",
+    "cost": null
+  },
+  "generatedAt": "2026-07-17T06:14:41.392Z",
+  "bestPracticeBody": {
+    "params": {
+      "prompt": "a portrait, cinematic lighting",
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "seed": 12345,
+      "style_id": "3db34ab5-3439-4317-9e03-08dc30852e69"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "Minimum working shape (verified 2026-07-17 starter/von7qxenjs): params requires prompt, width, height, batch_size, seed, style_id. style_id must come from catalogs/soul_v2_presets.json. No aspect_ratio, resolution, or style object needed."
+}

@@ -1,0 +1,31 @@
+{
+  "alias": "kling-o3-flf",
+  "jobSetType": "kling_o3_flf",
+  "endpoint": "/jobs/v2/kling_o3_flf",
+  "version": "v2",
+  "output": "video",
+  "realCost": 6.25,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "width": 512,
+      "height": 512,
+      "prompt": "apple",
+      "medias": [],
+      "duration": 5,
+      "aspect_ratio": "1:1",
+      "multi_shots": false,
+      "multi_prompt": [],
+      "mode": "std",
+      "sound": "on"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "08403603-6e55-4f9b-99a0-286cfd73039d",
+    "jobId": "0d62546f-cc04-408f-9069-b7633abb5f94",
+    "cost": 625
+  },
+  "generatedAt": "2026-07-04T12:44:56.322Z"
+}

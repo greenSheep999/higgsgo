@@ -1,0 +1,35 @@
+{
+  "alias": "wan2-6",
+  "jobSetType": "wan2_6",
+  "endpoint": "/jobs/wan2-6",
+  "version": "v1-hyphen",
+  "output": "video",
+  "realCost": 13,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k",
+      "seed": 12345,
+      "duration": 5,
+      "quality": "720p",
+      "multi_shots": false
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "f160ea75-2a13-4723-8134-8c95214e13c6",
+    "jobId": "8f58f4ee-05c5-48c7-b180-85d64061e6e1",
+    "cost": 1300
+  },
+  "generatedAt": "2026-07-01T06:52:08.089Z"
+}

@@ -1,0 +1,1360 @@
+[
+  {
+    "job_id": "1fb8253c-0338-4648-933d-c1e53e84eeb7",
+    "label": "product_showcase",
+    "groups": [
+      "general"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Bu8kApHUBmQcoBNUYoyCcOGJne/hf_20260414_170749_3474b08b-9dc4-49e6-b6e2-4af862eff61d.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3Bu8kApHUBmQcoBNUYoyCcOGJne/hf_20260414_170749_3474b08b-9dc4-49e6-b6e2-4af862eff61d_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Bu8kApHUBmQcoBNUYoyCcOGJne/hf_20260414_170749_3474b08b-9dc4-49e6-b6e2-4af862eff61d.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3Bu8kApHUBmQcoBNUYoyCcOGJne/hf_20260414_170749_3474b08b-9dc4-49e6-b6e2-4af862eff61d_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "chocolate japanese style commercial, with chocolate crunching, pieces breaking, hands passing chocolate to each other, japanese happy people smiling while biting, and these little characters animated ",
+      "duration": 12,
+      "aspect_ratio": "16:9",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 1280,
+      "height": 720,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [],
+      "mode": "product_showcase",
+      "product": null
+    }
+  },
+  {
+    "job_id": "b769c26d-396c-453a-98b2-5b1d7c82c79d",
+    "label": "unboxing",
+    "groups": [
+      "general"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BtuMjeO56IlCCzTiD419c4NiyM/hf_20260414_221341_a0111aa8-dd19-425a-9316-a32cd0f251da.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3BtuMjeO56IlCCzTiD419c4NiyM/hf_20260414_221341_a0111aa8-dd19-425a-9316-a32cd0f251da_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BtuMjeO56IlCCzTiD419c4NiyM/hf_20260414_221341_a0111aa8-dd19-425a-9316-a32cd0f251da.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3BtuMjeO56IlCCzTiD419c4NiyM/hf_20260414_221341_a0111aa8-dd19-425a-9316-a32cd0f251da_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "<<<product:af95ff68-042b-45b0-b46c-2b2728a85bb1>>> <<<avatar:ffc8862b-0b8a-485c-88e1-f89196d3dc10>>> VIDEO  — 10-second vertical (9:16) satisfying ASMR unboxing of \"FROGGY PRINCE\" by \"MELON STUDIO × PLAY PALS\"\nProduct: A cute vinyl art toy figure — a chubby character wearing a green frog costume hoodie with a small red felt crown on top. Big black sparkly eyes with white star highlights, rosy pink cheeks, open happy smile. Orange bow tie, red heart on the belly, white boots with red heart details. Comes in a square pastel-yellow box with green lid, plus collectible art cards.\nFormat: Overhead top-down camera looking straight down at a light wooden desk surface. Only hands visible — female hands, short natural nails, cozy oversized sage-green sweater sleeves. Warm soft natural lighting from a window on the left. Slow, deliberate, ASMR-style movements.\nScene 1 — Box Tap + Open (0–3s): The sealed yellow-and-green square box sits centered on the wooden desk. The illustrated Froggy Prince character is visible on the front — a cute kid in a frog hoodie with \"Froggy Prince\" in playful green cursive and \"MELON STUDIO × PLAY PALS\" below. Fingers tap the box lid three times — satisfying hollow cardboard thuds. Then both hands grip the green lid and lift it straight up slowly — revealing white tissue paper inside with a small round green sticker seal. The lid is placed to the right.\nScene 2 — Tissue Peel + Figure Reveal (3–6s): Fingers peel the green sticker seal (satisfying crisp peel sound), then pull the tissue paper apart to reveal the Froggy Prince figure nestled in a shaped foam insert. A brief pause — the figure sits snugly in its cutout, the red felt crown, glossy green body, and pink cheeks immediately visible. One hand lifts the figure out gently, holds it up at center frame, and rotates it slowly — showing the front face (big star eyes, open smile), the orange bow tie, the red heart on the belly, and the little white boots. The vinyl surface catches the warm light with a soft glossy sheen.\nScene 3 — Cards + Final Display (6–10s): The figure is placed standing upright on the desk. Hands reach back into the box and pull out two square art cards stacked together. The first card (orange background, sparkle details) is slid to the left — showing the illustrated Froggy Prince character with \"FROGGY PRINCE\" in bold blue retro text. The second card (pink background, heart frame) is slid to the right — showing the character inside a rainbow heart. Both cards are tapped once into alignment on the desk. Final arrangement: the figure standing center on the wooden desk, the open box behind it, the green lid leaning against the box showing the illustrated front, both art cards fanned in front. Hands pull away. Hold the beauty shot for 1.5 seconds — warm light, cozy desk, the little frog prince smiling at camera.\nOverall style: Cozy ASMR unboxing for Xiaohongshu/TikTok. Top-down overhead, no face, only hands. Every sound is crisp and amplified: cardboard tap, sticker peel, tissue rustle, vinyl figure lifted from foam, cards sliding on wood. No music — pure ASMR sounds only. Warm natural daylight, light wooden surface, sage-green sweater sleeves for color harmony with the frog character. Slow, satisfying, tactile. Vertical 9:16. Designer toy collector aesthetic.",
+      "duration": 10,
+      "aspect_ratio": "9:16",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 1280,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "ffc8862b-0b8a-485c-88e1-f89196d3dc10",
+          "url": "https://cdn.higgsfield.ai/marketing_studio_avatar/8d5948e6-db10-46b2-b48f-9728fba0b6c4.webp",
+          "type": "preset"
+        }
+      ],
+      "mode": "ugc_unboxing",
+      "product": {
+        "id": "af95ff68-042b-45b0-b46c-2b2728a85bb1",
+        "title": "Froggy Prince Collectible Vinyl Figure",
+        "description": "A cute frog-prince themed collectible figurine with a crown and heart details, packaged with matching illustrated box and art cards. Ideal as a desk toy or display piece for designer toy and character fans.",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "310d085a-62d1-489b-b95a-804b8370f390",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3BtuMjeO56IlCCzTiD419c4NiyM/310d085a-62d1-489b-b95a-804b8370f390.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-17T21:59:02.325110Z",
+        "updated_at": "2026-04-17T21:59:02.325143Z"
+      }
+    }
+  },
+  {
+    "job_id": "5e122601-8f0a-4990-838a-0c0c284df6a2",
+    "label": "product_showcase",
+    "groups": [
+      "general"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Bu8kApHUBmQcoBNUYoyCcOGJne/hf_20260414_232148_e856f696-c60e-4c40-921e-3fc3ac60224f.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3Bu8kApHUBmQcoBNUYoyCcOGJne/hf_20260414_232148_e856f696-c60e-4c40-921e-3fc3ac60224f_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3Bu8kApHUBmQcoBNUYoyCcOGJne/hf_20260414_232148_e856f696-c60e-4c40-921e-3fc3ac60224f.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3Bu8kApHUBmQcoBNUYoyCcOGJne/hf_20260414_232148_e856f696-c60e-4c40-921e-3fc3ac60224f_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "High-energy cinematic product commercial. Molten liquid silver flows and swirls elegantly in mid-air, pouring into a sleek silver chrome sneaker. The liquid chrome ripples across the shoe's surface, filling the textures like molten metal. Dynamic camera movements: extreme macro tracking shots of the fluid, aggressive 360-degree orbits around the sneaker, and fast whip pans. Speed ramping transitions: slow-motion liquid flow followed by fast motion reveals. Vibrant green studio background with professional lighting and subtle lens flares. The video concludes with a smooth match-cut transition to a final packshot of the bright green shoe box sitting on a polished, reflective surface. High-end 3D liquid simulation, 8k resolution, hyper-realistic, polished aesthetic.",
+      "duration": 10,
+      "aspect_ratio": "16:9",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 1280,
+      "height": 720,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [],
+      "mode": "product_showcase",
+      "product": null
+    }
+  },
+  {
+    "job_id": "213dbf28-c65e-4154-aa40-95c2b7050ca9",
+    "label": "ugc",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_004832_55fa9735-9ad0-4d97-902f-7bcb6722e131.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_004832_55fa9735-9ad0-4d97-902f-7bcb6722e131_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_004832_55fa9735-9ad0-4d97-902f-7bcb6722e131.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_004832_55fa9735-9ad0-4d97-902f-7bcb6722e131_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "Vertical 9:16 selfie-style UGC tennis racket review, shot on iPhone front and back camera mix, natural daylight on an outdoor tennis court, handheld authentic energy, casual \"showing a friend my new racket\" vibe, warm natural light, real skin tones, no filters\nAn outdoor tennis court — green or blue hard court surface with white lines, a net visible in the background, natural daylight, open sky above. The young woman wears a bright lime green tennis outfit — a fitted lime green sleeveless tennis dress or matching lime green tennis top and skirt, the vivid green a striking contrast against the mint green and orange of the AURA 300 racket; she holds the SERA AURA 300 tennis racket — mint green to white gradient frame, orange cross-string pattern through the white string face, white perforated grip tape, AURA 300 lettering on the shaft, a mint green butt cap at the handle end.\nAction and dialogue sequence:\nShe holds the AURA 300 up to the front camera with one hand, the full racket face filling the vertical frame, her bright lime green sleeve visible at the edge of the frame, the mint green frame and the orange string pattern sharp in the daylight: she tilts it slowly catching the sun across the surface, speaking naturally: \"Okay so this just arrived and I am obsessed with the color.\" She flips it to show the back face, then tilts to show the mint-to-white gradient on the shaft where AURA 300 is printed, the lime green of her outfit creating a vivid color contrast beside the racket.\nShe switches to the back camera. Holds the racket out at arm's length, the lime green dress visible in the frame, and bounces the racket lightly on her palm: \"It feels really balanced, like not too heavy.\" She brings the racket close to the back lens so the orange cross-string pattern fills the frame — the individual string intersections sharp, the orange against white vivid in the open daylight.\nShe props the phone against her bag or the court fence pointing toward her. She bounces a ball and hits two slow controlled groundstrokes toward the net — the bright lime green outfit and the mint AURA 300 frame moving through the frame together on each swing, the two greens catching the daylight differently, the racket head tracking cleanly through the air. She picks the phone back up.\nClose-up back camera shot — she holds the racket face close to the lens, the orange string mesh filling the vertical frame, then slowly pans down the shaft past the AURA 300 lettering to the white grip tape, her lime green sleeve visible at the top of the frame, her fingers wrapping the grip naturally: \"And the grip feels so good, really clean.\" She holds the full racket up one final time beside her face on the front camera — bright lime green outfit, mint green racket, orange strings — smiles directly into the lens: \"Yeah. Yeah this is the one.\" <<<product:2fafff57-93dd-4e2a-9764-d8e23543e689>>> <<<avatar:00b08443-83de-4218-b973-f80580b1dfdb>>>",
+      "duration": 15,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 960,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "00b08443-83de-4218-b973-f80580b1dfdb",
+          "url": "https://cdn.higgsfield.ai/marketing_studio_avatar/8c8e0717-70c1-46a5-b67f-4581637ff1fc.webp",
+          "type": "preset"
+        }
+      ],
+      "mode": "ugc",
+      "product": {
+        "id": "2fafff57-93dd-4e2a-9764-d8e23543e689",
+        "title": "Wilson Serena Williams Aura 300 Tennis Racket",
+        "description": "Lightweight, mint-colored tennis racket designed for easy handling and comfort, featuring a balanced frame and cushioned grip. Ideal for recreational players seeking controllable power and a stylish Serena-inspired look.",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "f5adce22-5c7a-4d30-b096-4c98c2e7f04b",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/f5adce22-5c7a-4d30-b096-4c98c2e7f04b.jpg",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-17T22:00:23.227289Z",
+        "updated_at": "2026-04-17T22:00:23.227313Z"
+      }
+    }
+  },
+  {
+    "job_id": "7a98d4e1-18d2-447e-af7b-cc2c5b723ba4",
+    "label": "ugc",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_010440_d4caf4cb-a3f5-422c-9d22-72446a1b6775.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_010440_d4caf4cb-a3f5-422c-9d22-72446a1b6775_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_010440_d4caf4cb-a3f5-422c-9d22-72446a1b6775.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_010440_d4caf4cb-a3f5-422c-9d22-72446a1b6775_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "Vertical 9:16 selfie-style UGC phone case review, shot on iPhone front and back camera mix, warm natural indoor light, soft cozy energy, casual \"showing a friend my new case\" vibe, real skin tones, no filters, intimate low-key mood\nA bright casual room — warm natural light from the side, a clean surface or bed behind her, soft and cozy atmosphere. The young woman holds the clear glitter liquid phone case — a transparent hard shell case with a rainbow iridescent border trim, filled with liquid glitter and confetti stars in pastel and holographic colors, and a collection of tiny 3D charms resting at the bottom: two yellow smiley face emojis, a white unicorn, a blue car, a pink car, a purple car, a yellow rubber duck, a green cactus, a blue dinosaur — all floating and shifting when the case moves.\nAction and dialogue sequence:\nShe holds the case up to the front camera with both hands, the clear front facing the lens, the rainbow border catching the warm room light: she says nothing for a beat — just slowly tilts the case left, and all the tiny charms and glitter drift together to the side in the liquid. She tilts it right, they drift back. She looks at the camera with wide eyes: \"Wait. Wait look at this.\"\nShe tilts the case again slowly, the camera close on the front face, the charms tumbling through the glitter liquid in slow motion — the smiley faces, the unicorn, the rubber duck all visible shifting through the holographic confetti stars. She brings it even closer to the front lens so the charms fill the frame: \"There is a dinosaur in here. And a duck. WHY is there a duck.\"\nShe switches to the back camera, holds the case flat and then tips it vertically — the charms and glitter cascade downward through the liquid in a slow satisfying drift, the rainbow border glowing in the warm light, the holographic stars catching every shift of light. She tilts it back the other way, the whole contents drifting again: \"I cannot stop doing this.\"\nShe props the phone and holds the case up with both hands, shaking it gently — the glitter and charms swirl in all directions, the liquid catching the light in shifting rainbow patches, the tiny 3D charms tumbling through. She looks at the camera, shakes it once more slowly: \"This is genuinely the most satisfying thing I own right now.\" She holds it still beside her face on the front camera, the rainbow border glowing, smiles directly into the lens: \"That's it. That's the review.\" <<<avatar:bcd9e6ee-c000-48e6-9f4b-a20fc2a674f7>>> <<<product:f9db0bce-3d5d-49ed-b091-6cc923ef52d8>>>",
+      "duration": 15,
+      "aspect_ratio": "9:16",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 1280,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "bcd9e6ee-c000-48e6-9f4b-a20fc2a674f7",
+          "url": "https://cdn.higgsfield.ai/marketing_studio_avatar/eadd09d6-7b7f-4bed-9196-b2142d1e1527.webp",
+          "type": "preset"
+        }
+      ],
+      "mode": "ugc",
+      "product": {
+        "id": "f9db0bce-3d5d-49ed-b091-6cc923ef52d8",
+        "title": "Clear Glitter Liquid Phone Case with Floating Charms",
+        "description": "Transparent liquid-filled phone case featuring floating glitter confetti and colorful mini charms (smileys, unicorns, cars, duck, dinosaur). Designed to protect the phone while creating a fun shaker effect when moved.",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "86c47910-6555-47a2-87a9-8fd60119bf0d",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/86c47910-6555-47a2-87a9-8fd60119bf0d.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-17T22:01:15.502125Z",
+        "updated_at": "2026-04-17T22:01:15.502130Z"
+      }
+    }
+  },
+  {
+    "job_id": "356a3954-be05-4036-98ea-c933634e351a",
+    "label": "ugc_virtual_try_on",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/hf_20260415_014636_4873f538-b114-48c3-b604-05e32945d184.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/hf_20260415_014636_4873f538-b114-48c3-b604-05e32945d184_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/hf_20260415_014636_4873f538-b114-48c3-b604-05e32945d184.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/hf_20260415_014636_4873f538-b114-48c3-b604-05e32945d184_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "Style: UGC, get ready with me, iPhone front camera, fashion vlog, playful energy\n\nA stylish young girl is filming herself in her room while getting dressed. The room is aesthetic — mirror, clothes, soft natural daylight, slight creative mess.\n\nShot on iPhone front camera, vertical 9:16, natural HDR, slight handheld movement, real skin tones, no color grading.\n\nOutfit is laid out or partially worn: white top with red stars, camo skirt, bold red furry boots.\n\nShe walks into frame adjusting her top, looks into camera: “Okay, I’m getting ready and I don’t know if this outfit is crazy or—”\n\nSuddenly, someone (guy/friend) walks into frame casually from the side. She immediately reacts, pushes him out of frame: “Hey— no, get out!” She laughs.\n\nShe turns back to camera like nothing happened: “Anyway… I kinda love it.”\n\nShe steps back slightly to show full outfit.\n\n“It’s a little chaotic…”\n“But it works.”\n\nShe poses slightly: “I’m wearing this.”\n\nNatural messy UGC vibe, playful interruption moment, confident energy, full body outfit visible, light humor.",
+      "duration": 13,
+      "aspect_ratio": "9:16",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 1280,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "f0fd9868-b172-406c-b418-02768f3ef8b6",
+          "url": "https://cdn.higgsfield.ai/marketing_studio_avatar/464ec4fc-b6e1-4a14-8d74-c35b279b1e10.webp",
+          "type": "preset"
+        }
+      ],
+      "mode": "ugc_virtual_try_on",
+      "product": {
+        "id": "73848745-891e-4853-baf9-a0e937e8c0ff",
+        "title": "Girls' Star Print Top with Camo Cargo Pants and Faux Fur Leg Warmers Set",
+        "description": "A coordinated kids outfit featuring a white short-sleeve star-print top layered over a red camisole, paired with camouflage cargo pants. Includes matching red faux fur leg warmers for a bold, playful look.",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "54ff2d05-1575-40f2-bb5b-45fe7c1a7029",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/54ff2d05-1575-40f2-bb5b-45fe7c1a7029.jpg",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-17T22:01:51.163026Z",
+        "updated_at": "2026-04-17T22:01:51.163033Z"
+      }
+    }
+  },
+  {
+    "job_id": "e3d48b09-9c73-431b-9ec3-82da18e3133d",
+    "label": "ugc",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_012608_2c21b2ad-368a-4199-bde3-e2c648d78186.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_012608_2c21b2ad-368a-4199-bde3-e2c648d78186_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_012608_2c21b2ad-368a-4199-bde3-e2c648d78186.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_012608_2c21b2ad-368a-4199-bde3-e2c648d78186_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "Vertical 9:16 UGC sneaker unboxing and review, shot on iPhone front and back camera mix, bright natural daylight from a window, casual bedroom energy, handheld selfie perspective, real skin tones, no filters, fun and expressive creator vibe\nA bright casual bedroom or living room — natural daylight from the side, a clean floor space visible, the pair of FUNNY STEPS sneakers sitting on the floor or a surface in front of her — multicolor upper panels in blue mesh, orange, green, yellow and purple leather panels, white laces with multicolored eyelets, a FUNNY STEPS logo tab on the tongue and side, and a clear transparent air bubble sole filled with tiny 3D charms and confetti pieces — miniature teddy bears, stars, colorful shapes all visible floating inside the sole.\nAction and dialogue sequence:\nShe picks up one sneaker with both hands and holds it directly to the front camera lens, the clear sole facing the lens so all the tiny charms inside are visible through the transparent bubble: she tilts it slowly and the charms shift and tumble inside the sole. Her eyes go wide directly at camera: \"There are TOYS in the sole. Actual tiny toys.\" She tilts it the other way, the charms drifting again, the colored confetti pieces catching the daylight inside the bubble.\nShe switches to the back camera, holds the sneaker sole-up close to the lens — the clear bubble sole fills the vertical frame, all the tiny teddy bears and stars and colorful shapes sharp through the transparent material, pressing against the inside of the sole as she tips it: \"A little bear. There is a little bear in there.\" She taps the sole gently with one finger and the charms bounce inside.\nShe sets the phone down propped against something, sits on the floor and pulls both sneakers on — lacing them quickly, the multicolor panels and white laces visible on her feet. She stands up, picks the phone up and points the back camera down at her feet: both FUNNY STEPS sneakers on the floor, the clear charm-filled soles visible from above, the rainbow of blue orange green yellow purple panels bright in the daylight. She stomps one foot lightly and the charms bounce inside the sole.\nShe brings the front camera back up to face level, holds one sneaker up beside her face — the multicolor upper and the clear charm sole both visible — looks directly into the lens, completely genuine: \"I am twenty years old and these are my favorite shoes I have ever owned.\" She holds the sneaker up one final time so the clear sole faces the camera, tilts it once more slowly, the tiny toys drifting inside: \"You are welcome.\" <<<avatar:8d6d9263-140b-4637-b4c9-b8eda5af1e54>>>",
+      "duration": 15,
+      "aspect_ratio": "9:16",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 1280,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "8d6d9263-140b-4637-b4c9-b8eda5af1e54",
+          "url": "https://cdn.higgsfield.ai/marketing_studio_avatar/5e83e0e8-9e10-4cf0-84f5-60ec11e150a0.webp",
+          "type": "preset"
+        }
+      ],
+      "mode": "ugc",
+      "product": {
+        "id": "92160669-68ad-4519-a6de-0adda695409c",
+        "title": "Colorful Kids Sneakers with Clear Glitter Toy Sole",
+        "description": "Bright multicolor lace-up sneakers featuring a breathable mesh upper and a transparent, cushioned sole filled with colorful beads and mini toy shapes. Designed for playful style and everyday comfort with a chunky, supportive midsole.",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "67347cfe-ce87-4711-8ba6-43576a2f0497",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/67347cfe-ce87-4711-8ba6-43576a2f0497.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-17T22:02:44.175520Z",
+        "updated_at": "2026-04-17T22:02:44.175541Z"
+      }
+    }
+  },
+  {
+    "job_id": "4687cea5-7169-4920-ab77-23ce8ab5a907",
+    "label": "ugc",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_002845_50816d49-2188-4f98-bc2d-7b6198e153bd.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_002845_50816d49-2188-4f98-bc2d-7b6198e153bd_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_002845_50816d49-2188-4f98-bc2d-7b6198e153bd.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/hf_20260415_002845_50816d49-2188-4f98-bc2d-7b6198e153bd_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "Shot on iPhone front camera, vertical 9:16, natural HDR, slight exposure shifts, real skin tones, authentic UGC creator energy, warm indoor natural light\nA bright casual room — warm natural light from the side, a clean desk surface with the ATELIER INK 12 CORE colors set in its clear transparent plastic case, the colorful marker caps visible through the case walls, a white sketchpad open beside it. A young woman sits close to the front camera, relaxed and natural, speaking slowly and genuinely.\nAction and dialogue sequence:\nShe picks up the full ATELIER INK clear case with both hands and holds it up to the front camera, the 12 colorful caps facing the lens, the label readable. She looks at it for a beat — then at the camera: \"Okay I need to show you these.\" She sets the case down, pulls out the green G04 marker, uncaps it slowly, sniffs the tip, pauses. Looks at camera: \"Why does it smell like that.\" Genuine. Unhurried.\nShe opens the sketchpad and draws a slow deliberate star with the green marker. Holds the paper up to the lens. Says nothing for a beat — just lets the color speak. Then quietly: \"That color is insane.\" She picks up the cobalt blue B17, draws beside the green. Holds it up again. \"The pigment is so good.\"\nShe sets the paper down. Looks directly into the camera. Taps the marker cap slowly against her lip. One breath. Then: \"Honestly — if you draw, if you doodle — just get these.\" She lifts the full clear case up to the lens, all 12 caps facing camera. Holds it there. Smiles slowly. Says nothing. Then: \"That's it. That's the review.\"",
+      "duration": 15,
+      "aspect_ratio": "16:9",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 1280,
+      "height": 720,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "1da384ed-3856-45e4-bf4c-a496c7aa95ff",
+          "url": "https://cdn.higgsfield.ai/marketing_studio_avatar/31dbdd31-65ad-495f-af81-a252fafe3e62.webp",
+          "type": "preset"
+        }
+      ],
+      "mode": "ugc",
+      "product": {
+        "id": "80e9929b-e41a-47ab-a3fc-fe9557275da2",
+        "title": "Atelier Ink 12 Core Colors Dual-Tip Marker Set",
+        "description": "A set of 12 alcohol-based dual-tip art markers in core colors, stored in a clear plastic case. Designed for illustration, coloring, and blending with a range of vibrant and neutral tones.",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "955433cc-4dd1-43cf-98a3-0769ad0f87cb",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3CIezRC2bfkh5fn1Cl8MjaHdSlp/955433cc-4dd1-43cf-98a3-0769ad0f87cb.jpg",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-17T22:03:28.005198Z",
+        "updated_at": "2026-04-17T22:03:28.005220Z"
+      }
+    }
+  },
+  {
+    "job_id": "7f34c12c-4350-4c4a-abc9-4ada664e181b",
+    "label": "tv_spot",
+    "groups": [
+      "general"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BtuMjeO56IlCCzTiD419c4NiyM/hf_20260415_011357_9dd4f822-d35c-4a43-9102-61ad0bb14331.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3BtuMjeO56IlCCzTiD419c4NiyM/hf_20260415_011357_9dd4f822-d35c-4a43-9102-61ad0bb14331_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BtuMjeO56IlCCzTiD419c4NiyM/hf_20260415_011357_9dd4f822-d35c-4a43-9102-61ad0bb14331.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3BtuMjeO56IlCCzTiD419c4NiyM/hf_20260415_011357_9dd4f822-d35c-4a43-9102-61ad0bb14331_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "6-second vertical video ad (9:16), cinematic, dark pirate-ship interior lit by candlelight.\nSec 0–2: Close-up of an old treasure chest with red velvet lining being opened. Inside — gold coins and two thick chocolate bars in matte black wrappers with gold foil pattern, nestled among the treasure. Camera pushes in slowly.\nSec 2–4: A grizzled pirate — long gray beard, tricorn hat, wild eyes, heavy rings — grabs a bar from the chest, tears the wrapper with his teeth, revealing dark chocolate with caramel-nut layers inside. Close-up on his face, greedy grin, candlelight from below.\nSec 4–5.5: He takes a big crunching bite, eyes closing in pleasure, chewing with deep satisfaction. Chocolate and caramel stretching. Crewmates visible in the dark background.\nSec 5.5–6: Cut to black. Gold logo: \"VIKING BAR\" centered, small tagline beneath: \"Worth plundering.\" Fade out.\nStyle: Dark cinematic grading, amber candlelight, deep shadows, film grain, handheld camera feel. No text on screen until final logo card. <<<product:9d7e1749-82eb-44e7-bdc8-facd29984309>>>",
+      "duration": 6,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 960,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [],
+      "mode": "tv_spot",
+      "product": {
+        "id": "9d7e1749-82eb-44e7-bdc8-facd29984309",
+        "title": "Viking Bar Chocolate Bar",
+        "description": "A premium chocolate bar packaged in an ornate Viking-themed wrapper featuring gold Celtic knotwork, a horned helmet emblem, and a Viking ship motif.",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "419a99d4-5722-488d-81e6-adbd4b87e2f6",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3BtuMjeO56IlCCzTiD419c4NiyM/419a99d4-5722-488d-81e6-adbd4b87e2f6.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-17T22:06:22.511842Z",
+        "updated_at": "2026-04-17T22:06:22.511866Z"
+      }
+    }
+  },
+  {
+    "job_id": "7ead900a-9a38-4c67-862f-899f803aeb43",
+    "label": "unboxing",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/hf_20260415_001819_f11fd2c4-6297-40b4-9b18-3a2c65c25c2a.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/hf_20260415_001819_f11fd2c4-6297-40b4-9b18-3a2c65c25c2a_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/hf_20260415_001819_f11fd2c4-6297-40b4-9b18-3a2c65c25c2a.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/hf_20260415_001819_f11fd2c4-6297-40b4-9b18-3a2c65c25c2a_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "Style: UGC, gym vlog, iPhone front camera, real effort, natural energy\n\nA young girl is filming herself in a modern aesthetic gym, people training in the background.\n\nShot on iPhone front camera, vertical 9:16, slight shake, real gym lighting, no grading.\n\nShe is pedaling on a pastel stationary bike, already slightly tired.\n\nShe is breathing heavily and speaking directly while working out.\n\n“Okay… I thought this was gonna be easy…”\n(breathing heavily)\n“It’s not.”\nShe laughs.\n“But it’s actually so good.”\n",
+      "duration": 15,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 960,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "bba3087a-ad14-42c2-b51b-7c22b632abf4",
+          "url": "https://cdn.higgsfield.ai/marketing_studio_avatar/cd4c64ff-555d-4387-bedb-73ee12629a2b.webp",
+          "type": "preset"
+        }
+      ],
+      "mode": "ugc_unboxing",
+      "product": {
+        "id": "580b8fc4-7d70-4f8e-8d2b-999222291f1b",
+        "title": "Indoor Spin Bike (White/Purple)",
+        "description": "A stationary indoor cycling bike with a heavy flywheel for smooth resistance training. Features adjustable seat and handlebars plus transport wheels for easy moving.",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "6115c328-ee09-4562-a1f1-07d8062056f1",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/6115c328-ee09-4562-a1f1-07d8062056f1.jpg",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-17T22:07:20.830971Z",
+        "updated_at": "2026-04-17T22:07:20.830997Z"
+      }
+    }
+  },
+  {
+    "job_id": "cb3c54b0-3eb8-4718-a477-9f75f4ca9198",
+    "label": "ugc_virtual_try_on",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/hf_20260413_122237_e843f6d5-8248-4488-a7ec-d4cc8f7f3c60.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/hf_20260413_122237_e843f6d5-8248-4488-a7ec-d4cc8f7f3c60_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/hf_20260413_122237_e843f6d5-8248-4488-a7ec-d4cc8f7f3c60.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/hf_20260413_122237_e843f6d5-8248-4488-a7ec-d4cc8f7f3c60_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "dynamic <<<product:09a23d6d-8f62-441c-aec8-c1d07e9ac8b2>>> <<<avatar:ed87431a-e819-4547-a846-940fe20b52f3>>>",
+      "duration": 10,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 960,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "ed87431a-e819-4547-a846-940fe20b52f3",
+          "url": "https://cdn.higgsfield.ai/marketing_studio_avatar/8aec05e4-f69c-4529-a611-ba48684f3b7c.webp",
+          "type": "preset"
+        }
+      ],
+      "mode": "ugc_virtual_try_on",
+      "product": {
+        "id": "09a23d6d-8f62-441c-aec8-c1d07e9ac8b2",
+        "title": "Toothbrush",
+        "description": "",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "df3c9352-6bac-4fbc-b03f-74eff63de174",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/df3c9352-6bac-4fbc-b03f-74eff63de174.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-13T12:02:46.885779Z",
+        "updated_at": "2026-04-13T12:02:46.885784Z"
+      }
+    }
+  },
+  {
+    "job_id": "b7a4e32c-6d09-4d04-95e6-6bcfe3851aef",
+    "label": "ugc_how_to",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3B9ysSkvPFs8NnELOqJwjcodGpA/hf_20260411_171147_ace9e350-0b28-4082-9685-3e4ac89288b0.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3B9ysSkvPFs8NnELOqJwjcodGpA/hf_20260411_171147_ace9e350-0b28-4082-9685-3e4ac89288b0_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3B9ysSkvPFs8NnELOqJwjcodGpA/hf_20260411_171147_ace9e350-0b28-4082-9685-3e4ac89288b0.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3B9ysSkvPFs8NnELOqJwjcodGpA/hf_20260411_171147_ace9e350-0b28-4082-9685-3e4ac89288b0_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "<<<product:6ad7b13f-3078-44aa-99db-de31d27491ad>>> A 15-second vertical UGC product review video, iPhone aesthetic. The girl is reviewing and demonstrating the blender — not teaching a recipe. She's excited about the product itself.\n⚡ 0–2s — HOOK: Girl holds the dark charcoal green blender base close to camera with both hands, eyes wide, says straight into lens: \"This blender just changed my morning routine.\"\n2–5s: She runs her finger along the matte dark body, taps the single round green dial knob, then spins it slowly — small copper LED dots light up around it. She tilts her head impressed: \"One knob. That's literally all you need.\"\n5–8s: She lifts the clear glass jar, knocks on it with her knuckle — solid sound — and shows the blade assembly underneath: \"Glass jar, not plastic. You can actually see everything inside.\"\n8–11s: She locks the jar onto the base with a satisfying click, loads fruits in, presses the dial — blender fires up instantly. She steps back and gestures at it like \"look at this thing\": \"Hear how quiet that is?\"\n11–13s: She pours the smoothie, holds the glass up to the light — vibrant color, smooth texture: \"First try. No chunks.\"\n13–15s: Takes a sip, looks at the blender, then back to camera with a nod: \"Yeah. Worth it.\"\nStyle: Raw UGC product review, vertical 9:16, warm natural light, clean kitchen counter, blender always in frame, handheld shaky cam, no text overlays. ",
+      "duration": 15,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 960,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "70637887-44b6-4c1e-ba3e-fea9e237ff1b",
+          "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/016013aa-61a7-4d2f-b7da-54fdbad86319.jpg",
+          "type": "custom"
+        }
+      ],
+      "mode": "ugc_how_to",
+      "product": {
+        "id": "6ad7b13f-3078-44aa-99db-de31d27491ad",
+        "title": "Blender",
+        "description": "",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "b769c295-b75e-4cd3-a1d2-2a42c90102de",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/b769c295-b75e-4cd3-a1d2-2a42c90102de.jpg",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-13T14:26:24.726092Z",
+        "updated_at": "2026-04-13T14:26:24.726103Z"
+      }
+    }
+  },
+  {
+    "job_id": "4202353a-b01a-42bb-85c2-8e4635da1890",
+    "label": "ugc_unboxing",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/hf_20260410_231619_0c2814a2-9a87-48f8-a18f-811265d90dca.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/hf_20260410_231619_0c2814a2-9a87-48f8-a18f-811265d90dca_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/hf_20260410_231619_0c2814a2-9a87-48f8-a18f-811265d90dca.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/hf_20260410_231619_0c2814a2-9a87-48f8-a18f-811265d90dca_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "HOOK (0–2 sec) POV handheld shot, slightly shaky. A bright red shopping bag with gold text \"MAISON BRUNÉ\" gets tossed onto a white unmade bed from above — lands with a satisfying thud, tissue paper rustling. Natural bedroom lighting, warm tones. Authentic, raw, no tripod.\nJUMP CUT 1 (2–4 sec) Close-up hands grabbing the red bag handles, pulling it closer. Camera slightly out of focus then snaps sharp. Nail polish, casual outfit visible at edges. Breathing audible.\nJUMP CUT 2 (4–7 sec) Hands pull out the pink dustbag — \"MAISON BRUNÉ PARIS\" printed in rose. Fabric sliding sound. Slow squeeze of the dustbag, then quick reveal yank.\nJUMP CUT 3 (7–12 sec) Tan pebbled leather tote bag drops onto the bed in full frame. Gold chain strap clinks and settles. Camera circles product quickly — chaotic but intentional. Natural window light catches the gold hardware.\nJUMP CUT 4 (12–18 sec) Extreme close-up: fingers running across the grainy leather texture. Gold lobster clasp swings. Chain strap draped over hand — slow pan up arm.\nOUTRO (18–22 sec) Bag held up toward camera with both hands — full reveal. Slight smile reflected in mirror behind. Red shopping bag and pink dustbag visible on bed in background.",
+      "duration": 12,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 960,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "225a45f8-4d68-4ce4-b00b-0b55490898b8",
+          "url": "https://cdn.higgsfield.ai/marketing_studio_avatar/0e9c8724-bf7c-4fc4-addf-2d48df338556.webp",
+          "type": "preset"
+        }
+      ],
+      "mode": "ugc",
+      "product": {
+        "id": "880b02bd-4b2b-48f0-9de5-6b4446953606",
+        "title": "Maison Brune",
+        "description": "",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "a47e7504-df2c-4101-9ccc-b2b73d7791b4",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/a47e7504-df2c-4101-9ccc-b2b73d7791b4.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-10T22:56:25.630692Z",
+        "updated_at": "2026-04-10T22:56:25.630696Z"
+      }
+    }
+  },
+  {
+    "job_id": "147b7b5a-b7c7-4849-9174-8ed8804a3bea",
+    "label": "ugc_unboxing",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260413_133035_bf1fbde5-d95a-4c23-907d-df9c475f948f.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260413_133035_bf1fbde5-d95a-4c23-907d-df9c475f948f_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260413_133035_bf1fbde5-d95a-4c23-907d-df9c475f948f.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260413_133035_bf1fbde5-d95a-4c23-907d-df9c475f948f_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "\nA 15-second vertical (9:16) ASMR-style jewelry unboxing video. Top-down overhead camera angle throughout. The surface is draped in soft white silk or satin fabric with gentle folds and creases creating elegant light and shadow. Soft diffused natural daylight, warm tone. No text overlays, no logos, no branding. Silent visual ASMR — slow, theatrical, satisfying.\n0–3s: A striking matte red square gift box sits centered on the white silk. The box has a theatrical design — on the lid, a silver heart-shaped clasp with a keyhole in the center, surrounded by four small decorative square patches with graphic black-and-white optical patterns (stripes, sunbursts). A white satin ribbon trails loosely from under the box across the silk. Her hands (natural nails, no polish, one thin gold ring) enter frame from the bottom and gently touch the sides of the box, fingers tracing the heart clasp. She slowly turns the heart clasp — it clicks open with a satisfying motion.\n3–7s: She opens the box — but it doesn't open like a normal lid. The box unfolds outward like a book or a theater stage, the front panel swinging open on a hinge to reveal an elaborate inner scene. Inside is a miniature diorama: a deep navy blue backdrop painted with gold shooting stars and pink paper-cut clouds at the bottom — like a tiny magical night sky theater. In the center of this scene, suspended on a small hook, hangs a single delicate silver chain necklace with a small silver key pendant. The key has a heart-shaped bow at the top. The diorama catches the light — gold foil stars shimmer, the pendant slowly sways. Her hands pause, letting the viewer take in the reveal.\n7–10s: She carefully unclips the necklace from its display hook inside the diorama. She lifts it out slowly — the thin silver chain catches the light as it rises from the blue backdrop. She drapes the necklace across her open palm over the white silk, the key pendant dangling between her fingers. She turns her hand slightly so the pendant rotates and catches the light from different angles — the silver gleams against her skin.\n10–13s: She lays the necklace down on the white silk in a gentle S-curve. She picks up the open box and tilts it toward camera — showing off the inner diorama scene one more time: the navy sky, gold stars, pink clouds, the tiny text at the bottom reading \"you are the key.\" The box's theatrical pop-up construction is visible — layered paper-cut elements creating depth.\n13–15s: Final flatlay — the open red box sits at the top of frame, its diorama interior visible like a tiny stage. The silver key necklace lies on the white silk below in an elegant curve. The white ribbon trails diagonally across the frame. Her hand gently adjusts the pendant one last time, then slowly pulls away. The silk catches a gentle highlight. Hold. End.\nStyle: Aesthetic jewelry unboxing / visual ASMR. Overhead POV, only hands visible. The star of the video is the packaging — a theatrical, interactive box that opens like a storybook to reveal a miniature paper-cut diorama scene, making the unboxing feel like unlocking a tiny magical world. One single jewelry piece inside — the reveal is slow and dramatic. Color palette: matte red box, navy blue interior, gold foil accents, pink paper clouds, silver jewelry, pure white silk background. The contrast between the white silk and red box is bold and eye-catching. Intimate, luxurious, deeply satisfying, gift-worthy. No brand names visible anywhere. <<<product:b544d110-7f69-4307-b79c-16ebfb69c6fa>>>",
+      "duration": 15,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 960,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [],
+      "mode": "ugc_unboxing",
+      "product": {
+        "id": "b544d110-7f69-4307-b79c-16ebfb69c6fa",
+        "title": "333",
+        "description": "",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "98903ef1-c3de-4c9b-9312-d9227706503d",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/98903ef1-c3de-4c9b-9312-d9227706503d.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-13T13:30:05.225579Z",
+        "updated_at": "2026-04-13T13:30:05.225583Z"
+      }
+    }
+  },
+  {
+    "job_id": "c460dcc5-4f84-4e7e-90e7-2a786c640d21",
+    "label": "ugc",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260413_130012_71e5711f-f3e1-4eb4-8d58-6777737bcbd8.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260413_130012_71e5711f-f3e1-4eb4-8d58-6777737bcbd8_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260413_130012_71e5711f-f3e1-4eb4-8d58-6777737bcbd8.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260413_130012_71e5711f-f3e1-4eb4-8d58-6777737bcbd8_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "A 15-second vertical (9:16) UGC try-on video filmed on a smartphone. A young East Asian woman with a short black bob haircut stands in front of a full-length mirror in a minimalist bedroom — neutral beige walls, natural daylight from a window. Handheld selfie-style camera, authentic influencer energy, slightly warm tones.\n0–3s: She faces the mirror camera wearing a simple white bathrobe or basic white tee and shorts. She holds up the outfit pieces on hangers — a black fitted top and a black-and-white striped mini skirt — showing them to camera with a \"watch this\" expression, raises an eyebrow playfully.\n3–5s: Quick jump cut — she's now wearing the fitted black short-sleeve top with a mock neckline, slightly structured and tailored at the waist. She adjusts the hem, smoothing it down, turns side to side checking the fit in the mirror. The top has a clean minimal look — matte black fabric, cap sleeves, a subtle peplum-like shape at the waist.\n5–8s: Another jump cut — she pulls on the black-and-white horizontal striped knit mini skirt, tugging it over her hips. The skirt is very short, body-con, sitting low on the waist just below the top's hem. She adjusts the waistband and does a quick spin to show the fit from all angles.\n8–11s: Jump cut — now the full outfit is complete. She's added bright neon yellow opaque tights covering her legs entirely, and matching neon yellow pointed-toe stiletto pumps. She puts on a pair of retro oval sunglasses with yellow-amber tinted lenses. She steps back from the mirror to show the full look head to toe — black top, striped mini, yellow tights, yellow heels, yellow shades. She does a confident slow turn, hand on hip.\n11–15s: She faces the mirror straight on, strikes a final pose — legs slightly apart, arms at her sides, chin slightly up, deadpan editorial expression through the yellow sunglasses. She holds the pose for a beat, then breaks into a small satisfied smile. She reaches toward the phone and the video cuts.\nStyle: Authentic UGC / TikTok try-on haul aesthetic. Quick jump cuts between each stage of getting dressed. Handheld slight camera shake. Natural bedroom lighting, no ring light. The outfit is the star — the contrast between the monochrome black-and-white top half and the bold neon yellow bottom half creates a striking graphic pop-art look. The vibe is effortlessly cool, editorial-meets-street, confident. No music specified. No text, no logos, no filters. <<<avatar:24cdba19-3a23-413f-ae9c-eaef6be7616f>>> <<<product:02b598d3-18eb-4ff3-ab82-bac2d011b3ba>>>",
+      "duration": 15,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 960,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "24cdba19-3a23-413f-ae9c-eaef6be7616f",
+          "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/f26afac7-3503-484e-a2d8-767b632a956a.png",
+          "type": "custom"
+        }
+      ],
+      "mode": "ugc_virtual_try_on",
+      "product": {
+        "id": "02b598d3-18eb-4ff3-ab82-bac2d011b3ba",
+        "title": "222",
+        "description": "",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "46142ab5-eee7-4599-8766-bfac23826a05",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/46142ab5-eee7-4599-8766-bfac23826a05.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-13T12:59:22.350472Z",
+        "updated_at": "2026-04-13T12:59:22.350476Z"
+      }
+    }
+  },
+  {
+    "job_id": "a74e9198-2be2-447e-ae6e-00b5fc7907de",
+    "label": "ugc",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3B9ysSkvPFs8NnELOqJwjcodGpA/hf_20260410_200105_6b9142b4-9ac9-4c42-9206-84b70c939e52.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3B9ysSkvPFs8NnELOqJwjcodGpA/hf_20260410_200105_6b9142b4-9ac9-4c42-9206-84b70c939e52_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3B9ysSkvPFs8NnELOqJwjcodGpA/hf_20260410_200105_6b9142b4-9ac9-4c42-9206-84b70c939e52.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3B9ysSkvPFs8NnELOqJwjcodGpA/hf_20260410_200105_6b9142b4-9ac9-4c42-9206-84b70c939e52_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "<<<product:51fd4d9a-d907-450f-8886-4b5f82fadb09>>> \n\nAuthentic amateur-style UGC in a bright bathroom: white tiles, soft natural daylight from a window, real-life details (folded towel, small plant, simple ceramics). Handheld feel with subtle micro-shake, natural smartphone-lens look, no cinematic grading. Feels like a real girl filming a quick clip for friends. The phone, camera, and any mirror reflection of a phone or hands holding a phone must never be visible. No mirrors showing the filming setup at all — if a mirror appears, it only shows her face and the room, never a device.\n0–2s — Visual hook: Extreme close-up of the girl's face, slightly off-center, lit by soft window light. She leans in fast with wide surprised eyes and a half-smile, like she just noticed something amazing on her skin. Natural ambient sound: faint water drip + her soft excited \"okay wait—\". Tiny handheld wobble. No on-screen text.\n2–4s: Quick cut — her hand brings [PRODUCT] up next to her cheek, turning it once so the label catches the light. She says in casual upbeat American English: \"I literally cannot believe how good this is.\"\n4–7s: Tight close-up of her hands applying [PRODUCT] to her skin — real texture, real motion, product visibly going on. Soft bathroom room tone. Voiceover: \"Look how it just melts in — my skin already feels insane.\"\n7–10s: Medium shot of her face and shoulders, soft daylight, she touches the area where she applied it and turns her face gently side to side in the light to show the glow. Small natural giggle. Says: \"Okay, I'm obsessed. I'm not going back.\"\n10–12s: Final close-up: both hands hold [PRODUCT] up near her face, she gives a small playful shrug and a genuine smile, clip ends mid-motion like a real social post.\nAudio: Only her voice + natural bathroom room tone (faint water, soft tile echo). No music, no sound effects, no narrator. Voice: warm, friendly, mid-20s American accent, conversational, natural breaths and pauses, pe",
+      "duration": 15,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 960,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "7bab16db-8e6c-4a5e-9048-f1ee1cd82209",
+          "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/729420bc-97e2-470d-ad38-fc2e820f428d.png",
+          "type": "custom"
+        }
+      ],
+      "mode": "ugc_how_to",
+      "product": {
+        "id": "51fd4d9a-d907-450f-8886-4b5f82fadb09",
+        "title": "Nude lab",
+        "description": "",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "95345390-abe3-4b88-b89c-42fff4828c91",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/95345390-abe3-4b88-b89c-42fff4828c91.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-13T14:28:35.092470Z",
+        "updated_at": "2026-04-13T14:28:35.092491Z"
+      }
+    }
+  },
+  {
+    "job_id": "d583f9aa-f200-4ead-8aec-aa20c2ece44d",
+    "label": "ugc",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260413_132040_3db6758b-7eef-4046-87e1-ec81097c126e.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260413_132040_3db6758b-7eef-4046-87e1-ec81097c126e_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260413_132040_3db6758b-7eef-4046-87e1-ec81097c126e.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260413_132040_3db6758b-7eef-4046-87e1-ec81097c126e_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "<<<avatar:bcd9e6ee-c000-48e6-9f4b-a20fc2a674f7>>>:\nA 15-second vertical (9:16) UGC try-on video filmed on a smartphone. A young East Asian woman with a short black bob haircut stands in front of a full-length mirror in a minimalist bedroom — neutral beige walls, natural daylight from a window. Handheld selfie-style camera, authentic influencer energy, slightly warm tones.\n0–3s: She faces the mirror camera wearing a simple white bathrobe or basic white tee and shorts. She holds up the outfit pieces on hangers — a black fitted top and a black-and-white striped mini skirt — showing them to camera with a \"watch this\" expression, raises an eyebrow playfully.\n3–5s: Quick jump cut — she's now wearing the fitted black short-sleeve top with a mock neckline, slightly structured and tailored at the waist. She adjusts the hem, smoothing it down, turns side to side checking the fit in the mirror. The top has a clean minimal look — matte black fabric, cap sleeves, a subtle peplum-like shape at the waist.\n5–8s: Another jump cut — she pulls on the black-and-white horizontal striped knit mini skirt, tugging it over her hips. The skirt is very short, body-con, sitting low on the waist just below the top's hem. She adjusts the waistband and does a quick spin to show the fit from all angles.\n8–11s: Jump cut — now the full outfit is complete. She's added bright neon yellow opaque tights covering her legs entirely, and matching neon yellow pointed-toe stiletto pumps. She puts on a pair of retro oval sunglasses with yellow-amber tinted lenses. She steps back from the mirror to show the full look head to toe — black top, striped mini, yellow tights, yellow heels, yellow shades. She does a confident slow turn, hand on hip.\n11–15s: She faces the mirror straight on, strikes a final pose — legs slightly apart, arms at her sides, chin slightly up, deadpan editorial expression through the yellow sunglasses. She holds the pose for a beat, then breaks into a small satisfied smile. She reaches toward the phone and the video cuts.\nStyle: Authentic UGC / TikTok try-on haul aesthetic. Quick jump cuts between each stage of getting dressed. Handheld slight camera shake. Natural bedroom lighting, no ring light. The outfit is the star — the contrast between the monochrome black-and-white top half and the bold neon yellow bottom half creates a striking graphic pop-art look. The vibe is effortlessly cool, editorial-meets-street, confident. No music specified. No text, no logos, no filters. <<<product:02b598d3-18eb-4ff3-ab82-bac2d011b3ba>>>",
+      "duration": 15,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 960,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "bcd9e6ee-c000-48e6-9f4b-a20fc2a674f7",
+          "url": "https://cdn.higgsfield.ai/marketing_studio_avatar/eadd09d6-7b7f-4bed-9196-b2142d1e1527.webp",
+          "type": "preset"
+        }
+      ],
+      "mode": "ugc_virtual_try_on",
+      "product": {
+        "id": "02b598d3-18eb-4ff3-ab82-bac2d011b3ba",
+        "title": "222",
+        "description": "",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "46142ab5-eee7-4599-8766-bfac23826a05",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/46142ab5-eee7-4599-8766-bfac23826a05.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-13T12:59:22.350472Z",
+        "updated_at": "2026-04-13T12:59:22.350476Z"
+      }
+    }
+  },
+  {
+    "job_id": "50b6f2e9-7b3b-41fd-9a6e-0c237de4a96f",
+    "label": "product_showcase",
+    "groups": [
+      "general"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/hf_20260413_124545_9ae0acdc-4d0e-4c03-a065-b572bf9c66cf.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/hf_20260413_124545_9ae0acdc-4d0e-4c03-a065-b572bf9c66cf_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/hf_20260413_124545_9ae0acdc-4d0e-4c03-a065-b572bf9c66cf.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/hf_20260413_124545_9ae0acdc-4d0e-4c03-a065-b572bf9c66cf_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "dynamic <<<product:7c12cfc3-2c23-454f-9592-0bc0dc286153>>>",
+      "duration": 10,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 960,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [],
+      "mode": "product_showcase",
+      "product": {
+        "id": "7c12cfc3-2c23-454f-9592-0bc0dc286153",
+        "title": "Vazu",
+        "description": "",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "6b62cceb-20c9-45f4-8207-198bcd1174ee",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_34hPp7fXOu4gkTrKKk2ESqFSfG1/6b62cceb-20c9-45f4-8207-198bcd1174ee.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-13T12:25:26.155358Z",
+        "updated_at": "2026-04-13T12:32:12.111333Z"
+      }
+    }
+  },
+  {
+    "job_id": "70de35cc-8a02-43d3-be72-27547d78ff94",
+    "label": "Talking Head",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3CIjqzTsrKEUr8OzFBaYO4ux3nG/hf_20260413_121933_7dfa9582-a536-4a83-9041-ee5aa102ff8c.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3CIjqzTsrKEUr8OzFBaYO4ux3nG/hf_20260413_121933_7dfa9582-a536-4a83-9041-ee5aa102ff8c_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3CIjqzTsrKEUr8OzFBaYO4ux3nG/hf_20260413_121933_7dfa9582-a536-4a83-9041-ee5aa102ff8c.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3CIjqzTsrKEUr8OzFBaYO4ux3nG/hf_20260413_121933_7dfa9582-a536-4a83-9041-ee5aa102ff8c_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "A young stylish female influencer <<<avatar:cd6fb78c-e1a2-42f1-8b1e-902c15511877>>> s in a cozy modern apartment with soft natural daylight. She records herself using the front camera of her phone (selfie mode), holding the phone in one hand and the AURA <<<product:fe148564-c941-4c97-b817-97a909233f5d>>> Tumbler 40oz in the other. The camera has slight natural hand movement, casual framing, and feels real and unpolished.\nShe looks directly into the camera, relaxed and natural, like talking to a friend. While speaking, she casually rotates the tumbler, shows the handle and lid, lightly taps it, and takes a small sip.\nDialogue (natural, calm, ~15 sec):\n\"I’ve been using this tumbler every day lately, and I didn’t expect to like it this much.\nMy drinks stay cold literally all day, which is kind of crazy.\nIt doesn’t leak, it fits in my car, and the handle is actually super comfortable.\nI just end up taking it with me everywhere now.\"",
+      "duration": 15,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 960,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "cd6fb78c-e1a2-42f1-8b1e-902c15511877",
+          "url": "https://cdn.higgsfield.ai/marketing_studio_avatar/67d87b01-e3c3-4e39-8a94-ed9b23f3c232.webp",
+          "type": "preset"
+        }
+      ],
+      "mode": "ugc",
+      "product": {
+        "id": "fe148564-c941-4c97-b817-97a909233f5d",
+        "title": "AURA",
+        "description": "AURA Tumbler 40oz — Insulated Stainless Steel with Handle & Straw\nYour new everyday carry. AURA keeps drinks ice-cold for 24 hours or hot for 12, wrapped in a matte soft-touch finish that looks as good as it performs. Ergonomic handle, leak-proof 3-position lid, fits standard car cup holders.\nDouble-wall vacuum insulated. Sweat-proof exterior. BPA-free. Dishwasher-safe straw and brush included.",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "cb631ed5-287b-439f-a150-0e3c2b49d587",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3CIjqzTsrKEUr8OzFBaYO4ux3nG/cb631ed5-287b-439f-a150-0e3c2b49d587.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-13T11:51:44.702665Z",
+        "updated_at": "2026-04-13T11:51:44.702669Z"
+      }
+    }
+  },
+  {
+    "job_id": "c196813a-1d3e-4ee3-8bb4-40518e1f44bc",
+    "label": "virtual_try_on",
+    "groups": [
+      "professional"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_2vtxM3DRcDcQIjpmiCpUDF2wcAT/hf_20260413_134418_6d688d5f-a19e-453c-95ac-72829a69a19b.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_2vtxM3DRcDcQIjpmiCpUDF2wcAT/hf_20260413_134418_6d688d5f-a19e-453c-95ac-72829a69a19b_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_2vtxM3DRcDcQIjpmiCpUDF2wcAT/hf_20260413_134418_6d688d5f-a19e-453c-95ac-72829a69a19b.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_2vtxM3DRcDcQIjpmiCpUDF2wcAT/hf_20260413_134418_6d688d5f-a19e-453c-95ac-72829a69a19b_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "<<<product:96de30d5-e9fa-4888-86e6-edbdb0ba4ae4>>> use this location   <<<avatar:ed87431a-e819-4547-a846-940fe20b52f3>>>",
+      "duration": 15,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 960,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "ed87431a-e819-4547-a846-940fe20b52f3",
+          "url": "https://cdn.higgsfield.ai/marketing_studio_avatar/8aec05e4-f69c-4529-a611-ba48684f3b7c.webp",
+          "type": "preset"
+        }
+      ],
+      "mode": "virtual_try_on",
+      "product": {
+        "id": "96de30d5-e9fa-4888-86e6-edbdb0ba4ae4",
+        "title": "Clothes",
+        "description": "",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "e82ccb20-162e-4478-abb7-83bbfc94df4e",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_2vtxM3DRcDcQIjpmiCpUDF2wcAT/e82ccb20-162e-4478-abb7-83bbfc94df4e.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-13T12:43:13.925564Z",
+        "updated_at": "2026-04-13T12:43:13.925568Z"
+      }
+    }
+  },
+  {
+    "job_id": "87bc0d8f-d885-439b-8274-7f16b4d69910",
+    "label": "ugc",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260412_001025_266abd8c-886a-47e6-9959-6371f3b5f840.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260412_001025_266abd8c-886a-47e6-9959-6371f3b5f840_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260412_001025_266abd8c-886a-47e6-9959-6371f3b5f840.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/hf_20260412_001025_266abd8c-886a-47e6-9959-6371f3b5f840_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "A trendy 13-second vertical (3:4) street style fashion video filmed on a European cobblestone street with grey stone building facades. Shot on a smartphone in a raw, authentic influencer/TikTok style with fast dynamic cuts, varied camera angles, and natural daylight. The model is a stylish young Asian woman with dark hair pulled into a sleek bun, wearing retro cat-eye glasses, pearl drop earrings, and red nail polish.\nOutfit: A burgundy-wine leather blazer with structured shoulders over a black corset top layered on a white collared shirt with a thin black tie. A short black bubble skirt (puffball mini). Sheer wine-red tinted tights. Black pointed-toe ankle-strap heels. A compact elongated burgundy leather bowling bag with silver chain detail and star-shaped charms hanging across the front.\nScene 1 — Accessory Tease (0–1.5s): Opens with a first-person POV shot from behind the camera — someone's hand extends into frame from the left, holding the burgundy bowling bag by its straps toward the model who stands a few meters away on the sidewalk in front of a stone building entrance with a dark glass door. The model reacts with an excited, surprised expression — mouth open, hands gesturing \"give it to me.\" Camera is slightly low angle, handheld, casual. The bag is sharp in the foreground, the model slightly soft in the background.\nScene 2 — Detail Flatlay (1.5–3.5s): Cut to a top-down POV shot looking down at the ground. The model is sitting on the cobblestones — we see her legs in sheer wine tights and black pointed heels from above. The burgundy bag sits on the ground to the left. She holds a phone in her hand between her feet, scrolling through a photo of herself in the same outfit (a mirror-selfie style shot visible on the phone screen). Her other hand with burgundy nails rests near the phone. The composition is a casual \"what's in my feed\" moment. Camera is steady, overhead angle.\nScene 3 — Bag Pickup (3.5–5s): Close-up side angle shot at ground level. The model crouches down to pick up the bag from the cobblestones — we see her burgundy leather sleeve with white shirt cuff peeking out, her hand gripping the bag handles, the silver chain detail catching light. Her legs in tights and heels are visible in the background. Intimate detail shot emphasizing the bag texture and craftsmanship.\nScene 4 — Low Angle Power Shot (5–6.5s): Ultra-low angle shot from the ground looking up at the model. She towers over the camera confidently, the burgundy blazer and black corset framing the shot. The sky, building facade, and tree branches are visible behind her. Strong backlighting creates a slight lens flare. She has a confident, editorial expression, looking slightly down at camera.\nScene 5 — Walking Detail (6.5–7.5s): Side-angle close-up at knee height. The model bends down or walks, picking up / adjusting the bag. Focus on the leather blazer sleeve, bag handles, her hands, and the silver chain swinging. The stone wall provides a neutral textured backdrop. Natural motion blur.\nScene 6 — Portrait with Bag (7.5–9s): Medium close-up selfie-style angle. The model faces the camera, slightly turned, showing off the bag hanging from her arm. She holds the bag strap with one hand near her face, showing off her red nails and pearl earrings. Confident, slightly playful expression. The glass entrance door and stone columns are behind her. Natural daylight, warm tones.\nScene 7 — Walking Shot Profile (9–10.5s): Side profile tracking shot. The model walks past the stone building wall, bag on her shoulder. Her full outfit is visible — the burgundy blazer, black corset, bubble skirt, wine tights, pointed heels. The bag hangs perfectly at her side with the chain catching light. A green potted plant is visible near the entrance. She walks with purpose, slightly looking down. Cinematic, editorial feel.\nScene 8 — Full Body Pose (10.5–12s): Full body frontal shot. The model stands between stone columns, facing the camera directly. She raises both hands near her chin in a cute, playful gesture. The entire outfit is visible head to toe — glasses, blazer, corset, skirt, tights, heels, bag on shoulder. She shifts her weight slightly, posing naturally.\nScene 9 — Final Walk Away (12–13s): Three-quarter back/side tracking shot. The model walks away along the building, looking over her shoulder toward camera with a knowing glance. The bag is tucked under her arm. Sunlight catches the leather blazer. She moves with effortless cool energy. The video ends mid-stride.\nOverall style: Raw, authentic street style content shot on smartphone. Fast cuts (1–2 seconds each). Mix of POV, close-up detail, low angle, and full body shots. Natural handheld camera movement with slight shake. Warm European daylight. Color palette dominated by burgundy/wine, black, and cool grey stone. Monochromatic outfit coordination — bag, blazer, tights, and nails all matching in wine tones. No text overlays, no filters. Upbeat background music (not generated). Fashion influencer energy — confident, playful, editorial yet casual. <<<avatar:bbf8e803-f10b-4e39-801c-eb12850237ab>>> <<<product:20f1a7ae-e42b-4a13-a62d-a139ba85feba>>>",
+      "duration": 13,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 960,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "bbf8e803-f10b-4e39-801c-eb12850237ab",
+          "url": "https://cdn.higgsfield.ai/marketing_studio_avatar/cfca7330-6317-4217-9f02-0b76a2d49f6b.webp",
+          "type": "preset"
+        }
+      ],
+      "mode": "ugc_virtual_try_on",
+      "product": {
+        "id": "20f1a7ae-e42b-4a13-a62d-a139ba85feba",
+        "title": "bag",
+        "description": "fashion bag",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "53798191-ebda-4b2c-a1c1-7b639454a66c",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_39acLUpaKDzX3Ox7Ekzzl7vlQ67/53798191-ebda-4b2c-a1c1-7b639454a66c.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-12T00:10:01.590300Z",
+        "updated_at": "2026-04-12T00:10:01.590304Z"
+      }
+    }
+  },
+  {
+    "job_id": "85fdb56a-fdaa-4c53-85d2-7ea079ba38ab",
+    "label": "ugc_unboxing",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3CIjqzTsrKEUr8OzFBaYO4ux3nG/hf_20260413_131601_e29e767d-fe44-4b42-a751-01b178692f67.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3CIjqzTsrKEUr8OzFBaYO4ux3nG/hf_20260413_131601_e29e767d-fe44-4b42-a751-01b178692f67_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3CIjqzTsrKEUr8OzFBaYO4ux3nG/hf_20260413_131601_e29e767d-fe44-4b42-a751-01b178692f67.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3CIjqzTsrKEUr8OzFBaYO4ux3nG/hf_20260413_131601_e29e767d-fe44-4b42-a751-01b178692f67_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "Man influencer <<<avatar:48b5553f-4bad-4b87-9a39-4f0088664ed7>>> first opens the box <<<image_1>>> then takes the product with its packaging out of the box <<<product:8897c656-c053-4af3-8b11-5e97b6a424ac>>>\n\nDialogue (quiet, impressed, natural):\n\"Okay… wow.\nThis is actually beautiful.\nIt feels… really refined.\nLike, nothing extra — just clean, perfect details.\"\n\nNO MUSIC, ONLY SFX\n",
+      "duration": 15,
+      "aspect_ratio": "3:4",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 720,
+      "height": 960,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [
+        {
+          "id": "48b5553f-4bad-4b87-9a39-4f0088664ed7",
+          "url": "https://cdn.higgsfield.ai/marketing_studio_avatar/06d85ea1-d1f0-4925-af08-9428c9359deb.webp",
+          "type": "preset"
+        }
+      ],
+      "mode": "ugc_unboxing",
+      "product": {
+        "id": "8897c656-c053-4af3-8b11-5e97b6a424ac",
+        "title": "ÉMERA",
+        "description": "ÉMERA Classique — Diamond Accent Automatic Watch, 38mm Rose Gold\nTime, refined to its purest form. ÉMERA Classique pairs a hand-finished enamel dial with four VVS diamond hour markers set in polished rose gold. No clutter, no excess — just quiet brilliance on your wrist.\nSwiss automatic movement. Sapphire crystal front and back. 38mm brushed rose gold case. Water resistant 50m. Two straps included — warm taupe French calfskin and ivory white rubber.\nComes in signature ÉMERA ceramic box with suede interior, certificate of authenticity and diamond grading card.\nColors: Ivory Dial / Rose Gold, Forest Green / White Gold, Midnight Blue / Platinum\nÉMERA — time, distilled.",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "da3d8390-939a-49c6-95b3-6a9972751b3d",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3CIjqzTsrKEUr8OzFBaYO4ux3nG/da3d8390-939a-49c6-95b3-6a9972751b3d.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-13T12:34:16.726499Z",
+        "updated_at": "2026-04-13T12:55:50.752870Z"
+      }
+    }
+  },
+  {
+    "job_id": "95d87c22-1db6-4f1d-9ece-09f0294a60f2",
+    "label": "product_showcase",
+    "groups": [
+      "general"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_2vV68Ukpv101mL5Dprsk6JvfLMI/hf_20260414_230955_d7382d46-8c96-4e25-8a5f-1785ed64b886.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_2vV68Ukpv101mL5Dprsk6JvfLMI/hf_20260414_230955_d7382d46-8c96-4e25-8a5f-1785ed64b886_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_2vV68Ukpv101mL5Dprsk6JvfLMI/hf_20260414_230955_d7382d46-8c96-4e25-8a5f-1785ed64b886.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_2vV68Ukpv101mL5Dprsk6JvfLMI/hf_20260414_230955_d7382d46-8c96-4e25-8a5f-1785ed64b886_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "8-second premium CGI commercial, photoreal pack reference matches the FIZZBEARS sour gummy candy bag (hot-pink/magenta pack with white burst accents, bold rounded yellow \"FIZZBEARS\" logo with black outline, electric-lime \"SOUR\" sub-badge, sugar-crystal texture graphic + tumbling multicolor gummy bears illustration on pack front), dynamic non-white/non-black environments only, 10 cuts total:\nCut 1 (0.0–0.7s) extreme macro of sugar crystal landscape — jagged translucent crystals rise like a frozen tundra, backlit by electric cyan and acid-lime volumetric light, micro sugar granules scatter prismatic rainbow flares, camera skims low with a fast aggressive push-in, shallow DOF blurring crystal peaks into bokeh;\nCut 2 (0.7–1.4s) slow-motion sugar-crystal avalanche cascades down a magenta dune slope, catching hot-pink rim light from behind, loose gummy bear silhouettes tumble in parallax layers, fluid sim sugar dust billows in teal side light, extreme shallow DOF;\nCut 3 (1.4–2.0s) whip-pan into a cluster of translucent gummy bears — jewel-toned reds, greens, oranges — slowly rotating like a mobile, refracting prismatic light shafts through their gelatin bodies, sugar crystal coating catches specular hits, acid-lime streaks of motion blur sweep past;\nCut 4 (2.0–2.6s) \"sour cyclone\" forms: electric-lime mist + sugar crystal confetti spirals upward in a sunlit magenta-to-tangerine gradient studio (no white/black), camera orbits 180° with aggressive speed-ramp, gummy bears spin outward from vortex center like a candy centrifuge;\nCut 5 (2.6–3.3s) the FIZZBEARS bag bursts through the sour vortex with kinetic impact, plastic crinkle and specular flash, pack suspended midair, lit by warm coral key light + electric-lime edge rim, background shifts to a saturated coral-to-fuchsia textured backdrop with soft bokeh sugar crystals floating;\nCut 6 (3.3–4.0s) ultra macro tracking shot across the pack surface: embossed gummy bear graphic texture, soft crinkle seams, gloss reflections rolling over the magenta field, camera glides to the yellow \"FIZZBEARS\" logo — crisp specular catch light on the raised black outline, micro sugar crystal particles drift through volumetric haze;\nCut 7 (4.0–4.7s) snap-zoom to the electric-lime \"SOUR\" sub-badge, camera tilts and rolls playfully as if pulled by a sugar rush, sugar crystal particles sweep across frame as sparkling streaks left-to-right, sour vapor wisps curl at frame edges;\nCut 8 (4.7–5.6s) product-beauty hero: the pack rotates 20–30° on a gimbal-smooth arc revealing the full front gummy bear illustration, background fades to a bubblegum-pink-to-tangerine gradient (no pure white), soft candy-floss lens bloom on logo, caustic light patterns from gummy bear bodies dance across the backdrop;\nCut 9 (5.6–6.8s) flavor payoff impact: a cascade of photoreal gummy bears explodes outward in slow motion from behind the pack — translucent gelatin bodies catching every light angle, sugar coating crystals burst off surfaces in glittering slow-mo clouds, one bear lands in foreground with a satisfying bounce-and-wobble jiggle physics, synced to a crisp \"pop-crunch\" cadence, camera dolly-in continues with speed-ramp;\nCut 10 (6.8–8.0s) final lockoff hero pack centered, slight forward drift, gentle crinkle settling animation, sour-mist halo of lime and cyan aura floating around pack edges, loose sugar crystals drift upward like inverse snow, scattered gummy bears orbit lazily in soft focus background, premium candy-studio lighting — warm coral key + cool cyan fill — clean frame, no text overlays, no watermarks, 4K, high shutter clarity with tasteful motion blur on candy elements, cinematic color grade emphasizing electric lime, hot pink, and saturated coral tones. <<<product:59231dcb-5493-45bf-adaa-5f55392c629c>>>",
+      "duration": 9,
+      "aspect_ratio": "16:9",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 1280,
+      "height": 720,
+      "medias": [],
+      "model": "marketing_studio_video",
+      "avatars": [],
+      "mode": "product_showcase",
+      "product": {
+        "id": "7bc622b1-751c-4620-86fe-1f01c1fed687",
+        "title": "Fizzbears Sour Gummy Candy",
+        "description": "A bag of sour gummy bear-shaped candies in assorted fruity colors. Designed for a tangy, fizzy-sour taste and chewy texture.",
+        "scrape_url": null,
+        "scrape_url_domain": null,
+        "status": "completed",
+        "fail_reason": null,
+        "fail_reason_type": null,
+        "medias": [
+          {
+            "media_input_id": "bd5994bb-3e33-4fe4-a872-76a28e871afe",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_2vV68Ukpv101mL5Dprsk6JvfLMI/bd5994bb-3e33-4fe4-a872-76a28e871afe.png",
+            "is_primary": true,
+            "sort_order": 0
+          }
+        ],
+        "created_at": "2026-04-17T22:05:21.333630Z",
+        "updated_at": "2026-04-17T22:05:21.333653Z"
+      }
+    }
+  },
+  {
+    "job_id": "fddd38f9-6c8f-49a7-bb40-a4375f56066d",
+    "label": "ugc_virtual_try_on",
+    "groups": [
+      "ugc"
+    ],
+    "results": {
+      "raw": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/hf_20260414_213926_7e9ec0e7-418c-487a-b7a9-c244e238bc7f.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/hf_20260414_213926_7e9ec0e7-418c-487a-b7a9-c244e238bc7f_thumbnail.webp"
+      },
+      "min": {
+        "type": "video",
+        "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/hf_20260414_213926_7e9ec0e7-418c-487a-b7a9-c244e238bc7f.mp4",
+        "thumbnail_url": "https://cdn.higgsfield.ai/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/hf_20260414_213926_7e9ec0e7-418c-487a-b7a9-c244e238bc7f_thumbnail.webp"
+      },
+      "hls": null,
+      "h264": null
+    },
+    "params": {
+      "prompt": "Style: UGC luxury, iPhone front camera, natural high-end lifestyle\nPrompt:\nA young stylish woman <<<image_1>>> is inside a modern luxury mansion (large windows, soft sunlight, neutral tones, minimal expensive interior).\nShot on iPhone front camera, vertical 9:16, Apple HDR, slightly overexposed highlights, realistic skin texture, natural lens distortion, no cinematic grading.\nShe is wearing a gold cuff bracelet <<<image_2>>>.\n\nAction:\nShe brings her wrist closer to camera:\n\"Okay… I didn’t expect to like this this much.\"\nShe rotates her wrist — light reflects naturally.\n\nDialogue:\n\"It’s super simple, but it looks really expensive.\"\nShe adjusts it.\n\"And it goes with literally everything.\"\n\nShe looks into camera:\n\"I’ve been wearing it every day.\"\n\nDetails (IMPORTANT):\nnatural iPhone highlight roll-off\nslight exposure flicker when hand moves\nrealistic reflections on gold\nsubtle handheld micro shake\nno perfect studio lighting",
+      "duration": 15,
+      "aspect_ratio": "4:3",
+      "resolution": "720p",
+      "generate_audio": true,
+      "width": 960,
+      "height": 720,
+      "medias": [
+        {
+          "data": {
+            "id": "d5217430-26e9-4419-b6fc-04749c8edb91",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/d5217430-26e9-4419-b6fc-04749c8edb91.png",
+            "type": "media_input"
+          },
+          "role": "image"
+        },
+        {
+          "data": {
+            "id": "7086633a-fc49-444b-9860-f7033869accf",
+            "url": "https://d8j0ntlcm91z4.cloudfront.net/user_3BuPFKmNsBjkEgZ5LeOvNlL8ShO/hf_20260414_211527_81f0a85f-3754-4a58-905c-5ed00c35d6b2.png",
+            "type": "media_input"
+          },
+          "role": "image"
+        }
+      ],
+      "model": "marketing_studio_video",
+      "avatars": [],
+      "mode": "ugc_virtual_try_on",
+      "product": null
+    }
+  }
+]

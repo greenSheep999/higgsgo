@@ -1,0 +1,150 @@
+{
+  "user_cursor": null,
+  "preset_cursor": null,
+  "has_more": false,
+  "items": [
+    {
+      "id": "7a6d14bf-3349-46ed-8105-d3900012ad0d",
+      "name": "torn nylon tights",
+      "asset_type": "socks",
+      "gender": "female",
+      "input_image": {
+        "id": "763cd0da-3192-4f6c-8893-dad3d77e001f",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/763cd0da-3192-4f6c-8893-dad3d77e001f.jpg"
+      },
+      "created_at": 1765216516.300421,
+      "type": "preset"
+    },
+    {
+      "id": "8b4555c9-4053-4a33-9ba3-1c0f3abf9118",
+      "name": "red tights",
+      "asset_type": "socks",
+      "gender": "female",
+      "input_image": {
+        "id": "6e31ceeb-961e-4507-93b4-7e2a828b0faf",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/6e31ceeb-961e-4507-93b4-7e2a828b0faf.jpg"
+      },
+      "created_at": 1765216516.283739,
+      "type": "preset"
+    },
+    {
+      "id": "c7b58f84-63d4-4bad-9167-0ebb9d28c871",
+      "name": "pink bow socks",
+      "asset_type": "socks",
+      "gender": "female",
+      "input_image": {
+        "id": "e5fab15a-4cfc-42ec-a23b-750efe626b89",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/e5fab15a-4cfc-42ec-a23b-750efe626b89.jpg"
+      },
+      "created_at": 1765216516.275316,
+      "type": "preset"
+    },
+    {
+      "id": "c4bbda19-c537-4abf-813e-c906988cf1b1",
+      "name": "patterned white knee socks with a bow",
+      "asset_type": "socks",
+      "gender": "female",
+      "input_image": {
+        "id": "a30d5460-338e-4d25-8ed8-50adc3a2c39d",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/a30d5460-338e-4d25-8ed8-50adc3a2c39d.jpg"
+      },
+      "created_at": 1765216516.274333,
+      "type": "preset"
+    },
+    {
+      "id": "ddf2b16b-5461-4817-a590-58ed5ca5a11a",
+      "name": "music pattern socks",
+      "asset_type": "socks",
+      "gender": "female",
+      "input_image": {
+        "id": "8bf61cbf-719e-458e-a6a8-994a29029aa7",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/8bf61cbf-719e-458e-a6a8-994a29029aa7.jpg"
+      },
+      "created_at": 1765216516.271283,
+      "type": "preset"
+    },
+    {
+      "id": "5eb995ec-8918-4a99-aa51-d6cfef90049e",
+      "name": "fishnet stockings",
+      "asset_type": "socks",
+      "gender": "female",
+      "input_image": {
+        "id": "9de96397-516f-4c71-8531-30d3a359e08a",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/9de96397-516f-4c71-8531-30d3a359e08a.jpg"
+      },
+      "created_at": 1765216516.254825,
+      "type": "preset"
+    },
+    {
+      "id": "69829a98-fd1c-4696-8e22-bab346f059ab",
+      "name": "bow knee socks",
+      "asset_type": "socks",
+      "gender": "female",
+      "input_image": {
+        "id": "aa25b9fb-9fd9-4957-a91a-b1bac78cfa0e",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/aa25b9fb-9fd9-4957-a91a-b1bac78cfa0e.jpg"
+      },
+      "created_at": 1765216516.226337,
+      "type": "preset"
+    },
+    {
+      "id": "b1205a0e-bd71-4cef-ba05-c5bbf872831a",
+      "name": "black striped knee socks",
+      "asset_type": "socks",
+      "gender": "female",
+      "input_image": {
+        "id": "21a7de51-d7b6-4918-b45f-34c1cfe0fbfd",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/21a7de51-d7b6-4918-b45f-34c1cfe0fbfd.jpg"
+      },
+      "created_at": 1765216516.220788,
+      "type": "preset"
+    },
+    {
+      "id": "c49917d2-9ebb-4697-a05a-243680cbb3d6",
+      "name": "black sheer tights",
+      "asset_type": "socks",
+      "gender": "female",
+      "input_image": {
+        "id": "cb05ca6b-0ed5-4189-906c-23ace49694af",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/cb05ca6b-0ed5-4189-906c-23ace49694af.jpg"
+      },
+      "created_at": 1765216516.218696,
+      "type": "preset"
+    },
+    {
+      "id": "baed4d3a-1805-4668-bce4-aa9886fdb59e",
+      "name": "black long socks",
+      "asset_type": "socks",
+      "gender": "female",
+      "input_image": {
+        "id": "712aa747-7b44-47d2-a076-c75703c6742c",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/712aa747-7b44-47d2-a076-c75703c6742c.jpg"
+      },
+      "created_at": 1765216516.215335,
+      "type": "preset"
+    },
+    {
+      "id": "363debf9-b285-406c-afca-0f7e0d4b0db6",
+      "name": "black lace cocks",
+      "asset_type": "socks",
+      "gender": "female",
+      "input_image": {
+        "id": "ee423365-545e-45d0-b2eb-7d9aedb091dc",
+        "type": "media_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/content_user_id/ee423365-545e-45d0-b2eb-7d9aedb091dc.jpg"
+      },
+      "created_at": 1765216516.212329,
+      "type": "preset"
+    }
+  ]
+}

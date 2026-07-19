@@ -1,0 +1,36 @@
+{
+  "alias": "video-upscale",
+  "jobSetType": "video_upscale",
+  "endpoint": "/jobs/video-upscale",
+  "version": "v1-hyphen",
+  "output": "video",
+  "realCost": 2,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k",
+      "input_video": {
+        "id": "937d4405-7791-4ef0-855e-c2aeff8175e4",
+        "type": "video_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Flevg5z3r1kTApnx5j83ZABPoE/937d4405-7791-4ef0-855e-c2aeff8175e4.mp4"
+      }
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "932a555e-467c-491f-820f-2d8b92d47f3b",
+    "jobId": "c50edde0-9917-4200-b34a-72534db1352d",
+    "cost": 200
+  },
+  "generatedAt": "2026-07-01T18:55:36.900Z"
+}

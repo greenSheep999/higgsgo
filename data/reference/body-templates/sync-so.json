@@ -1,0 +1,41 @@
+{
+  "alias": "sync-so",
+  "jobSetType": "sync_so",
+  "endpoint": "/jobs/sync-so",
+  "version": "v1-hyphen",
+  "output": "video",
+  "realCost": 3.6,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "prompt": "a red apple on a wooden table, studio photo, soft lighting",
+      "input_images": [],
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "is_storyboard": false,
+      "is_zoom_control": false,
+      "use_unlim": false,
+      "resolution": "1k",
+      "input_video": {
+        "id": "36e0fd46-c72f-4695-a53a-a6ec406ecfa5",
+        "type": "video_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemqwvSqMuSk4JKHFXcZz57wm/36e0fd46-c72f-4695-a53a-a6ec406ecfa5.mp4"
+      },
+      "input_audio": {
+        "id": "8512559b-71ba-4d40-86ab-13ac92f91187",
+        "type": "audio_input",
+        "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3FlemqwvSqMuSk4JKHFXcZz57wm/8512559b-71ba-4d40-86ab-13ac92f91187.mp3"
+      }
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "f160ea75-2a13-4723-8134-8c95214e13c6",
+    "jobId": "de2ca2b4-8dc1-4136-a341-39c0899b44b4",
+    "cost": 360
+  },
+  "generatedAt": "2026-07-01T19:08:48.801Z"
+}

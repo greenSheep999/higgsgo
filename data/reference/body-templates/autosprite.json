@@ -1,0 +1,47 @@
+{
+  "alias": "autosprite",
+  "jobSetType": "autosprite",
+  "endpoint": "/jobs/v2/autosprite",
+  "version": "v2",
+  "output": "image",
+  "realCost": 2,
+  "catalogRefs": {},
+  "exampleBody": {
+    "params": {
+      "image_url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3G2SJnEes2BJTHhcTuZLIWFFFel/87dd3721-e6af-42a8-8273-4c432fa442a6.jpg",
+      "kind": "custom",
+      "prompt": "a red apple",
+      "name": "apple",
+      "video_tier": "turbo",
+      "frame_count": 25,
+      "frame_size": 256,
+      "remove_bg": "default",
+      "with_sound": false,
+      "is_humanoid": true
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "exampleResponse": {
+    "id": "f24a1d9b-d72d-4219-bd34-63caabf82985",
+    "jobId": "b0ad54c0-41a6-4555-922e-e27b40532d63",
+    "cost": 200
+  },
+  "generatedAt": "2026-07-04T12:35:13.499Z",
+  "bestPracticeBody": {
+    "params": {
+      "image_url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3Fl9AVWk4Ul3rZ3mFjXnAjSX1qD/201ffddc-6cb0-4080-8db6-eb617e77a408.jpg",
+      "kind": "custom",
+      "name": "my sprite",
+      "prompt": ".",
+      "width": 1024,
+      "height": 1024,
+      "batch_size": 1,
+      "aspect_ratio": "1:1",
+      "resolution": "1k"
+    },
+    "use_unlim": false,
+    "use_seedream_bonus": false
+  },
+  "bestPracticeHint": "kind=custom + name required when prompt is provided."
+}
