@@ -42,7 +42,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - run: corepack enable && corepack prepare pnpm@latest --activate
+      - run: corepack enable && corepack prepare pnpm@10 --activate
       - run: pnpm --dir webui install --frozen-lockfile
       - run: pnpm --dir webui build
 
