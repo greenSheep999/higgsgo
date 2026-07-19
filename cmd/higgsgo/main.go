@@ -256,6 +256,7 @@ func run() error {
 		APIKeys:  apiKeyStore,
 		Accounts: accountStore,
 		Groups:   groupStore, // ROADMAP P1-4: enables group monthly_credit_budget self-limiting
+		Jobs:     jobStore,   // back-fill actual/charged credits on the jobs row
 		Logger:   logger,
 		Metrics:  metrics,
 	}

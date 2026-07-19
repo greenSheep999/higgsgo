@@ -48,6 +48,13 @@ type Recorder struct {
 	// gate falls back to whatever monthly_credit_used the DB happens
 	// to hold (typically zero, so the gate is effectively disabled).
 	Groups ports.GroupStore
+	// Jobs, when non-nil, receives an UpdateStatus call after the
+	// usage_events row is inserted, back-filling actual/charged credits
+	// on the jobs row so /admin/jobs and per-job UIs can display the
+	// realized cost. Nil-safe: pre-migration deployments that only read
+	// aggregates from usage_events can leave this unset and the jobs
+	// table's credit columns stay NULL (harmless).
+	Jobs   ports.JobStore
 	Logger *slog.Logger
 	// Metrics is optional; when non-nil, OnJobTerminal increments the
 	// UsageCredits counter (labels: media_type, status) by the charged
@@ -150,6 +157,25 @@ func (r *Recorder) OnJobTerminal(ctx context.Context, job *domain.Job, account *
 				slog.String("err", err.Error()))
 		}
 		return err
+	}
+
+	// 3.5. Back-fill actual/charged credits + markup on the jobs row so
+	//      /admin/jobs and per-job UIs show realized cost. Best-effort:
+	//      a failure here does not undo the usage_events insert. The SQL
+	//      UpdateStatus helper only appends fields when non-zero, so a
+	//      zero-cost terminal (rare) simply leaves the columns NULL.
+	if r.Jobs != nil {
+		meta := ports.JobMeta{
+			ActualCreditsHundredths:  actualCreditsH,
+			ChargedCreditsHundredths: chargedCreditsH,
+		}
+		if err := r.Jobs.UpdateStatus(ctx, job.ID, job.Status, meta); err != nil {
+			if r.Logger != nil {
+				r.Logger.Warn("metering jobs backfill failed",
+					slog.String("job_id", job.ID),
+					slog.String("err", err.Error()))
+			}
+		}
 	}
 
 	// 3a. Increment the Prometheus usage-credits counter. Guarded by
