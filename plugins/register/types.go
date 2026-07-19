@@ -24,6 +24,12 @@ type Registration struct {
 	AccountID   string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
+	// MailboxClientID + MailboxRefreshToken pass through from the
+	// main module's RegistrationStore so Flow.run can build a
+	// Driver.RegisterRequest carrying per-row Graph OAuth2
+	// credentials. See docs/ROADMAP.md §5.4 P4-3d.
+	MailboxClientID     string
+	MailboxRefreshToken string
 }
 
 type EnqueueRequest struct {

@@ -190,10 +190,13 @@ func (r *registrar) Enqueue(ctx context.Context, req ports.RegistrationRequest) 
 		return "", fmt.Errorf("registrar.Enqueue: email required")
 	}
 	row := &ports.Registration{
-		Email:       req.Email,
-		OAuthSource: req.OAuthSource,
-		ProxyURL:    req.ProxyURL,
-		Status:      "pending",
+		Email:               req.Email,
+		Password:            req.Password,
+		OAuthSource:         req.OAuthSource,
+		ProxyURL:            req.ProxyURL,
+		MailboxClientID:     req.MailboxClientID,
+		MailboxRefreshToken: req.MailboxRefreshToken,
+		Status:              "pending",
 	}
 	if err := r.deps.Store.Enqueue(ctx, row); err != nil {
 		return "", err
@@ -555,16 +558,18 @@ func (a *storeAdapter) resetToPending(ctx context.Context, id int64) error {
 // method bodies for readability.
 func fromPortsRegistration(r *ports.Registration) *register.Registration {
 	return &register.Registration{
-		ID:          strconv.FormatInt(r.ID, 10),
-		Email:       r.Email,
-		Password:    r.Password,
-		Status:      mapMainStatusToPlugin(r.Status),
-		OAuthSource: r.OAuthSource,
-		ProxyURL:    r.ProxyURL,
-		Error:       r.LastError,
-		AccountID:   r.AccountID,
-		CreatedAt:   r.CreatedAt,
-		UpdatedAt:   pickUpdatedAt(r),
+		ID:                  strconv.FormatInt(r.ID, 10),
+		Email:               r.Email,
+		Password:            r.Password,
+		Status:              mapMainStatusToPlugin(r.Status),
+		OAuthSource:         r.OAuthSource,
+		ProxyURL:            r.ProxyURL,
+		Error:               r.LastError,
+		AccountID:           r.AccountID,
+		CreatedAt:           r.CreatedAt,
+		UpdatedAt:           pickUpdatedAt(r),
+		MailboxClientID:     r.MailboxClientID,
+		MailboxRefreshToken: r.MailboxRefreshToken,
 	}
 }
 

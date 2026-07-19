@@ -225,10 +225,22 @@ func (d *NodeDriver) Register(ctx context.Context, req register.RegisterRequest)
 		"oauth_source": req.OAuthSource,
 		"proxy_url":    req.ProxyURL,
 	}
-	if d.mailboxConfig.ClientID != "" && d.mailboxConfig.RefreshToken != "" {
+	// Prefer per-row mailbox credentials from the RegisterRequest
+	// (bulk-import world — every mailbox has its own Graph OAuth2
+	// app registration). Fall back to the driver-wide config only
+	// when the request carries none — that's the legacy
+	// "single-mailbox operator" path we shipped in the P4-3b
+	// commit and keep as a safety net.
+	clientID := req.MailboxClientID
+	refreshToken := req.MailboxRefreshToken
+	if clientID == "" && refreshToken == "" {
+		clientID = d.mailboxConfig.ClientID
+		refreshToken = d.mailboxConfig.RefreshToken
+	}
+	if clientID != "" && refreshToken != "" {
 		payload["mailbox_config"] = map[string]string{
-			"client_id":     d.mailboxConfig.ClientID,
-			"refresh_token": d.mailboxConfig.RefreshToken,
+			"client_id":     clientID,
+			"refresh_token": refreshToken,
 		}
 	}
 	body, err := json.Marshal(payload)

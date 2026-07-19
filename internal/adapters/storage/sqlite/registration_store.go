@@ -69,8 +69,9 @@ func (s *RegistrationStore) Enqueue(ctx context.Context, r *ports.Registration) 
 	res, err := s.db.ExecContext(ctx, `
 		INSERT INTO registrations
 			(email, password, oauth_source, refresh_token, proxy_url,
-			 status, attempts, last_error, account_id, created_at, finished_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			 status, attempts, last_error, account_id, created_at, finished_at,
+			 mailbox_client_id, mailbox_refresh_token)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		r.Email,
 		r.Password,
 		r.OAuthSource,
@@ -82,6 +83,8 @@ func (s *RegistrationStore) Enqueue(ctx context.Context, r *ports.Registration) 
 		r.AccountID,
 		fmtTime(r.CreatedAt),
 		fmtTime(r.FinishedAt),
+		r.MailboxClientID,
+		r.MailboxRefreshToken,
 	)
 	if err != nil {
 		return fmt.Errorf("enqueue registration: %w", err)
@@ -102,6 +105,7 @@ func (s *RegistrationStore) Enqueue(ctx context.Context, r *ports.Registration) 
 func (s *RegistrationStore) NextPending(ctx context.Context) (*ports.Registration, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT id, email, password, oauth_source, refresh_token,
+		       mailbox_client_id, mailbox_refresh_token,
 		       proxy_url, status, attempts, last_error, account_id,
 		       created_at, finished_at
 		FROM registrations
@@ -217,6 +221,7 @@ func (s *RegistrationStore) List(ctx context.Context, filter ports.RegistrationF
 	// the same second still sort deterministically.
 	q := `
 		SELECT id, email, password, oauth_source, refresh_token,
+		       mailbox_client_id, mailbox_refresh_token,
 		       proxy_url, status, attempts, last_error, account_id,
 		       created_at, finished_at
 		FROM registrations
@@ -279,6 +284,7 @@ func (s *RegistrationStore) ResetToPending(ctx context.Context, id int64) error 
 func (s *RegistrationStore) Get(ctx context.Context, id int64) (*ports.Registration, error) {
 	row := s.db.QueryRowContext(ctx, `
 		SELECT id, email, password, oauth_source, refresh_token,
+		       mailbox_client_id, mailbox_refresh_token,
 		       proxy_url, status, attempts, last_error, account_id,
 		       created_at, finished_at
 		FROM registrations
@@ -304,18 +310,26 @@ func scanRegistration(sc scanner) (*ports.Registration, error) {
 		password     sql.NullString
 		oauthSource  sql.NullString
 		refreshToken sql.NullString
+		mbClient     sql.NullString
+		mbRefresh    sql.NullString
 		proxyURL     sql.NullString
 		lastError    sql.NullString
 		accountID    sql.NullString
 		createdAt    sql.NullString
 		finishedAt   sql.NullString
 	)
+	// Column order matches every SELECT in this file. mailbox_* are
+	// added by migration 017 (P4-3d) and land after refresh_token
+	// but before proxy_url so a future OAuth column can be added
+	// next to refresh_token without shifting the mailbox tail.
 	if err := sc.Scan(
 		&r.ID,
 		&r.Email,
 		&password,
 		&oauthSource,
 		&refreshToken,
+		&mbClient,
+		&mbRefresh,
 		&proxyURL,
 		&r.Status,
 		&r.Attempts,
@@ -329,6 +343,8 @@ func scanRegistration(sc scanner) (*ports.Registration, error) {
 	r.Password = password.String
 	r.OAuthSource = oauthSource.String
 	r.RefreshToken = refreshToken.String
+	r.MailboxClientID = mbClient.String
+	r.MailboxRefreshToken = mbRefresh.String
 	r.ProxyURL = proxyURL.String
 	r.LastError = lastError.String
 	r.AccountID = accountID.String

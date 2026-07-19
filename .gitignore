@@ -52,3 +52,10 @@ package-lock.json
 # Logs
 *.log
 /logs/
+
+# plugins/register/driver-node node_modules — operators npm install locally
+plugins/register/driver-node/node_modules/
+
+# Playwright MCP scratch dir
+.playwright-mcp/
+registrations-working.png

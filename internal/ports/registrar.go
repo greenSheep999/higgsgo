@@ -66,6 +66,19 @@ type RegistrationRequest struct {
 	Email       string
 	OAuthSource string
 	ProxyURL    string
+	// Password for the password flow (OAuthSource == ""). Required
+	// for the password flow — the API layer rejects a bulk row
+	// missing it. The chosen password is persisted on the
+	// registrations row so a Retry re-uses it verbatim.
+	Password string
+	// MailboxClientID + MailboxRefreshToken are the Microsoft Graph
+	// OAuth2 credentials the Node driver uses to fetch this
+	// mailbox's OTP verification email. Every mailbox in a bulk
+	// import list carries its own pair (format:
+	// email----password----client_id----refresh_token). Empty on
+	// OAuth flows since those skip mailbox retrieval entirely.
+	MailboxClientID     string
+	MailboxRefreshToken string
 }
 
 // RegistrationFilter is the input for Registrar.List.

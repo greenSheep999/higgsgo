@@ -805,6 +805,18 @@ export const admin = {
       method: "POST",
       body: JSON.stringify(body),
     }),
+  // bulkEnqueueRegistrations parses a mailbox list line-by-line
+  // server-side. The response's `skipped` array lets the UI show
+  // per-line errors without aborting the whole batch. Handled at
+  // /admin/registrations/bulk (see ROADMAP §5.4 P4-3d).
+  bulkEnqueueRegistrations: (body: BulkEnqueueRegistrationRequest) =>
+    request<BulkEnqueueRegistrationResponse>(
+      "/admin/registrations/bulk",
+      {
+        method: "POST",
+        body: JSON.stringify(body),
+      },
+    ),
   retryRegistration: (id: string) =>
     request<{ id: string; status: string }>(
       `/admin/registrations/${id}/retry`,
@@ -1055,6 +1067,29 @@ export interface RegistrationFilter {
 
 export interface EnqueueRegistrationRequest {
   email: string;
+  password?: string;
   oauth_source?: string;
   proxy_url?: string;
+  mailbox_client_id?: string;
+  mailbox_refresh_token?: string;
+}
+
+// BulkEnqueueRegistrationRequest is the shape of POST
+// /admin/registrations/bulk. `lines` is the raw text from the
+// mailbox list file — one row per line, format:
+//   email----password----client_id----refresh_token
+// Blank lines and lines beginning with `#` are ignored.
+export interface BulkEnqueueRegistrationRequest {
+  lines: string;
+  proxy_url?: string;
+}
+
+// BulkEnqueueRegistrationResponse is the summary the server returns
+// so the UI can render partial-success rather than all-or-nothing:
+// even a batch with 3 bad lines out of 100 still enqueues the other
+// 97.
+export interface BulkEnqueueRegistrationResponse {
+  enqueued: number;
+  ids: string[];
+  skipped: Array<{ line: number; reason: string }>;
 }

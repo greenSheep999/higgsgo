@@ -12,6 +12,7 @@ import {
 import {
   admin,
   ApiError,
+  type BulkEnqueueRegistrationRequest,
   type EnqueueRegistrationRequest,
   type Registration,
 } from "@/lib/api";
@@ -53,6 +54,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 
 // Registrations page.
 //
@@ -273,9 +276,17 @@ function Registrations() {
   );
 }
 
-// EnqueueDialog owns the form state + submit mutation for the
-// "queue a new registration" flow. Kept a sibling of Registrations
-// so the parent stays focused on the list surface.
+// EnqueueDialog is a two-tab dialog:
+//   - "Single" — one row form for the classic case (test row, or
+//     a manual OAuth registration that doesn't fit the bulk format).
+//     Requires email + password + mailbox_client_id + mailbox_refresh_token
+//     because the Node driver's password flow needs all four to
+//     actually complete OTP verification.
+//   - "Bulk" — a textarea for the higgsfield-register mailbox list
+//     format (`email----password----client_id----refresh_token`, one
+//     line per row). Server parses line-by-line and returns
+//     per-line errors so a bad line doesn't abort the whole batch.
+// See ROADMAP §5.4 P4-3d.
 function EnqueueDialog({
   open,
   onOpenChange,
@@ -285,12 +296,19 @@ function EnqueueDialog({
 }) {
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const [tab, setTab] = useState<"single" | "bulk">("bulk");
 
-  // Form state: reset every time the dialog opens so operators
-  // don't see stale values from a prior submission.
+  // --- Single-row form state ------------------------------------
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [oauthSource, setOauthSource] = useState<string>("");
   const [proxyURL, setProxyURL] = useState("");
+  const [mailboxClientID, setMailboxClientID] = useState("");
+  const [mailboxRefreshToken, setMailboxRefreshToken] = useState("");
+
+  // --- Bulk form state ------------------------------------------
+  const [bulkLines, setBulkLines] = useState("");
+  const [bulkProxyURL, setBulkProxyURL] = useState("");
 
   const enqueue = useMutation({
     mutationFn: (body: EnqueueRegistrationRequest) =>
@@ -299,26 +317,81 @@ function EnqueueDialog({
       toast.success(t("registrations.toasts.enqueued", { id: res.id }));
       qc.invalidateQueries({ queryKey: ["admin", "registrations"] });
       onOpenChange(false);
-      // Reset for next time.
       setEmail("");
+      setPassword("");
       setOauthSource("");
       setProxyURL("");
+      setMailboxClientID("");
+      setMailboxRefreshToken("");
     },
     onError: (err) => toast.error(errMsg(err)),
   });
 
-  const submit = () => {
+  const bulkEnqueue = useMutation({
+    mutationFn: (body: BulkEnqueueRegistrationRequest) =>
+      admin.bulkEnqueueRegistrations(body),
+    onSuccess: (res) => {
+      // Show a summary toast with skipped count so operators know a
+      // partial-success happened even when the batch is huge.
+      if (res.skipped.length === 0) {
+        toast.success(
+          t("registrations.toasts.bulkOk", { count: res.enqueued }),
+        );
+      } else {
+        toast.warning(
+          t("registrations.toasts.bulkPartial", {
+            enqueued: res.enqueued,
+            skipped: res.skipped.length,
+            firstReason: res.skipped[0]?.reason ?? "",
+            firstLine: res.skipped[0]?.line ?? 0,
+          }),
+        );
+      }
+      qc.invalidateQueries({ queryKey: ["admin", "registrations"] });
+      onOpenChange(false);
+      setBulkLines("");
+      setBulkProxyURL("");
+    },
+    onError: (err) => toast.error(errMsg(err)),
+  });
+
+  const submitSingle = () => {
     const body: EnqueueRegistrationRequest = { email: email.trim() };
+    if (password) body.password = password;
     if (oauthSource) body.oauth_source = oauthSource;
     if (proxyURL.trim()) body.proxy_url = proxyURL.trim();
+    if (mailboxClientID.trim()) body.mailbox_client_id = mailboxClientID.trim();
+    if (mailboxRefreshToken.trim())
+      body.mailbox_refresh_token = mailboxRefreshToken.trim();
     enqueue.mutate(body);
   };
 
-  const canSubmit = email.trim() !== "" && !enqueue.isPending;
+  const submitBulk = () => {
+    const body: BulkEnqueueRegistrationRequest = { lines: bulkLines };
+    if (bulkProxyURL.trim()) body.proxy_url = bulkProxyURL.trim();
+    bulkEnqueue.mutate(body);
+  };
+
+  // Single-row validation: password flow needs everything, OAuth
+  // needs only email. Mirror the server-side gate in the handler.
+  const singleValid = (() => {
+    if (email.trim() === "") return false;
+    if (oauthSource !== "") return true; // OAuth path
+    return (
+      password.trim() !== "" &&
+      mailboxClientID.trim() !== "" &&
+      mailboxRefreshToken.trim() !== ""
+    );
+  })();
+
+  const canSubmitBulk = bulkLines.trim() !== "" && !bulkEnqueue.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      {/* Wider than a normal dialog because the bulk textarea benefits
+          from real horizontal room — mailbox refresh tokens are ~600
+          chars per line. */}
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{t("registrations.enqueue")}</DialogTitle>
           <DialogDescription>
@@ -326,65 +399,187 @@ function EnqueueDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-3 py-2">
-          <div className="grid grid-cols-[6rem_1fr] items-center gap-3">
-            <Label htmlFor="reg-email" className="text-xs text-muted-foreground">
-              {t("registrations.form.email")}
-            </Label>
-            <Input
-              id="reg-email"
-              type="email"
-              autoFocus
-              placeholder="user@example.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-          <div className="grid grid-cols-[6rem_1fr] items-center gap-3">
-            <Label className="text-xs text-muted-foreground">
-              {t("registrations.form.oauth")}
-            </Label>
-            <Select
-              value={oauthSource || "password"}
-              onValueChange={(v) => setOauthSource(v === "password" ? "" : v)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="password">
-                  {t("registrations.form.oauthPassword")}
-                </SelectItem>
-                <SelectItem value="google">Google</SelectItem>
-                <SelectItem value="github">GitHub</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-[6rem_1fr] items-center gap-3">
-            <Label htmlFor="reg-proxy" className="text-xs text-muted-foreground">
-              {t("registrations.form.proxy")}
-            </Label>
-            <Input
-              id="reg-proxy"
-              placeholder="socks5://user:pass@host:port"
-              value={proxyURL}
-              onChange={(e) => setProxyURL(e.target.value)}
-            />
-          </div>
-          <p className="text-[10px] text-muted-foreground">
-            {t("registrations.form.hint")}
-          </p>
-        </div>
+        <Tabs
+          value={tab}
+          onValueChange={(v) => setTab(v as "single" | "bulk")}
+          className="w-full"
+        >
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="bulk">
+              {t("registrations.tabs.bulk")}
+            </TabsTrigger>
+            <TabsTrigger value="single">
+              {t("registrations.tabs.single")}
+            </TabsTrigger>
+          </TabsList>
+
+          {/* -------- Bulk import -------------------------------- */}
+          <TabsContent value="bulk" className="space-y-3 py-2">
+            <div>
+              <Label
+                htmlFor="reg-bulk-lines"
+                className="text-xs text-muted-foreground"
+              >
+                {t("registrations.form.bulkLines")}
+              </Label>
+              <Textarea
+                id="reg-bulk-lines"
+                rows={10}
+                spellCheck={false}
+                className="mt-1 font-mono text-xs"
+                placeholder="email@outlook.com----password----client_id----refresh_token"
+                value={bulkLines}
+                onChange={(e) => setBulkLines(e.target.value)}
+              />
+              <p className="mt-1 text-[10px] text-muted-foreground">
+                {t("registrations.form.bulkHint")}
+              </p>
+            </div>
+            <div className="grid grid-cols-[6rem_1fr] items-center gap-3">
+              <Label
+                htmlFor="reg-bulk-proxy"
+                className="text-xs text-muted-foreground"
+              >
+                {t("registrations.form.proxy")}
+              </Label>
+              <Input
+                id="reg-bulk-proxy"
+                placeholder="socks5://user:pass@host:port"
+                value={bulkProxyURL}
+                onChange={(e) => setBulkProxyURL(e.target.value)}
+              />
+            </div>
+          </TabsContent>
+
+          {/* -------- Single row --------------------------------- */}
+          <TabsContent value="single" className="space-y-3 py-2">
+            <div className="grid grid-cols-[6rem_1fr] items-center gap-3">
+              <Label
+                htmlFor="reg-email"
+                className="text-xs text-muted-foreground"
+              >
+                {t("registrations.form.email")}
+              </Label>
+              <Input
+                id="reg-email"
+                type="email"
+                placeholder="user@example.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-[6rem_1fr] items-center gap-3">
+              <Label
+                htmlFor="reg-password"
+                className="text-xs text-muted-foreground"
+              >
+                {t("registrations.form.password")}
+              </Label>
+              <Input
+                id="reg-password"
+                type="text"
+                placeholder="required for the password flow"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+            <div className="grid grid-cols-[6rem_1fr] items-center gap-3">
+              <Label className="text-xs text-muted-foreground">
+                {t("registrations.form.oauth")}
+              </Label>
+              <Select
+                value={oauthSource || "password"}
+                onValueChange={(v) =>
+                  setOauthSource(v === "password" ? "" : v)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="password">
+                    {t("registrations.form.oauthPassword")}
+                  </SelectItem>
+                  <SelectItem value="google">Google</SelectItem>
+                  <SelectItem value="github">GitHub</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {/* Mailbox credentials — only visible/required on the
+                password flow. Hidden on OAuth. */}
+            {oauthSource === "" ? (
+              <>
+                <div className="grid grid-cols-[6rem_1fr] items-center gap-3">
+                  <Label
+                    htmlFor="reg-mbclient"
+                    className="text-xs text-muted-foreground"
+                  >
+                    {t("registrations.form.mailboxClient")}
+                  </Label>
+                  <Input
+                    id="reg-mbclient"
+                    placeholder="Microsoft Graph app client_id"
+                    value={mailboxClientID}
+                    onChange={(e) => setMailboxClientID(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-[6rem_1fr] items-center gap-3">
+                  <Label
+                    htmlFor="reg-mbrefresh"
+                    className="text-xs text-muted-foreground"
+                  >
+                    {t("registrations.form.mailboxRefresh")}
+                  </Label>
+                  <Input
+                    id="reg-mbrefresh"
+                    placeholder="Microsoft Graph refresh_token"
+                    className="font-mono text-xs"
+                    value={mailboxRefreshToken}
+                    onChange={(e) => setMailboxRefreshToken(e.target.value)}
+                  />
+                </div>
+              </>
+            ) : null}
+            <div className="grid grid-cols-[6rem_1fr] items-center gap-3">
+              <Label
+                htmlFor="reg-proxy"
+                className="text-xs text-muted-foreground"
+              >
+                {t("registrations.form.proxy")}
+              </Label>
+              <Input
+                id="reg-proxy"
+                placeholder="socks5://user:pass@host:port"
+                value={proxyURL}
+                onChange={(e) => setProxyURL(e.target.value)}
+              />
+            </div>
+            <p className="text-[10px] text-muted-foreground">
+              {t("registrations.form.hint")}
+            </p>
+          </TabsContent>
+        </Tabs>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             {t("common.cancel")}
           </Button>
-          <Button onClick={submit} disabled={!canSubmit}>
-            {enqueue.isPending
-              ? t("common.loading")
-              : t("registrations.enqueue")}
-          </Button>
+          {tab === "bulk" ? (
+            <Button onClick={submitBulk} disabled={!canSubmitBulk}>
+              {bulkEnqueue.isPending
+                ? t("common.loading")
+                : t("registrations.tabs.bulkSubmit")}
+            </Button>
+          ) : (
+            <Button
+              onClick={submitSingle}
+              disabled={!singleValid || enqueue.isPending}
+            >
+              {enqueue.isPending
+                ? t("common.loading")
+                : t("registrations.enqueue")}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>

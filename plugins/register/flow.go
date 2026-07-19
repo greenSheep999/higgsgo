@@ -74,10 +74,12 @@ func (f *Flow) Execute(ctx context.Context, reg *Registration) error {
 		// Driver path — one round trip to the subprocess covers the
 		// whole flow. Mailbox/captcha are driven inside the driver.
 		result, err = f.driver.Register(ctx, RegisterRequest{
-			Email:       reg.Email,
-			Password:    reg.Password,
-			OAuthSource: reg.OAuthSource,
-			ProxyURL:    reg.ProxyURL,
+			Email:               reg.Email,
+			Password:            reg.Password,
+			OAuthSource:         reg.OAuthSource,
+			ProxyURL:            reg.ProxyURL,
+			MailboxClientID:     reg.MailboxClientID,
+			MailboxRefreshToken: reg.MailboxRefreshToken,
 		})
 	} else {
 		// Legacy in-Go path.

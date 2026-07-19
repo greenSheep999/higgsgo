@@ -384,19 +384,27 @@ type RegistrationStore interface {
 // RegistrationFilter is declared in ports/registrar.go; reused here.
 
 // Registration is a pending or completed account registration attempt.
+//
+// MailboxClientID / MailboxRefreshToken are the Microsoft Graph OAuth2
+// credentials the Node driver uses to fetch this mailbox's OTP email.
+// Both are populated on every password-flow row from the bulk import
+// (line format: email----password----client_id----refresh_token).
+// OAuth flows leave them empty. See migration 017 and ROADMAP §5.4.
 type Registration struct {
-	ID           int64
-	Email        string
-	Password     string
-	OAuthSource  string
-	RefreshToken string
-	ProxyURL     string
-	Status       string
-	Attempts     int
-	LastError    string
-	AccountID    string // filled on success
-	CreatedAt    time.Time
-	FinishedAt   time.Time
+	ID                  int64
+	Email               string
+	Password            string
+	OAuthSource         string
+	RefreshToken        string // legacy — kept for the OAuth path; unrelated to MailboxRefreshToken
+	ProxyURL            string
+	Status              string
+	Attempts            int
+	LastError           string
+	AccountID           string // filled on success
+	CreatedAt           time.Time
+	FinishedAt          time.Time
+	MailboxClientID     string
+	MailboxRefreshToken string
 }
 
 // ProxyStore persists the IP proxy pool.

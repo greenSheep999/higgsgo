@@ -947,16 +947,30 @@ const zh: Dict = {
       "当前二进制未启用 `register` build tag，higgsfield 注册流程为占位实现。重新编译并加上 `-tags register`，同时配置 Mailbox / Captcha / Browser Provider 后可启用。",
     retry: "重试",
     retryHint: "将该行重置为 pending，worker 会重新执行 flow。",
+    tabs: {
+      bulk: "批量粘贴",
+      bulkSubmit: "批量导入",
+      single: "单条",
+    },
     form: {
       email: "邮箱",
+      password: "密码",
       oauth: "登录方式",
       oauthPassword: "密码 + OTP",
       proxy: "代理",
-      hint: "留空代理让 pool 自动选择健康的 socks5。OAuth 流程会跳过 mailbox 步骤。",
+      mailboxClient: "邮箱 client",
+      mailboxRefresh: "邮箱 refresh",
+      bulkLines: "邮箱清单",
+      bulkHint:
+        "每行一个邮箱：email----password----client_id----refresh_token。空行和 # 开头的行会被忽略。每个邮箱都需要自己的 Microsoft Graph 凭据。",
+      hint: "密码流程需要填齐邮箱 4 个字段——Node driver 需要通过 Microsoft Graph 拉 OTP 邮件。代理留空则使用进程级代理。",
     },
     toasts: {
       enqueued: "注册已入队 ({{id}})",
       retried: "注册 {{id}} 已重置为 pending",
+      bulkOk: "已入队 {{count}} 条注册",
+      bulkPartial:
+        "已入队 {{enqueued}} 条，跳过 {{skipped}} 条（第 {{firstLine}} 行: {{firstReason}}）",
     },
     columns: {
       id: "编号",

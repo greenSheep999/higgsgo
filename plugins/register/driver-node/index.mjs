@@ -142,18 +142,21 @@ async function handleRegister(req, res) {
     return respond(res, 400, { error: 'invalid_request', detail: 'email + password required' });
   }
 
-  // fetchOtp callback: uses the driver's own Graph OTP module when the
-  // caller provided mailbox_config, otherwise polls a caller-provided
-  // OTP endpoint. Both paths are optional so the initial MVP can run
-  // through the flow up to the OTP wait and time out cleanly if no
-  // mailbox is configured.
+  // fetchOtp callback runs the higgsfield-register Graph OTP module
+  // against this row's mailbox credentials. Refuses to attempt when
+  // mailbox_config is missing — the caller is Go-side, which already
+  // requires the fields for the password flow, so this branch mostly
+  // exists as a safety net for hand-crafted requests.
+  //
+  // higgsfield-register's registerAccount() invokes fetchOtp with the
+  // sign-up submit timestamp (as a Date). We forward it as-is to
+  // waitForOtp so the Graph query only returns emails received after
+  // the sign-up. Returns a string per registerAccount's contract —
+  // waitForOtp yields { code, message }, we return just the code.
   const fetchOtp = async (notBefore) => {
     if (!mailbox_config) {
       throw new Error('mailbox_config required for OTP retrieval');
     }
-    // Reuse the Graph OTP module from the sibling repo when possible.
-    // Import lazily so a mis-configured mailbox doesn't tank the whole
-    // driver process at boot.
     const graphOtpPath = path.join(bridge.root, 'src', 'mail', 'graph-otp.mjs');
     if (!fs.existsSync(graphOtpPath)) {
       throw new Error(`graph-otp.mjs not found at ${graphOtpPath}`);
@@ -164,12 +167,13 @@ async function handleRegister(req, res) {
       refreshToken: mailbox_config.refresh_token,
       proxyUrl,
     });
-    return graph.waitForOtp({
+    const result = await graph.waitForOtp({
       accessToken: token.accessToken,
-      recipient: email,
       notBefore,
       proxyUrl,
     });
+    // registerAccount expects a string OTP code; unwrap.
+    return result.code;
   };
 
   const logs = [];
@@ -179,15 +183,52 @@ async function handleRegister(req, res) {
   };
 
   try {
-    const result = await bridge.registerAccount({
+    const harvest = await bridge.registerAccount({
       account: { email, password },
       proxyUrl,
       headed: !args.headless,
       fetchOtp,
       log,
     });
-    // registerAccount returns whatever the sibling repo's harvest step
-    // built. Pass it through — Go side does the field-level mapping.
+    // Normalize the sibling repo's harvest shape into the field
+    // names the Go NodeDriver.mapDriverResult expects. The Go side
+    // was designed against the plugin's CompletedResult (snake_case,
+    // cookies as array); higgsfield-register/harvest emits camelCase
+    // with cookies as a map. Doing the shape mapping here — where
+    // both shapes are one file away — keeps Go free of harvest-
+    // specific knowledge.
+    const cookiesArr = Object.entries(harvest.cookies || {}).map(([name, value]) => ({
+      name,
+      value,
+      domain: name.startsWith('__client') || name.startsWith('__session')
+        ? '.higgsfield.ai'
+        : 'higgsfield.ai',
+      path: '/',
+      secure: true,
+      httpOnly: name.startsWith('__') || name === 'datadome',
+    }));
+    // Best-effort credit extraction. walletSnapshot may not exist
+    // (harvest gets it opportunistically); zero is fine — the pool's
+    // balance refresher will fill it in on the next tick anyway.
+    let credits = 0;
+    if (harvest.walletSnapshot?.subscription_balance != null) {
+      credits = Number(harvest.walletSnapshot.subscription_balance);
+    } else if (harvest.walletSnapshot?.credits_balance != null) {
+      credits = Number(harvest.walletSnapshot.credits_balance);
+    }
+    const result = {
+      // higgsfield's clerk user_id doubles as the account_id in the
+      // higgsgo Account row (see internal/domain/account.go — the
+      // ID field is documented as "clerk user_id").
+      account_id: harvest.userId || '',
+      user_id: harvest.userId || '',
+      session_id: harvest.sessionId || '',
+      user_agent: harvest.capturedUserAgent || '',
+      datadome_id: harvest.xDatadomeClientId || '',
+      plan_type: harvest.planType || '',
+      credits,
+      cookies: cookiesArr,
+    };
     return respond(res, 200, { ok: true, result, logs });
   } catch (err) {
     return respond(res, 200, { ok: false, error: String(err?.message || err), logs });

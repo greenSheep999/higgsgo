@@ -83,4 +83,10 @@ type RegisterRequest struct {
 	Password    string
 	OAuthSource string
 	ProxyURL    string
+	// MailboxClientID + MailboxRefreshToken are the Microsoft Graph
+	// OAuth2 credentials the driver uses to pull the OTP email.
+	// Every mailbox in a bulk import list has its own pair.
+	// Password flow only — OAuth flows leave them empty.
+	MailboxClientID     string
+	MailboxRefreshToken string
 }

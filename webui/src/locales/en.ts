@@ -966,17 +966,31 @@ const en = {
       "This deploy was built without the `register` tag, so the higgsfield signup flow is stubbed out. Rebuild with `-tags register` and configure the Mailbox / Captcha / Browser providers to enable it.",
     retry: "Retry",
     retryHint: "Reset to pending; the worker will re-run the flow.",
+    tabs: {
+      bulk: "Bulk paste",
+      bulkSubmit: "Import batch",
+      single: "Single row",
+    },
     form: {
       email: "Email",
+      password: "Password",
       oauth: "Auth",
       oauthPassword: "Password + OTP",
       proxy: "Proxy",
+      mailboxClient: "MB client",
+      mailboxRefresh: "MB refresh",
+      bulkLines: "Mailbox list",
+      bulkHint:
+        "One line per mailbox: email----password----client_id----refresh_token. Blank lines and lines starting with # are ignored. Every mailbox needs its own Microsoft Graph credentials.",
       hint:
-        "Leave the proxy field empty to let the pool picker choose a healthy socks5. OAuth flows skip the mailbox step.",
+        "Password flow requires all four mailbox fields — the Node driver uses them to fetch the OTP verification email via Microsoft Graph. Leave the proxy empty to route through the process-level proxy.",
     },
     toasts: {
       enqueued: "Registration queued ({{id}})",
       retried: "Registration {{id}} reset to pending",
+      bulkOk: "Queued {{count}} registrations",
+      bulkPartial:
+        "Queued {{enqueued}} — skipped {{skipped}} (line {{firstLine}}: {{firstReason}})",
     },
     columns: {
       id: "Id",
