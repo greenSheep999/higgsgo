@@ -364,6 +364,13 @@ func scanJob(sc scanner) (*domain.Job, error) {
 		errorType      sql.NullString
 		errorDetail    sql.NullString
 		finishedAt     sql.NullString
+		// latency_ms is NULL for pending / running rows (only stamped
+		// at the terminal transition). Scan via NullInt64 so
+		// pool_collector + pollworker's ListPending don't crash on
+		// live queue rows. Same for poll_count which historically
+		// defaulted to 0 but older migrations may have left NULL.
+		latencyMS      sql.NullInt64
+		pollCount      sql.NullInt64
 		actualCredits  sql.NullInt64
 		chargedCredits sql.NullInt64
 		refunded       int
@@ -377,7 +384,7 @@ func scanJob(sc scanner) (*domain.Job, error) {
 		&j.ModelAlias, &j.JST, &j.Endpoint, &j.RequestBodyJSON, &requestTS,
 		&upstreamJobID, &upstreamCost, &resultURL,
 		&statusStr, &errorType, &errorDetail, &finishedAt,
-		&j.LatencyMS, &j.PollCount,
+		&latencyMS, &pollCount,
 		&actualCredits, &chargedCredits, &refunded,
 		&callbackURL, &preBalanceH,
 	); err != nil {
@@ -386,6 +393,8 @@ func scanJob(sc scanner) (*domain.Job, error) {
 		}
 		return nil, err
 	}
+	j.LatencyMS = latencyMS.Int64
+	j.PollCount = int(pollCount.Int64)
 	j.APIKeyID = apiKeyID.String
 	j.CPAPartnerID = cpaPartnerID.String
 	j.GroupID = groupID.String
