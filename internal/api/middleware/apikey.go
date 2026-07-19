@@ -55,12 +55,20 @@ func APIKeyAuth(store ports.APIKeyStore, optional bool) func(http.Handler) http.
 			}
 			token := strings.TrimPrefix(raw, "Bearer ")
 			if token == raw {
+				if optional {
+					next.ServeHTTP(w, r)
+					return
+				}
 				writeAuthError(w, http.StatusUnauthorized, "malformed_authorization",
 					"Authorization header must start with 'Bearer '")
 				return
 			}
 			hash, err := apikey.Parse(token)
 			if err != nil {
+				if optional {
+					next.ServeHTTP(w, r)
+					return
+				}
 				writeAuthError(w, http.StatusUnauthorized, "invalid_api_key", err.Error())
 				return
 			}
