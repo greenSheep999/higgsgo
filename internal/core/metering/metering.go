@@ -21,6 +21,7 @@ package metering
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -164,13 +165,20 @@ func (r *Recorder) OnJobTerminal(ctx context.Context, job *domain.Job, account *
 	//      a failure here does not undo the usage_events insert. The SQL
 	//      UpdateStatus helper only appends fields when non-zero, so a
 	//      zero-cost terminal (rare) simply leaves the columns NULL.
+	//
+	//      ErrJobNotFound is silently swallowed: sync-path CreateJob
+	//      failures (see proxy.Service.Generate) intentionally emit a
+	//      usage_events row *without* a matching jobs row, using a
+	//      locally-minted "cf" id. That is a feature, not a bug — the
+	//      operator should see the failed request in usage reports even
+	//      though upstream never issued a job id to persist.
 	if r.Jobs != nil {
 		meta := ports.JobMeta{
 			ActualCreditsHundredths:  actualCreditsH,
 			ChargedCreditsHundredths: chargedCreditsH,
 		}
 		if err := r.Jobs.UpdateStatus(ctx, job.ID, job.Status, meta); err != nil {
-			if r.Logger != nil {
+			if !errors.Is(err, domain.ErrJobNotFound) && r.Logger != nil {
 				r.Logger.Warn("metering jobs backfill failed",
 					slog.String("job_id", job.ID),
 					slog.String("err", err.Error()))

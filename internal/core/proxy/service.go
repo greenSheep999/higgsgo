@@ -27,6 +27,7 @@ import (
 	"github.com/greensheep999/higgsgo/internal/core/webhook"
 	"github.com/greensheep999/higgsgo/internal/domain"
 	"github.com/greensheep999/higgsgo/internal/ports"
+	"github.com/greensheep999/higgsgo/internal/util/idgen"
 )
 
 // Service is the reverse-proxy business object.
@@ -365,6 +366,38 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 		// operator-configured RiskMarkers can still match on the
 		// stringified body snippet the sentinel carries. Nil-safe.
 		s.Failover.RecordError(ctx, acc.ID, err, err.Error())
+		// Record a failed usage_event even though upstream never returned
+		// a job id. Without this, sync-path CreateJob failures (401 stale
+		// session, 422 body error, 429 rate limit, 5xx) are completely
+		// invisible in the dashboard — the operator only sees the pool
+		// getting hammered via access logs. HiggsgoJobID is minted locally
+		// with a distinct "cf" prefix so audit tooling can spot rows that
+		// never had an upstream counterpart. Runs before unlock() so a
+		// meter store failure does not block the slot release below.
+		if s.Meter != nil {
+			mJob := &domain.Job{
+				ID:           idgen.NewID("cf"),
+				APIKeyID:     req.APIKeyID,
+				CPAPartnerID: req.CPAPartnerID,
+				GroupID:      req.GroupID,
+				AccountID:    acc.ID,
+				ModelAlias:   spec.Alias,
+				JST:          spec.JST,
+				Endpoint:     spec.Endpoint,
+				RequestTS:    s.now(),
+				UpstreamCost: 0,
+				Status:       domain.JobFailed,
+				ErrorType:    classifyCreateErr(err),
+				LatencyMS:    0,
+				FinishedAt:   s.now(),
+			}
+			markup := s.resolveMarkup(ctx, req.APIKeyID)
+			if merr := s.Meter.OnJobTerminal(ctx, mJob, acc, 0, markup); merr != nil && s.Logger != nil {
+				s.Logger.Warn("metering create-failed job",
+					slog.String("job_id", mJob.ID),
+					slog.String("err", merr.Error()))
+			}
+		}
 		unlock()
 		return nil, mapUpstreamError(err, spec)
 	}
@@ -624,6 +657,29 @@ func objectForOutput(output string) string {
 	default:
 		return "image"
 	}
+}
+
+// classifyCreateErr maps a core/upstream sentinel returned from CreateJob
+// to a domain.ErrorType so the usage_events row records why the create
+// failed. Mirrors the failover.Classify buckets but is intentionally
+// stringly-typed on the resulting label — the errorType column is a free
+// text tag for dashboards, not a routing signal.
+func classifyCreateErr(err error) domain.ErrorType {
+	switch {
+	case errors.Is(err, domain.ErrUpstreamUnauthorized):
+		return domain.ErrUpstream // session expired counts as upstream fail
+	case errors.Is(err, domain.ErrUpstreamRateLimit):
+		return domain.ErrRateLimit
+	case errors.Is(err, domain.ErrUpstreamBadBody):
+		return domain.ErrBody
+	case errors.Is(err, domain.ErrUpstreamForbidden):
+		return domain.ErrGate
+	case errors.Is(err, domain.ErrUpstreamServerError):
+		return domain.ErrUpstream
+	case errors.Is(err, domain.ErrUpstreamTimeout):
+		return domain.ErrTimeout
+	}
+	return domain.ErrUnknown
 }
 
 // mapUpstreamError converts sentinel errors from core/upstream into the
