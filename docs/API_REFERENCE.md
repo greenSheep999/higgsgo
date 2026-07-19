@@ -230,23 +230,30 @@ List / create / get / delete. Delete cascades on members + bindings. Create body
 
 Only `name` is required. Defaults: `owner_type=internal`, `route_strategy=round_robin`.
 
-> No update endpoint. Adjust budgets by delete + recreate.
+### `PUT /admin/groups/{id}`
+
+Update a group's mutable fields. Body accepts same fields as create;
+only supplied keys are modified.
 
 ### `GET /admin/groups/{id}/members`, `POST /admin/groups/{id}/members`, `DELETE /admin/groups/{id}/members/{accountId}`
 
 List returns `{"group_id":..., "members":["acc_...", ...]}`. Add body: `{"account_id":"acc_...","priority":10}` (idempotent). Remove has no body.
 
-### `POST /admin/groups/{id}/bindings`, `DELETE /admin/groups/{id}/bindings/{apiKeyId}`
+### `GET /admin/groups/{id}/bindings`, `POST /admin/groups/{id}/bindings`, `DELETE /admin/groups/{id}/bindings/{apiKeyId}`
 
-Bind an API key to the group. Body: `{"api_key_id":"key_..."}`. When a key has exactly one binding, `/v1/*` auto-resolves `group_id` from it; multiple bindings force explicit `group_id` in the request body.
-
-> No `GET /admin/groups/{id}/bindings` list route today.
+List bindings for a group. Bind an API key to the group. Body: `{"api_key_id":"key_..."}`. When a key has exactly one binding, `/v1/*` auto-resolves `group_id` from it; multiple bindings use the spillover resolution (sorted by binding name ascending).
 
 ### `GET /admin/jobs`, `GET /admin/jobs/{id}`
 
 Query params (list): `status`, `account_id`, `api_key_id`, `group_id`, `model_alias`, `since` / `until`, `limit` (default 100, max 500), `offset`. Response echoes effective `limit`/`offset`.
 
 Unlike `/v1/jobs`, this view exposes internal accounting: `account_id`, `group_id`, `pre_balance_h`, `actual_credits_h`, `charged_credits_h`. Timestamps are RFC3339.
+
+### `POST /admin/jobs/purge`
+
+Body: `{"older_than":"2026-07-01T00:00:00Z"}`. Deletes job rows older
+than the given timestamp. Usage events are preserved. Response:
+`{"purged": N}`.
 
 ### `GET /admin/model-health`, `GET /admin/model-health/{jst}`
 
@@ -255,6 +262,8 @@ the regression ticker.
 
 - List: `GET /admin/model-health?verdict=&stale_before=` — newest first.
 - Detail: `GET /admin/model-health/{jst}` — latest probe for one model.
+- Time-series: `GET /admin/model-health/{jst}/slots?count=N&slot_sec=S` —
+  bucketed success/fail slots for the uptime bar. Count capped at 168.
 
 WebUI consumer: `webui/src/routes/models.tsx`. Note: the UI currently
 backfills a mock uptime value when no health row exists for a JST — see
@@ -269,7 +278,7 @@ and by CI post-deploy hooks.
 ### Account operations (bulk / lifecycle / import-export)
 
 - `PATCH /admin/accounts/{id}` — mutable columns:
-  `bound_proxy_url` (⚠️ stored but not enforced — see ROADMAP §1),
+  `bound_proxy_url` (enforced — P1-5 landed; `utls.Pool` routes per-account),
   `priority` (int, [-1000, 1000]), `max_concurrent`,
   `note`, `source`.
 - `POST /admin/accounts` (bulk import) — accepts a JSON array; upserts
@@ -279,6 +288,11 @@ and by CI post-deploy hooks.
 - `GET /admin/accounts/{id}/eligible-models` — resolves which models the
   account's plan / cohort is entitled to. Consumed by the WebUI
   account detail sheet.
+- `POST /admin/accounts/{id}/probe` — actively pings the account via
+  the upstream client (JWT mint + per-account proxy + TLS fingerprint).
+  Response: `{ok, latency_ms, balance}` on success, or
+  `{ok:false, error:{kind, message}}` on failure. 15 s deadline.
+  Returns 503 `probe_disabled` when no upstream client is wired.
 
 ### Key operations (write verbs beyond CRUD)
 
@@ -292,6 +306,8 @@ and by CI post-deploy hooks.
   outside the natural month boundary.
 - `GET /admin/keys/{id}/stats` — call counts, credits used, last-seen.
 - `GET /admin/keys/{id}/groups` — groups this key is bound to.
+- `POST /admin/keys/{id}/playground_scope` — toggle playground access
+  for a key (body: `{"enabled": true|false}`).
 
 ### Failover console
 
@@ -312,17 +328,18 @@ Wired at `/admin/failover/*` and `/admin/accounts/{id}/failover`
 
 ### Model overrides
 
-- `GET /admin/model_overrides` — list runtime overrides on top of the
+- `GET /admin/models/overrides` — list runtime overrides on top of the
   static registry.
-- `PUT /admin/model_overrides/{alias}` — set / clear per-field overrides
+- `GET /admin/models/{alias}/override` — get the override for one model.
+- `PUT /admin/models/{alias}/override` — set / clear per-field overrides
   (pointer semantics: `null` clears, value overrides). Triggers
   `Registry.Reload()`.
-- `DELETE /admin/model_overrides/{alias}` — remove all overrides for
+- `DELETE /admin/models/{alias}/override` — remove all overrides for
   one alias.
 
 ### Routing default
 
-- `GET /admin/routing_settings`, `PUT /admin/routing_settings` — the
+- `GET /admin/settings/routing`, `PUT /admin/settings/routing` — the
   default `RouteStrategy` used when a new group is created.
   ⚠️ **Does not** retroactively change existing groups' strategies.
 
@@ -330,7 +347,6 @@ Wired at `/admin/failover/*` and `/admin/accounts/{id}/failover`
 
 - `GET /admin/settings/bearer` — hash-only read (returns SHA-256 of
   current token for confirmation).
-- `POST /admin/settings/bearer` — set an override.
 - `POST /admin/settings/bearer/rotate` — mint a fresh token, activate
   after a 30 s grace window.
 
@@ -338,6 +354,14 @@ Wired at `/admin/failover/*` and `/admin/accounts/{id}/failover`
 
 - `GET /admin/registrations` — list rows (paged).
 - `POST /admin/registrations` — enqueue a new registration request.
+  Body: `{"email":"...", "password":"...", "mailbox_client_id":"...",
+  "mailbox_refresh_token":"...", "proxy_url":"...", "oauth_source":"..."}`.
+  Password + mailbox fields required for the password flow (no
+  `oauth_source`); OAuth flows skip them.
+- `POST /admin/registrations/bulk` — bulk import from a mailbox list.
+  Body: `{"lines":"email----password----client_id----refresh_token\n...",
+  "proxy_url":"socks5://..."}`. Response:
+  `{enqueued, ids, skipped:[{line, reason}]}`.
 - `GET /admin/registrations/{id}` — status detail.
 - `POST /admin/registrations/{id}/retry` — retry a failed registration.
 
@@ -354,10 +378,10 @@ retry endpoint.** Only the `-tags register` build compiles the bridge to
 
 ### Tickers (manual runs)
 
-- `POST /admin/tickers/{name}` — force-run one of the scheduled
-  tickers (`jwt_refresh`, `balance_refresh`, `a_regression`,
-  `monthreset`, `failover_recover`). Used both for admin recovery
-  actions and by the WebUI "run now" buttons on the tickers page.
+- `POST /admin/tickers/refresher` — force-run the JWT + balance refresher
+  tick synchronously. Returns 200 on success, 503 when not wired.
+- `POST /admin/tickers/regression` — force-run the model regression check
+  tick synchronously. Returns 200 on success, 503 when not wired.
 
 ### Version endpoint
 
@@ -367,9 +391,9 @@ retry endpoint.** Only the `-tags register` build compiles the bridge to
 
 ### Webhooks
 
-- `GET /admin/webhooks`, `POST /admin/webhooks`, `PATCH
-/admin/webhooks/{id}`, `DELETE /admin/webhooks/{id}` — outbound
-webhook subscriptions for metering events.
+- `GET /admin/webhooks/stats` — aggregated delivery statistics from the
+  webhook dispatcher. Full CRUD for webhook subscriptions is not yet
+  wired.
 
 ---
 

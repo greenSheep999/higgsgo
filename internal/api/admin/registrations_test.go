@@ -139,7 +139,8 @@ func TestNilRegistrar_All503(t *testing.T) {
 func TestStubRegistrar_All503(t *testing.T) {
 	t.Parallel()
 	h := mount(cpaplugin.StubRegistrar{})
-	code, env := do(t, h, "POST", "/registrations", `{"email":"a@b.co"}`)
+	code, env := do(t, h, "POST", "/registrations",
+		`{"email":"a@b.co","password":"pw","mailbox_client_id":"cid","mailbox_refresh_token":"rt"}`)
 	if code != http.StatusServiceUnavailable {
 		t.Fatalf("stub Enqueue: want 503, got %d (env=%v)", code, env)
 	}
@@ -162,7 +163,8 @@ func TestEnqueue_HappyPath_202(t *testing.T) {
 	t.Parallel()
 	f := &fakeRegistrar{nextID: "reg_new"}
 	h := mount(f)
-	code, env := do(t, h, "POST", "/registrations", `{"email":"a@b.co"}`)
+	code, env := do(t, h, "POST", "/registrations",
+		`{"email":"a@b.co","password":"pw","mailbox_client_id":"cid","mailbox_refresh_token":"rt"}`)
 	if code != http.StatusAccepted {
 		t.Fatalf("want 202, got %d (env=%v)", code, env)
 	}
@@ -238,12 +240,54 @@ func TestList_HappyPath_200(t *testing.T) {
 func TestUnexpectedErrorPropagation(t *testing.T) {
 	t.Parallel()
 	h := mount(&fakeRegistrar{enqErr: errors.New("boom")})
-	code, env := do(t, h, "POST", "/registrations", `{"email":"a@b.co"}`)
+	code, env := do(t, h, "POST", "/registrations",
+		`{"email":"a@b.co","password":"pw","mailbox_client_id":"cid","mailbox_refresh_token":"rt"}`)
 	if code != http.StatusInternalServerError {
 		t.Fatalf("want 500, got %d (env=%v)", code, env)
 	}
 	errObj, _ := env["error"].(map[string]any)
 	if errObj["type"] != "enqueue" {
 		t.Fatalf("want type=enqueue, got %v", errObj)
+	}
+}
+
+func TestEnqueue_PasswordFlow_MissingFields_400(t *testing.T) {
+	t.Parallel()
+	h := mount(&fakeRegistrar{})
+	cases := []struct {
+		name string
+		body string
+		want string
+	}{
+		{"no password", `{"email":"a@b.co"}`, "password is required"},
+		{"no mailbox creds", `{"email":"a@b.co","password":"pw"}`, "mailbox_client_id and mailbox_refresh_token"},
+		{"partial mailbox", `{"email":"a@b.co","password":"pw","mailbox_client_id":"cid"}`, "mailbox_client_id and mailbox_refresh_token"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			code, env := do(t, h, "POST", "/registrations", tc.body)
+			if code != http.StatusBadRequest {
+				t.Fatalf("want 400, got %d (env=%v)", code, env)
+			}
+			errObj, _ := env["error"].(map[string]any)
+			msg, _ := errObj["message"].(string)
+			if !strings.Contains(msg, tc.want) {
+				t.Fatalf("want message containing %q, got %q", tc.want, msg)
+			}
+		})
+	}
+}
+
+func TestEnqueue_OAuthFlow_NoPasswordRequired_202(t *testing.T) {
+	t.Parallel()
+	f := &fakeRegistrar{nextID: "reg_oauth"}
+	h := mount(f)
+	code, env := do(t, h, "POST", "/registrations",
+		`{"email":"a@b.co","oauth_source":"google"}`)
+	if code != http.StatusAccepted {
+		t.Fatalf("want 202, got %d (env=%v)", code, env)
+	}
+	if env["id"] != "reg_oauth" {
+		t.Fatalf("unexpected envelope %v", env)
 	}
 }
