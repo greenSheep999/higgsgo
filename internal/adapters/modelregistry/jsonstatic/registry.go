@@ -603,6 +603,13 @@ func loadBodyTemplates(dir string) (map[string]bodyTemplate, error) {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
 			continue
 		}
+		// Skip macOS AppleDouble metadata (`._foo.json`) that survives
+		// a `tar cf` on a HFS+/APFS source. These are binary and
+		// json.Unmarshal chokes on them; treat them as invisible so a
+		// misconfigured deploy pipeline doesn't crash the boot.
+		if strings.HasPrefix(e.Name(), "._") || strings.HasPrefix(e.Name(), ".") {
+			continue
+		}
 		body, err := os.ReadFile(filepath.Join(dir, e.Name()))
 		if err != nil {
 			return nil, fmt.Errorf("read body template %q: %w", e.Name(), err)
@@ -656,6 +663,10 @@ func loadCatalogs(dir string) (map[string][]string, error) {
 	}
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		// Same dotfile / AppleDouble guard as loadBodyTemplates.
+		if strings.HasPrefix(e.Name(), "._") || strings.HasPrefix(e.Name(), ".") {
 			continue
 		}
 		body, err := os.ReadFile(filepath.Join(dir, e.Name()))
