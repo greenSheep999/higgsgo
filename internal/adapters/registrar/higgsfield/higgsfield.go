@@ -175,7 +175,24 @@ var _ ports.Registrar = (*registrar)(nil)
 // Start launches the background worker goroutine. Callable once from
 // main.go after all adapters are wired. Idempotent: safe to call when
 // worker is nil (no-op).
+//
+// Reclaims any rows the previous process left in `running` state before
+// the worker starts polling. Rationale: SQLite single-instance deploy
+// means no other worker can own those rows across a restart, so they
+// are orphans by definition. Without the reclaim they stay `running`
+// forever — the worker only picks `pending`. Non-fatal on error to
+// preserve the "admin surface stays live" contract; a warn is emitted
+// and startup continues.
 func (r *registrar) Start(ctx context.Context) {
+	if r.deps.Store != nil {
+		if n, err := r.deps.Store.ReclaimStaleRunning(ctx); err != nil {
+			r.deps.Logger.Warn("registrar: reclaim stale running failed; continuing",
+				slog.String("err", err.Error()))
+		} else if n > 0 {
+			r.deps.Logger.Warn("registrar: reclaimed stale running rows from previous run",
+				slog.Int64("count", n))
+		}
+	}
 	if r.worker == nil {
 		return
 	}
@@ -253,11 +270,14 @@ func (r *registrar) Retry(ctx context.Context, id string) error {
 		// Success rows are terminal — retry is a no-op. Return nil so
 		// admins retrying the wrong row don't see an error.
 		return nil
-	case "pending", "running":
-		// Already in-flight; retry is a no-op.
+	case "pending":
+		// Already queued; retry is a no-op.
 		return nil
 	}
-	// Reset to pending; worker will pick it up on next tick.
+	// `running` and `failed` both reset to pending here. `failed` is the
+	// obvious case; `running` catches orphaned rows whose worker died
+	// mid-flow (the boot-time ReclaimStaleRunning covers process
+	// restarts, but an operator may want to force-recover without one).
 	// Attempts count is preserved by the store so operators can see
 	// retry history.
 	if err := r.adapter.resetToPending(ctx, n); err != nil {

@@ -504,6 +504,13 @@ type RegistrationStore interface {
 	// state so admins can force-retry from any state if they
 	// choose.
 	ResetToPending(ctx context.Context, id int64) error
+	// ReclaimStaleRunning flips every row currently in `running` state
+	// back to `pending`. Called once at worker startup so rows orphaned
+	// by the previous process (killed / crashed mid-flow) get re-picked
+	// on the next poll tick. SQLite single-instance deploys can flip
+	// unconditionally — no second worker can own those rows. Returns
+	// the number of rows reset so callers can log the recovery count.
+	ReclaimStaleRunning(ctx context.Context) (int64, error)
 }
 
 // RegistrationFilter is declared in ports/registrar.go; reused here.

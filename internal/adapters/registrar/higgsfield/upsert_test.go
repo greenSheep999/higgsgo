@@ -74,6 +74,9 @@ func (s *fakeRegStore) List(_ context.Context, _ ports.RegistrationFilter) ([]po
 func (s *fakeRegStore) ResetToPending(_ context.Context, _ int64) error {
 	panic("unexpected ResetToPending")
 }
+func (s *fakeRegStore) ReclaimStaleRunning(_ context.Context) (int64, error) {
+	panic("unexpected ReclaimStaleRunning")
+}
 
 // fakeAccountStore records the Upsert call so the test can inspect
 // the produced Account. Every other method panics.

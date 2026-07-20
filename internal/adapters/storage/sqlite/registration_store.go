@@ -278,6 +278,28 @@ func (s *RegistrationStore) ResetToPending(ctx context.Context, id int64) error 
 	return nil
 }
 
+// ReclaimStaleRunning flips every `running` row back to `pending` so the
+// worker re-picks orphaned rows after a crash / kill. Single-instance
+// SQLite deploy means no live worker can own a `running` row across a
+// restart — the flip is unconditional. `attempts` is preserved so
+// operators can see how many times a row was tried; `last_error` and
+// `finished_at` are cleared for the same "fresh again" reason
+// ResetToPending has. Returns the number of rows reset.
+func (s *RegistrationStore) ReclaimStaleRunning(ctx context.Context) (int64, error) {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE registrations
+		SET status = 'pending',
+		    last_error = NULL,
+		    finished_at = NULL
+		WHERE status = 'running'`,
+	)
+	if err != nil {
+		return 0, fmt.Errorf("reclaim stale running: %w", err)
+	}
+	n, _ := res.RowsAffected()
+	return n, nil
+}
+
 // Get returns a registration by id. ErrRegistrationNotFound when
 // missing — the admin handler translates that into 404, the worker
 // treats it as "someone deleted this while I was working, give up".

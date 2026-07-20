@@ -278,3 +278,103 @@ func TestRegistrationStore_ResetToPending(t *testing.T) {
 		t.Errorf("unknown id: got %v want ErrRegistrationNotFound", err)
 	}
 }
+
+// TestRegistrationStore_ReclaimStaleRunning covers the crash-recovery
+// path: `running` rows left behind by a killed process get flipped back
+// to `pending` en masse on the next boot. Terminal rows (success /
+// failed) and already-pending rows are untouched. The attempts counter
+// is preserved so operators can still see per-row retry history after
+// recovery.
+func TestRegistrationStore_ReclaimStaleRunning(t *testing.T) {
+	db := openMem(t)
+	store := NewRegistrationStore(db)
+	ctx := context.Background()
+
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Empty table: reclaim is a no-op and returns 0.
+	n, err := store.ReclaimStaleRunning(ctx)
+	must(err)
+	if n != 0 {
+		t.Errorf("empty reclaim: got n=%d want 0", n)
+	}
+
+	// Seed one of each terminal state plus two `running` orphans.
+	rPending := &ports.Registration{Email: "pending@x.com"}
+	must(store.Enqueue(ctx, rPending))
+
+	rRunning1 := &ports.Registration{Email: "run1@x.com"}
+	must(store.Enqueue(ctx, rRunning1))
+	must(store.MarkRunning(ctx, rRunning1.ID)) // attempts=1
+	must(store.MarkRunning(ctx, rRunning1.ID)) // attempts=2 (simulate a mid-flow retry)
+
+	rRunning2 := &ports.Registration{Email: "run2@x.com"}
+	must(store.Enqueue(ctx, rRunning2))
+	must(store.MarkRunning(ctx, rRunning2.ID))
+
+	rFailed := &ports.Registration{Email: "fail@x.com"}
+	must(store.Enqueue(ctx, rFailed))
+	must(store.MarkRunning(ctx, rFailed.ID))
+	must(store.MarkFailed(ctx, rFailed.ID, "boom"))
+
+	rDone := &ports.Registration{Email: "done@x.com"}
+	must(store.Enqueue(ctx, rDone))
+	must(store.MarkRunning(ctx, rDone.ID))
+	must(store.MarkCompleted(ctx, rDone.ID, "acc-1"))
+
+	// Reclaim: only the two `running` rows should flip.
+	n, err = store.ReclaimStaleRunning(ctx)
+	must(err)
+	if n != 2 {
+		t.Fatalf("reclaim count: got %d want 2", n)
+	}
+
+	// The two running rows are now pending with attempts preserved and
+	// finished_at / last_error cleared.
+	got, err := store.Get(ctx, rRunning1.ID)
+	must(err)
+	if got.Status != "pending" {
+		t.Errorf("run1 status: %q want pending", got.Status)
+	}
+	if got.Attempts != 2 {
+		t.Errorf("run1 attempts: got %d want 2 (preserved)", got.Attempts)
+	}
+	if got.LastError != "" || !got.FinishedAt.IsZero() {
+		t.Errorf("run1 last_error/finished_at should be cleared, got %+v", got)
+	}
+
+	got, err = store.Get(ctx, rRunning2.ID)
+	must(err)
+	if got.Status != "pending" {
+		t.Errorf("run2 status: %q want pending", got.Status)
+	}
+
+	// Untouched: pending stays pending, failed stays failed, success stays success.
+	got, err = store.Get(ctx, rPending.ID)
+	must(err)
+	if got.Status != "pending" {
+		t.Errorf("pending row perturbed: %q", got.Status)
+	}
+	got, err = store.Get(ctx, rFailed.ID)
+	must(err)
+	if got.Status != "failed" || got.LastError != "boom" {
+		t.Errorf("failed row perturbed: %+v", got)
+	}
+	got, err = store.Get(ctx, rDone.ID)
+	must(err)
+	if got.Status != "success" || got.AccountID != "acc-1" {
+		t.Errorf("success row perturbed: %+v", got)
+	}
+
+	// Second call returns 0 — nothing left to reclaim.
+	n, err = store.ReclaimStaleRunning(ctx)
+	must(err)
+	if n != 0 {
+		t.Errorf("second reclaim: got n=%d want 0", n)
+	}
+}
