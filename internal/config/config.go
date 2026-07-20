@@ -38,10 +38,10 @@ type Config struct {
 // implemented in core/failover. When disabled the pool behaves exactly
 // like it did pre-013 (no auto-disable, no throttle cooldowns).
 type FailoverConfig struct {
-	Enabled     bool                       `toml:"enabled"`
-	Consecutive ConsecutiveFailoverConfig  `toml:"consecutive"`
-	Throttle    ThrottleFailoverConfig     `toml:"throttle"`
-	OutageGuard OutageGuardConfig          `toml:"outage_guard"`
+	Enabled     bool                      `toml:"enabled"`
+	Consecutive ConsecutiveFailoverConfig `toml:"consecutive"`
+	Throttle    ThrottleFailoverConfig    `toml:"throttle"`
+	OutageGuard OutageGuardConfig         `toml:"outage_guard"`
 }
 
 // ConsecutiveFailoverConfig — mechanism ①: N account-attributable
@@ -55,12 +55,12 @@ type ConsecutiveFailoverConfig struct {
 // risk-marker events. Off by default until real production 429 body
 // samples let us populate RiskMarkers safely.
 type ThrottleFailoverConfig struct {
-	Enabled        bool     `toml:"enabled"`
-	JudgeWindowSec int      `toml:"judge_window_sec"`
-	JudgeCount     int      `toml:"judge_count"`
-	CooldownSec    int      `toml:"cooldown_sec"`
-	EvictWindowSec int      `toml:"evict_window_sec"`
-	EvictCount     int      `toml:"evict_count"`
+	Enabled        bool `toml:"enabled"`
+	JudgeWindowSec int  `toml:"judge_window_sec"`
+	JudgeCount     int  `toml:"judge_count"`
+	CooldownSec    int  `toml:"cooldown_sec"`
+	EvictWindowSec int  `toml:"evict_window_sec"`
+	EvictCount     int  `toml:"evict_count"`
 	// RiskMarkers is a case-insensitive substring list matched against
 	// 429 response bodies. Empty = every 429 counts equally. TODO
 	// (failover): fill this in after collecting real higgsfield 429 /

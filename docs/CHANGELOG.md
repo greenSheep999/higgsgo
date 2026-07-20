@@ -9,6 +9,23 @@ Commits referenced inline as `[hash]` are reachable from `main`; run
 
 ## [Unreleased]
 
+### Video generation alias for new-api / OneAPI (2026-07-21)
+
+`POST /v1/video/generations` (singular `video`) now routes to the same
+`HandleVideoGeneration` as the pre-existing `POST /v1/videos/generations`
+(plural). new-api / OneAPI-style clients speak the singular form; the
+plural form was our own OpenAI-style historical spelling and stays
+mounted as a legacy alias — no breaking change for anyone integrated
+against `/v1/videos/generations`. Docs and the WebUI code-example
+generator now surface the singular path as the preferred one; API
+reference, ARCHITECTURE endpoint table and CONVENTIONS naming rule
+call out both. Regression coverage: new
+`TestPublicRouter_VideoAliasBothPathsMounted` in `internal/api/` sends
+an unauthenticated POST to each path and asserts a 401 (auth engaged),
+not a 404 (route missing). Note: OpenAI's own current video endpoint
+is `POST /v1/videos` with a different body contract — that is not
+mounted here.
+
 ### Registration Plugin Lands (2026-07-19, post-v0.2)
 
 The registration pipeline moves from "storage-only queue with a

@@ -40,8 +40,8 @@ func TestAccountStore_PickAndLock_LoadBalanceTierAwareOff(t *testing.T) {
 	}
 
 	now := time.Now().UTC()
-	starterLRU := now.Add(-1 * time.Minute)   // recent
-	plusLRU := now.Add(-24 * time.Hour)       // stale
+	starterLRU := now.Add(-1 * time.Minute) // recent
+	plusLRU := now.Add(-24 * time.Hour)     // stale
 	must(store.Upsert(ctx, &domain.Account{
 		ID: "acc_starter", Email: "starter@x", Password: "-",
 		SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
@@ -127,7 +127,7 @@ func TestAccountStore_PickAndLock_HeadroomTight(t *testing.T) {
 		ID: "acc_tight", Email: "tight@x", Password: "-",
 		SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
 		PlanType: domain.PlanPlus, SubscriptionBalance: cost,
-		Status: domain.StatusActive,
+		Status:       domain.StatusActive,
 		RegisteredAt: now, ImportedAt: now,
 	}))
 

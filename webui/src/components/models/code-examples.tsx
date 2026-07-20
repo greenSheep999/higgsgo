@@ -26,11 +26,15 @@ function generateCode(model: PublicModel, lang: Lang): string {
   const isImage = model.output === "image";
   const isVideo = model.output === "video";
 
-  // Determine the API path based on output type.
+  // Determine the API path based on output type. For video we surface the
+  // new-api compatible path (/v1/video/generations, singular) so copied
+  // examples drop straight into OneAPI-style stacks; the legacy plural
+  // /v1/videos/generations is still routed to the same handler on the
+  // server side for older integrations.
   const apiPath = isImage
     ? "/v1/images/generations"
     : isVideo
-      ? "/v1/videos/generations"
+      ? "/v1/video/generations"
       : "/v1/audio/speech";
 
   switch (lang) {

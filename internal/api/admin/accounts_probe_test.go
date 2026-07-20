@@ -91,8 +91,8 @@ func TestProbe_ErrorReturnsStructuredBody(t *testing.T) {
 	id := probeTestAccount(t, store, domain.StatusActive)
 
 	cases := []struct {
-		name    string
-		err     error
+		name     string
+		err      error
 		wantKind string
 	}{
 		{"unauthorized", domain.ErrUpstreamUnauthorized, "unauthorized"},

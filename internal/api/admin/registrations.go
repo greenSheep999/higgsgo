@@ -180,8 +180,8 @@ func (h *RegistrationsHandler) BulkEnqueue(w http.ResponseWriter, r *http.Reques
 		Reason string `json:"reason"`
 	}
 	var (
-		ids     []string
-		skips   []skipped
+		ids      []string
+		skips    []skipped
 		enqueued int
 	)
 	for i, rawLine := range strings.Split(req.Lines, "\n") {

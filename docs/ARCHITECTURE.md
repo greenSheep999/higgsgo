@@ -169,7 +169,7 @@ higgsgo/
 │   │   ├── middleware/             # apikey / logging / recovery
 │   │   ├── v1/                     # OpenAI-compatible public surface
 │   │   │   ├── images.go           # POST /v1/images/generations
-│   │   │   ├── videos.go           # POST /v1/videos/generations
+│   │   │   ├── videos.go           # POST /v1/video/generations (+ /videos/generations alias)
 │   │   │   ├── models.go           # GET /v1/models
 │   │   │   ├── catalogs.go         # GET /v1/catalogs/*
 │   │   │   └── jobs.go             # GET /v1/jobs/{id} async poll
@@ -420,7 +420,7 @@ Job fails → Pool.MarkFailed(account, err) → fail_streak++ → suspend after 
 ### 5.1 Request Flow
 
 ```
-POST /v1/videos/generations
+POST /v1/video/generations
 Authorization: Bearer <api_key>
 Content-Type: application/json
 
@@ -479,7 +479,8 @@ Content-Type: application/json
 | Endpoint | Description |
 |---|---|
 | `POST /v1/images/generations` | OpenAI-compatible image generation |
-| `POST /v1/videos/generations` | OpenAI-compatible video generation |
+| `POST /v1/video/generations` | OpenAI-compatible video generation (new-api / OneAPI shape) |
+| `POST /v1/videos/generations` | Legacy alias — same handler as `/v1/video/generations` |
 | `POST /v1/audio/generations` | OpenAI-compatible audio (text2speech) |
 | `GET  /v1/models` | list all model aliases (129 total) |
 | `GET  /v1/models?detail=1` | includes cost / catalogRefs / example body |

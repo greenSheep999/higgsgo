@@ -30,8 +30,8 @@ type Pool struct {
 	// direct if unset). Never nil after NewPool returns.
 	defaultClient *Client
 
-	mu       sync.Mutex
-	byProxy  map[string]*Client // keyed by proxy URL
+	mu      sync.Mutex
+	byProxy map[string]*Client // keyed by proxy URL
 	// buildErrs remembers the first build failure per URL so we don't
 	// hammer a broken proxy — a failed URL sticks to the fallback for
 	// the process lifetime. Cleared implicitly when Invalidate is

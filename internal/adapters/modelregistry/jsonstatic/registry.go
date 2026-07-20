@@ -672,9 +672,9 @@ func loadBodyTemplates(dir string) (map[string]bodyTemplate, error) {
 			return nil, fmt.Errorf("read body template %q: %w", e.Name(), err)
 		}
 		var raw struct {
-			Alias        string            `json:"alias"`
-			ExampleBody  json.RawMessage   `json:"exampleBody"`
-			CatalogRefs  map[string]string `json:"catalogRefs"`
+			Alias       string            `json:"alias"`
+			ExampleBody json.RawMessage   `json:"exampleBody"`
+			CatalogRefs map[string]string `json:"catalogRefs"`
 		}
 		if err := json.Unmarshal(body, &raw); err != nil {
 			return nil, fmt.Errorf("parse body template %q: %w", e.Name(), err)

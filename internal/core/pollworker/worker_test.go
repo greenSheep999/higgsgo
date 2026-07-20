@@ -49,11 +49,11 @@ type updateCall struct {
 
 // terminalCall captures one TryMarkTerminal invocation for assertions.
 type terminalCall struct {
-	id     string
-	from   []domain.JobStatus
-	to     domain.JobStatus
-	meta   ports.JobMeta
-	won    bool
+	id   string
+	from []domain.JobStatus
+	to   domain.JobStatus
+	meta ports.JobMeta
+	won  bool
 }
 
 func (s *fakeJobStore) Create(context.Context, *domain.Job) error { return nil }

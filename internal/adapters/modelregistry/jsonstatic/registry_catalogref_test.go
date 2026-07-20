@@ -176,11 +176,11 @@ func TestExtractFromCatalogTree(t *testing.T) {
 //     as refCatalog but resolves to zero ids, so we allowlist it
 //     rather than pretend the file is missing.
 var knownUnresolvedRefs = map[string]bool{
-	"spa-only-presets.json → nano_banana_animal":                                                                  true,
-	"spa-only-presets.json → cinema_studio_3_5_video_edit (SPA-generated artifact uuid tied to that parent)":      true,
+	"spa-only-presets.json → nano_banana_animal":                                                                              true,
+	"spa-only-presets.json → cinema_studio_3_5_video_edit (SPA-generated artifact uuid tied to that parent)":                  true,
 	"spa-only-presets.json → cinema_studio_3_5_video_edit (must be completed cinematic_studio_video_3_5 job in same account)": true,
-	"server/data/spa-only-presets.json → nano_banana_2_skin_enhancer.candidates[]":                                true,
-	"catalogs/reference_elements.json (must be user-created; empty by default)":                                   true,
+	"server/data/spa-only-presets.json → nano_banana_2_skin_enhancer.candidates[]":                                            true,
+	"catalogs/reference_elements.json (must be user-created; empty by default)":                                               true,
 	// marketing_brand_kits / marketing_products are on-disk catalogs
 	// that ship empty — the operator populates them via a scraper /
 	// user upload before use. Same "empty by default" shape as

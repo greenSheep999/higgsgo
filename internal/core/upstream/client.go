@@ -358,27 +358,27 @@ type Wallet struct {
 // operators route on strictly-positive values, so the fractional
 // precision matters.
 type UserSnapshot struct {
-	ID                        string  `json:"id"`
-	Email                     string  `json:"email"`
-	PlanType                  string  `json:"plan_type"`
-	SubscriptionCredits       float64 `json:"subscription_credits"`
-	PackageCredits            float64 `json:"package_credits"`
-	DailyCredits              float64 `json:"daily_credits"`
-	TotalPlanCredits          float64 `json:"total_plan_credits"`
-	BillingPeriod             string  `json:"billing_period"`
-	PlanEndsAt                string  `json:"plan_ends_at"`
-	HasUnlim                  bool    `json:"has_unlim"`
-	HasFlexUnlim              bool    `json:"has_flex_unlim"`
-	IsProVeo3Available        bool    `json:"is_pro_plan_veo3_available"`
-	Cohort                    string  `json:"cohort"`
-	WorkspaceID               string  `json:"workspace_id"`
-	FaceSwapCredits           float64 `json:"face_swap_credits"`
-	SoulCredits               float64 `json:"soul_credits"`
-	CharacterSwapCredits      float64 `json:"character_swap_credits"`
-	QwenCameraControlCredits  float64 `json:"qwen_camera_control_credits"`
-	Wan25VideoCredits         float64 `json:"wan2_5_video_credits"`
-	Text2KeyframesCredits     float64 `json:"text2keyframes_credits"`
-	Veo3FastGenerationsCount  float64 `json:"veo3_fast_generations_count"`
+	ID                       string  `json:"id"`
+	Email                    string  `json:"email"`
+	PlanType                 string  `json:"plan_type"`
+	SubscriptionCredits      float64 `json:"subscription_credits"`
+	PackageCredits           float64 `json:"package_credits"`
+	DailyCredits             float64 `json:"daily_credits"`
+	TotalPlanCredits         float64 `json:"total_plan_credits"`
+	BillingPeriod            string  `json:"billing_period"`
+	PlanEndsAt               string  `json:"plan_ends_at"`
+	HasUnlim                 bool    `json:"has_unlim"`
+	HasFlexUnlim             bool    `json:"has_flex_unlim"`
+	IsProVeo3Available       bool    `json:"is_pro_plan_veo3_available"`
+	Cohort                   string  `json:"cohort"`
+	WorkspaceID              string  `json:"workspace_id"`
+	FaceSwapCredits          float64 `json:"face_swap_credits"`
+	SoulCredits              float64 `json:"soul_credits"`
+	CharacterSwapCredits     float64 `json:"character_swap_credits"`
+	QwenCameraControlCredits float64 `json:"qwen_camera_control_credits"`
+	Wan25VideoCredits        float64 `json:"wan2_5_video_credits"`
+	Text2KeyframesCredits    float64 `json:"text2keyframes_credits"`
+	Veo3FastGenerationsCount float64 `json:"veo3_fast_generations_count"`
 }
 
 // FetchUser calls GET /user and returns the per-account entitlement snapshot.

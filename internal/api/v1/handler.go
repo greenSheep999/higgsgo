@@ -4,7 +4,8 @@
 //
 //	GET  /v1/models                     list of usable model aliases
 //	GET  /v1/models/{alias}             single-model detail
-//	POST /v1/videos/generations         create a video job
+//	POST /v1/video/generations          create a video job (new-api compatible; preferred)
+//	POST /v1/videos/generations         create a video job (higgsgo legacy alias)
 //	POST /v1/images/generations         create an image job
 //	POST /v1/audio/generations          create an audio (TTS) job
 //	GET  /v1/jobs/{id}                  poll an async job
@@ -335,12 +336,12 @@ type httpError struct {
 //     - zero bindings: returns [""] (default global pool).
 //     - one binding:   returns [that group's id].
 //     - multiple:      returns all bound group ids, sorted by name
-//       ascending. This is the ROADMAP P3-10 spillover list — Generate
-//       tries them in order and fails over on
-//       ErrGroupConcurrencyMax / ErrGroupQuotaExhausted /
-//       ErrNoEligibleAccount. Callers who need a specific group can
-//       still pin it via the explicit request body field, which
-//       short-circuits at tier 1.
+//     ascending. This is the ROADMAP P3-10 spillover list — Generate
+//     tries them in order and fails over on
+//     ErrGroupConcurrencyMax / ErrGroupQuotaExhausted /
+//     ErrNoEligibleAccount. Callers who need a specific group can
+//     still pin it via the explicit request body field, which
+//     short-circuits at tier 1.
 //
 // GroupStore errors are treated as best-effort failures: they are logged
 // (when logger is non-nil) but not surfaced to the caller — the request

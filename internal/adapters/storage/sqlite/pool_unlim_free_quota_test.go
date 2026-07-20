@@ -40,15 +40,15 @@ func TestAccountStore_UnlimActivations_ReplaceAndList(t *testing.T) {
 		SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
 		PlanType: domain.PlanPlus, Status: domain.StatusActive,
 		SubscriptionBalance: 100000,
-		RegisteredAt: now, ImportedAt: now,
+		RegisteredAt:        now, ImportedAt: now,
 	}))
 
 	// Seed two activations, in reverse alphabetical order to verify the
 	// List helper sorts by bundle_type ASC.
 	acts := []domain.UnlimActivation{
 		{
-			BundleType: "nano_banana_2_4k",
-			JobSetType: "nano_banana_pro_unlimited",
+			BundleType:  "nano_banana_2_4k",
+			JobSetType:  "nano_banana_pro_unlimited",
 			Resolutions: []string{"1k", "2k", "4k"},
 			ActivatedAt: now.Add(-1 * time.Hour),
 		},

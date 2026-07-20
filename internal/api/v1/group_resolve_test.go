@@ -1,6 +1,6 @@
 // Package v1 tests for the api-key → group auto-resolution helper.
 //
-// The generation handlers (POST /v1/videos/generations,
+// The generation handlers (POST /v1/video/generations,
 // POST /v1/images/generations) both delegate group scoping to the
 // resolveGroup helper. Rather than duplicate the same table-driven test in
 // videos_test.go and images_test.go, we cover the resolution behaviour

@@ -187,13 +187,13 @@ type Account struct {
 // dropped-to-zero value means the plan no longer grants that quota,
 // not a "keep the old value" signal.
 type FreeQuotaCounters struct {
-	FaceSwapCredits           float64
-	SoulCredits               float64
-	CharacterSwapCredits      float64
-	QwenCameraControlCredits  float64
-	Wan25VideoCredits         float64
-	Text2KeyframesCredits     float64
-	Veo3FastGenerationsCount  float64
+	FaceSwapCredits          float64
+	SoulCredits              float64
+	CharacterSwapCredits     float64
+	QwenCameraControlCredits float64
+	Wan25VideoCredits        float64
+	Text2KeyframesCredits    float64
+	Veo3FastGenerationsCount float64
 }
 
 // UnlimActivation is one row of the account_unlim_activations table.

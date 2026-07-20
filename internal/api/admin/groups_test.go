@@ -22,9 +22,9 @@ import (
 type fakeGroupStore struct {
 	// Data.
 	groups     map[string]*domain.Group
-	members    map[string][]string          // group id → account ids
-	memberPrio map[string]map[string]int    // group id → account id → priority
-	binds      map[string][]string          // group id → api key ids
+	members    map[string][]string       // group id → account ids
+	memberPrio map[string]map[string]int // group id → account id → priority
+	binds      map[string][]string       // group id → api key ids
 
 	// Injectable errors.
 	createErr error

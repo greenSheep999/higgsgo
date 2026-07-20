@@ -75,9 +75,9 @@ type ProbeResponse struct {
 }
 
 type ProbeBalance struct {
-	WorkspaceID   string `json:"workspace_id"`
-	Subscription  int64  `json:"subscription_hundredths"`
-	Credits       int64  `json:"credits_hundredths"`
+	WorkspaceID  string `json:"workspace_id"`
+	Subscription int64  `json:"subscription_hundredths"`
+	Credits      int64  `json:"credits_hundredths"`
 }
 
 type ProbeError struct {

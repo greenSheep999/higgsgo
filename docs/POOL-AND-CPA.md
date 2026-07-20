@@ -57,14 +57,15 @@
 ### Mode A: higgsgo self-managed (standalone)
 
 - User holds a higgsgo-issued API key (`sk-hg-xxx`)
-- Calls `https://higgsgo.example.com/v1/videos/generations` directly
+- Calls `https://higgsgo.example.com/v1/video/generations` (or the legacy
+  `/v1/videos/generations` alias) directly
 - higgsgo **ships its own WebUI** for pool management (`/admin/*`)
 - Billing, rate limiting, stats are all built into higgsgo
 
 ### Mode B: CPA-managed (plugin)
 
 - User holds an API key issued by the CPA platform (the existing CPA platform already has an API key / quota system)
-- User calls the CPA platform's endpoint (e.g. `https://cpa.example.com/v1/videos/generations`)
+- User calls the CPA platform's endpoint (e.g. `https://cpa.example.com/v1/video/generations`)
 - CPA internally forwards the request to higgsgo
 - Pool, API keys, and billing are all managed by CPA; higgsgo only provides **single-account executor capability** ("give me this account, run this job")
 

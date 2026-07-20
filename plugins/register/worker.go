@@ -8,7 +8,7 @@ import (
 
 // Worker is the background registration processor.
 type Worker struct {
-	flow *Flow
+	flow  *Flow
 	store RegistrationStore
 	cfg   Config
 	log   *slog.Logger
