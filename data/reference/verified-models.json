@@ -380,7 +380,7 @@
     {
       "alias": "cinematic-studio-2-5",
       "jst": "cinematic_studio_2_5",
-      "endpoint": "?",
+      "endpoint": "/jobs/v2/cinematic_studio_2_5",
       "version": "v1-hyphen",
       "output": "image",
       "cost_credits_h": 200,
@@ -779,7 +779,7 @@
     {
       "alias": "flux-kontext",
       "jst": "flux_kontext",
-      "endpoint": "?",
+      "endpoint": "/jobs/flux-kontext",
       "version": "v1-hyphen",
       "output": "image",
       "cost_credits_h": 500,

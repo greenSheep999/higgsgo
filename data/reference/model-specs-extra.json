@@ -253,8 +253,7 @@
     },
     "flux-kontext": {
       "max_resolution": "1k",
-      "min_plan": "starter",
-      "endpoint_status": "dead"
+      "min_plan": "starter"
     },
     "gpt-image": {
       "max_resolution": "1k",
@@ -351,8 +350,7 @@
       "min_plan": "starter"
     },
     "cinematic-studio-2-5": {
-      "min_plan": "starter",
-      "endpoint_status": "dead"
+      "min_plan": "starter"
     },
     "cinematic-studio-2-5-edit": {
       "min_plan": "starter"
