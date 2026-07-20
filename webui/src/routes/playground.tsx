@@ -416,6 +416,31 @@ function Playground() {
                   }),
                 })}
               </StatusBadge>
+              {/* v0.5.7+ enrichment chips. Rendered when the model
+                  has an unlim bundle or a free-quota grant so
+                  operators can see the load-balance router's
+                  optimization options at a glance. */}
+              {selectedModel.unlim_job_set_type ? (
+                <StatusBadge tone="success" title={
+                  `Unlim bundle available (${
+                    selectedModel.unlim_bundle_types?.join(", ") ?? ""
+                  }). Enable prefer_unlim in Settings to route to bundle holders first.`
+                }>
+                  {t("playground.unlimAvailable", {
+                    defaultValue: "unlim available",
+                  })}
+                </StatusBadge>
+              ) : null}
+              {selectedModel.free_quota_field ? (
+                <StatusBadge tone="info" title={
+                  `Free-quota field on the account: ${selectedModel.free_quota_field}. ` +
+                  `Enable prefer_free_quota in Settings to burn quota holders first.`
+                }>
+                  {t("playground.freeQuota", {
+                    defaultValue: "free quota",
+                  })}
+                </StatusBadge>
+              ) : null}
             </div>
           ) : null}
           <div className="flex gap-2">

@@ -319,6 +319,18 @@ export interface PlaygroundModel {
   starter_locked: boolean;
   allowed: boolean;
   blocked_reason?: string;
+  // v0.5.7+ enrichment (empty string / [] when not applicable):
+  // - unlim_job_set_type: the `_unlimited`-suffixed endpoint that the
+  //   model's unlim bundle unlocks. Presence signals "an unlim bundle
+  //   exists for this model".
+  // - unlim_bundle_types: the bundle SKUs (nano_banana_2_2k, ...) that
+  //   Plus/Pro/Ultra accounts can activate. The UI renders a chip per
+  //   entry so operators can see which SKU to purchase.
+  // - free_quota_field: /user field name (face_swap_credits, ...)
+  //   granting non-billable gens. Chip is rendered when non-empty.
+  unlim_job_set_type?: string;
+  unlim_bundle_types?: string[];
+  free_quota_field?: string;
 }
 
 export interface PlaygroundModelsResponse {
@@ -384,6 +396,16 @@ export interface PublicModel {
   // Longest duration the model can produce, in seconds. 0 when
   // unknown or when duration is not applicable (image models).
   max_duration_sec: number;
+  // v0.5.7+ enrichment (empty string / [] when not applicable):
+  // - unlim_job_set_type: `_unlimited`-suffixed endpoint unlocked by a
+  //   Plus/Pro/Ultra bundle purchase.
+  // - unlim_bundle_types: bundle SKUs (nano_banana_2_2k etc.) that
+  //   satisfy this model's unlim path.
+  // - free_quota_field: /user counter (face_swap_credits, soul_credits,
+  //   ...) granting non-billable gens on this model family.
+  unlim_job_set_type?: string;
+  unlim_bundle_types?: string[];
+  free_quota_field?: string;
 }
 
 // ModelOverride mirrors one row of the model_overrides table. Pointer-

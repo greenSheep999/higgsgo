@@ -207,7 +207,24 @@ func modelView(m *domain.ModelSpec) map[string]any {
 		"tags":             tags,
 		"max_resolution":   m.MaxResolution,
 		"max_duration_sec": m.MaxDurationSec,
+		// v0.5.7+ enrichment — surfaced so the SPA can render a
+		// "free quota" chip on models that have a per-family counter,
+		// and an "unlim available" chip on models that offer a bundle.
+		// Empty string / nil slice = "not applicable to this model".
+		"unlim_job_set_type": m.UnlimJobSetType,
+		"unlim_bundle_types": stringSliceOrEmpty(m.UnlimBundleTypes),
+		"free_quota_field":   m.FreeQuotaField,
 	}
+}
+
+// stringSliceOrEmpty guarantees a JSON array (never null) so the SPA
+// can .map without a nil branch. Matches the same treatment applied
+// to extra_aliases / tags / required_params above.
+func stringSliceOrEmpty(s []string) []string {
+	if s == nil {
+		return []string{}
+	}
+	return s
 }
 
 // parseOptionalBool reads a tri-state query flag: absent (returns nil,
