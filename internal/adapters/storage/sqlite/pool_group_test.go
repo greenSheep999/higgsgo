@@ -199,6 +199,87 @@ func TestAccountStore_PickAndLock_PerAccountCap(t *testing.T) {
 	}
 }
 
+// TestAccountStore_PickAndLock_AccountMaxConcurrent verifies the F4
+// audit fix: accounts.max_concurrent column is honoured by PickAndLock.
+// Set the row's cap to 1 and prove the second pick fails even when the
+// caller passes a looser group-level cap (10) via PickParams.
+//
+// The account cap must ALSO apply when the group-level cap is looser
+// (accounts.max_concurrent=1, PickParams cap=10 → effective cap = 1).
+// This is the intended precedence: MIN across both bounds.
+func TestAccountStore_PickAndLock_AccountMaxConcurrent(t *testing.T) {
+	db := openMem(t)
+	accStore := NewAccountStore(db)
+	ctx := context.Background()
+
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Single account with column-level cap = 1.
+	must(accStore.Upsert(ctx, &domain.Account{
+		ID: "acc_capped", Email: "capped@example.com", Password: "-", SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
+		PlanType: domain.PlanPlus, SubscriptionBalance: 100000, Status: domain.StatusActive,
+		MaxConcurrent: 1, // <-- the field under test
+		RegisteredAt:  time.Now(), ImportedAt: time.Now(),
+	}))
+
+	// First pick: allowed (in_flight=0 < column-cap=1).
+	if _, _, err := accStore.PickAndLock(ctx, ports.PickParams{
+		EstCostHundredths:       1000,
+		MaxConcurrentPerAccount: 10, // deliberately loose group cap
+	}); err != nil {
+		t.Fatalf("pick 1: %v", err)
+	}
+	// Second pick: must fail because in_flight (=1) is not below the
+	// column-level cap of 1, even though the group cap (10) still has room.
+	if _, _, err := accStore.PickAndLock(ctx, ports.PickParams{
+		EstCostHundredths:       1000,
+		MaxConcurrentPerAccount: 10,
+	}); err != domain.ErrNoEligibleAccount {
+		t.Errorf("over column-cap pick: got %v want ErrNoEligibleAccount", err)
+	}
+}
+
+// TestAccountStore_PickAndLock_ZeroAccountCapIsUnlimited verifies the
+// column's zero-means-unset semantics: an untouched account row
+// (max_concurrent=0, the default) must continue to obey only the group
+// / fallback caps, preserving the pre-F4 behaviour for existing
+// deployments that never touched this column.
+func TestAccountStore_PickAndLock_ZeroAccountCapIsUnlimited(t *testing.T) {
+	db := openMem(t)
+	accStore := NewAccountStore(db)
+	ctx := context.Background()
+
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// max_concurrent left at zero (the schema default).
+	must(accStore.Upsert(ctx, &domain.Account{
+		ID: "acc_open", Email: "open@example.com", Password: "-", SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
+		PlanType: domain.PlanPlus, SubscriptionBalance: 100000, Status: domain.StatusActive,
+		RegisteredAt: time.Now(), ImportedAt: time.Now(),
+	}))
+
+	// Three picks under a group cap of 3 must all succeed — the column
+	// cap of 0 must NOT be treated as "in_flight < 0".
+	for i := 1; i <= 3; i++ {
+		if _, _, err := accStore.PickAndLock(ctx, ports.PickParams{
+			EstCostHundredths:       1000,
+			MaxConcurrentPerAccount: 3,
+		}); err != nil {
+			t.Fatalf("pick %d with zero column cap: %v", i, err)
+		}
+	}
+}
+
 // TestAccountStore_ResetAllInFlight verifies the boot-time reconciliation
 // helper that clears leaked in_flight_jobs counters from prior crashes
 // (see docs/ROADMAP.md P0-2).

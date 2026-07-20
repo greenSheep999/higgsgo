@@ -439,10 +439,20 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 		}
 	}
 
-	// Per-account cap: fall back to the historical hardcoded 5 when the
-	// caller doesn't pass an explicit MaxConcurrentPerAccount. Non-zero
-	// values from ports.PickParams override so groups can lower or raise
-	// the cap for their members.
+	// Per-account cap precedence (F4 fix — 2026-07-20 audit):
+	//   1. accounts.max_concurrent column, when > 0, is the tightest
+	//      operator-facing knob (visible in WebUI, editable per-row).
+	//   2. ports.PickParams.MaxConcurrentPerAccount is the group-scoped
+	//      override callers pass in.
+	//   3. A hard fallback of 5 catches deployments where neither the
+	//      column nor the caller supplied a value — preserves the
+	//      pre-F4 behaviour.
+	//
+	// The account-column check is inlined into the WHERE clause below so
+	// SQLite can plan against `idx_accounts_pool` without needing a
+	// second CTE. The Go-side variable here carries the group/fallback
+	// cap; the SQL applies both bounds via AND, effectively an implicit
+	// MIN().
 	perAccountCap := params.MaxConcurrentPerAccount
 	if perAccountCap <= 0 {
 		perAccountCap = 5
@@ -457,6 +467,11 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 	// cooldown deadline has passed" (a lazy fallback so a Recoverer
 	// stall does not silently starve the pool). The Recoverer
 	// goroutine promotes the throttled row on its next tick.
+	//
+	// The `(max_concurrent = 0 OR in_flight_jobs < max_concurrent)`
+	// predicate enforces the account-column cap when the operator set
+	// one; a zero (the default) skips the check so untouched rows keep
+	// the group/fallback semantics unchanged.
 	q.WriteString(`
 		SELECT ` + accountColumns + `
 		FROM accounts
@@ -465,6 +480,7 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 		        OR (status = 'throttled' AND throttled_until IS NOT NULL AND throttled_until <= ?)
 		      )
 		  AND in_flight_jobs < ?
+		  AND (max_concurrent = 0 OR in_flight_jobs < max_concurrent)
 		  AND subscription_balance >= ?`)
 	args = append(args, fmtTime(time.Now()))
 	args = append(args, perAccountCap)
