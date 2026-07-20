@@ -10,13 +10,12 @@
 //   - proxy.Service snapshots acc.SubscriptionBalance before create and
 //     passes it as preBalance so the Recorder can compute the true actual
 //     credits consumed as (preBalance - post.SubscriptionBalance).
-//   - pollworker cannot easily snapshot preBalance (the create happened in
-//     a previous request), so it passes preBalance=0 and the Recorder
-//     falls back to job.UpstreamCost as the actual-credits estimate.
-//
-// This split accepts a small accuracy loss on async jobs in exchange for
-// keeping the jobs table schema slim. A future migration can add a
-// pre_balance_h column on jobs to make async attribution exact.
+//   - pollworker reads j.PreBalanceH — the pre-create snapshot persisted
+//     on the jobs row at create time — and passes it so the same delta
+//     path applies to async jobs. When PreBalanceH is zero (jobs that
+//     predate the column, or edge paths that skipped the snapshot) the
+//     Recorder falls back to job.UpstreamCost as the actual-credits
+//     estimate.
 package metering
 
 import (

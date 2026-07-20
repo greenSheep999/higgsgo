@@ -312,7 +312,16 @@ function Models() {
   // Build a jst -> uptime_pct map from real health data only. Models
   // with no health row show a distinct "no data" state — no
   // fabricated backfill (removed per docs/ROADMAP.md P2-7).
-  const all = catalog.data?.data ?? [];
+  //
+  // `all` is memoised on catalog.data?.data so downstream useMemo hooks
+  // (decorated, providerOptions, rows, detailRow) get a stable array
+  // identity between renders that don't change the catalog. Without
+  // this, react-hooks/exhaustive-deps flags the useMemo below and every
+  // parent render recomputes decorated / rows / providerOptions.
+  const all = useMemo(
+    () => catalog.data?.data ?? [],
+    [catalog.data?.data],
+  );
   const uptimeMap = useMemo(() => {
     const m = new Map<string, number | null>();
     for (const row of health.data ?? []) {

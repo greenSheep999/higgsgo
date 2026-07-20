@@ -56,9 +56,17 @@ export function ModelMultiSelect({ value, onChange, placeholder }: Props) {
   // rows. Memoised on the serialised regex so the identity is stable
   // between renders that don't actually change the selection — which
   // is what lets the memoised Row below skip re-rendering.
+  // `parsed` is recomputed every render (parseAnchoredList runs above
+  // unmemoised), so `parsed?.aliases` is a fresh array identity on
+  // every keystroke — depending on it directly would defeat the memo.
+  // Serialising to a stable key keeps the Set stable across renders
+  // that don't actually change the selection, which is what lets the
+  // memoised Row below skip re-rendering.
+  const aliasKey = parsed?.aliases?.join("|") ?? "";
   const selectedSet = useMemo(
     () => new Set(parsed?.aliases ?? []),
-    [parsed?.aliases?.join("|")],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on serialised aliasKey by design
+    [aliasKey],
   );
 
   // Stable callbacks so <Row> (memoised) only re-renders when its own
