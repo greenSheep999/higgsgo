@@ -37,7 +37,7 @@ func (s *ModelOverrideStore) Get(ctx context.Context, alias string) (*domain.Mod
 }
 
 // Upsert writes (or replaces) the override row for o.Alias. Every
-// pointer / slice field lands as NULL / '' when nil/empty so the
+// pointer / slice field lands as NULL / ” when nil/empty so the
 // merge helper falls back to spec defaults.
 func (s *ModelOverrideStore) Upsert(ctx context.Context, o *domain.ModelOverride) error {
 	if o == nil || o.Alias == "" {

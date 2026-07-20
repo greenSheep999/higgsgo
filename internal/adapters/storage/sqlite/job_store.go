@@ -468,16 +468,16 @@ func (s *JobStore) ListPending(ctx context.Context) ([]domain.Job, error) {
 // the SELECT lists in Get / ListPending exactly.
 func scanJob(sc scanner) (*domain.Job, error) {
 	var (
-		j              domain.Job
-		apiKeyID       sql.NullString
-		cpaPartnerID   sql.NullString
-		groupID        sql.NullString
-		upstreamJobID  sql.NullString
-		upstreamCost   sql.NullInt64
-		resultURL      sql.NullString
-		errorType      sql.NullString
-		errorDetail    sql.NullString
-		finishedAt     sql.NullString
+		j             domain.Job
+		apiKeyID      sql.NullString
+		cpaPartnerID  sql.NullString
+		groupID       sql.NullString
+		upstreamJobID sql.NullString
+		upstreamCost  sql.NullInt64
+		resultURL     sql.NullString
+		errorType     sql.NullString
+		errorDetail   sql.NullString
+		finishedAt    sql.NullString
 		// latency_ms is NULL for pending / running rows (only stamped
 		// at the terminal transition). Scan via NullInt64 so
 		// pool_collector + pollworker's ListPending don't crash on

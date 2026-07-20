@@ -16,8 +16,8 @@ import (
 // int64(50); non-integer floats and garbage return an error.
 func TestParseCreateResponse_CostIntAndFloat(t *testing.T) {
 	cases := []struct {
-		name    string
-		body    string
+		name     string
+		body     string
 		wantCost int64
 		wantErr  string // substring; empty means expect success
 	}{

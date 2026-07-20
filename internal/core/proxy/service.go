@@ -36,7 +36,7 @@ type Service struct {
 	Store    ports.AccountStore
 	Registry ports.ModelRegistry
 	Upstream *upstream.Client
-	Jobs     ports.JobStore // optional; when set every create is persisted
+	Jobs     ports.JobStore   // optional; when set every create is persisted
 	Groups   ports.GroupStore // optional; when set, group RouteStrategy is resolved
 	Logger   *slog.Logger
 	Clock    ports.Clock

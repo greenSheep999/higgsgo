@@ -336,12 +336,12 @@ type httpError struct {
 //     - zero bindings: returns [""] (default global pool).
 //     - one binding:   returns [that group's id].
 //     - multiple:      returns all bound group ids, sorted by name
-//       ascending. This is the ROADMAP P3-10 spillover list — Generate
-//       tries them in order and fails over on
-//       ErrGroupConcurrencyMax / ErrGroupQuotaExhausted /
-//       ErrNoEligibleAccount. Callers who need a specific group can
-//       still pin it via the explicit request body field, which
-//       short-circuits at tier 1.
+//     ascending. This is the ROADMAP P3-10 spillover list — Generate
+//     tries them in order and fails over on
+//     ErrGroupConcurrencyMax / ErrGroupQuotaExhausted /
+//     ErrNoEligibleAccount. Callers who need a specific group can
+//     still pin it via the explicit request body field, which
+//     short-circuits at tier 1.
 //
 // GroupStore errors are treated as best-effort failures: they are logged
 // (when logger is non-nil) but not surfaced to the caller — the request

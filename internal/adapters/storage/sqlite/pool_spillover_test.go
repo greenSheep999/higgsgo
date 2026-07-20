@@ -52,7 +52,7 @@ func TestPickAndLock_SpilloverContract(t *testing.T) {
 		ID: "acc_open", Email: "open@example.com",
 		Password: "-", SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
 		PlanType: domain.PlanPlus, SubscriptionBalance: 100000,
-		Status: domain.StatusActive,
+		Status:       domain.StatusActive,
 		RegisteredAt: time.Now(), ImportedAt: time.Now(),
 	}))
 	must(grpStore.AddMember(ctx, "grp_full", "acc_full", 100))

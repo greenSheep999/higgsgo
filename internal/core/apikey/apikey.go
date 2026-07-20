@@ -4,13 +4,13 @@
 // operator-facing "default" (admin console) key apart from a normal
 // downstream "project" key at a glance:
 //
-//	sk-hg-<40 hex chars>   — project keys (broadly-shared downstream)
-//	sk-adm-<40 hex chars>  — default keys (operator-only, admin console)
+//		sk-hg-<40 hex chars>   — project keys (broadly-shared downstream)
+//		sk-adm-<40 hex chars>  — default keys (operator-only, admin console)
 //
-//   - sk       = "secret key" (OpenAI convention)
-//   - hg / adm = higgsgo scope tag; the segment is what visually
-//     distinguishes the two kinds in logs and shoulder-surf glimpses
-//   - 20 random bytes → 40 hex chars
+//	  - sk       = "secret key" (OpenAI convention)
+//	  - hg / adm = higgsgo scope tag; the segment is what visually
+//	    distinguishes the two kinds in logs and shoulder-surf glimpses
+//	  - 20 random bytes → 40 hex chars
 //
 // Only the SHA-256 of the plaintext is persisted. We use SHA-256 instead of
 // bcrypt because API-key auth happens on every /v1 request and must be cheap

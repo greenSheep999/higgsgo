@@ -34,7 +34,7 @@ import (
 type fakeRegStore struct {
 	rows map[int64]*ports.Registration
 	// captures the last MarkCompleted args
-	completedID int64
+	completedID  int64
 	completedAcc string
 }
 

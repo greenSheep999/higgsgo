@@ -27,8 +27,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/greensheep999/higgsgo/internal/config"
 	v1 "github.com/greensheep999/higgsgo/internal/api/v1"
+	"github.com/greensheep999/higgsgo/internal/config"
 )
 
 // newVideoAliasTestServer builds the minimum Server needed to wire the

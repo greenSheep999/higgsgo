@@ -90,11 +90,11 @@ func (h *AccountsHandler) EligibleModels(w http.ResponseWriter, r *http.Request)
 		}
 		_ = reason
 		eligible = append(eligible, map[string]any{
-			"alias":     m.Alias,
-			"jst":       m.JST,
-			"output":    m.Output,
-			"est_cost":  float64(m.EstCostHundredths) / 100.0,
-			"unstable":  m.Unstable,
+			"alias":    m.Alias,
+			"jst":      m.JST,
+			"output":   m.Output,
+			"est_cost": float64(m.EstCostHundredths) / 100.0,
+			"unstable": m.Unstable,
 		})
 		switch m.Output {
 		case "image":
@@ -106,9 +106,9 @@ func (h *AccountsHandler) EligibleModels(w http.ResponseWriter, r *http.Request)
 		}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
-		"account_id":  acc.ID,
-		"total":       len(all),
-		"eligible":    len(eligible),
+		"account_id": acc.ID,
+		"total":      len(all),
+		"eligible":   len(eligible),
 		"by_output": map[string]int{
 			"image": eligibleImage,
 			"video": eligibleVideo,
@@ -124,6 +124,7 @@ func (h *AccountsHandler) EligibleModels(w http.ResponseWriter, r *http.Request)
 //   - RequiresPaid  → PlanType.IsPaid()
 //   - RequiresUltra → PlanType in {ultra, ultimate, scale, creator, team, enterprise}
 //   - RequiresUnlim → HasUnlim (any flavour)
+//
 // Returns (true, "") when the account can run the model, or
 // (false, reason) with a short human-readable reason otherwise.
 func accountCanRun(a *domain.Account, m *domain.ModelSpec) (bool, string) {

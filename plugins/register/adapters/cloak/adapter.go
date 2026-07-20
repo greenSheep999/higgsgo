@@ -30,12 +30,22 @@ func (a *Automator) Launch(_ context.Context, _ register.LaunchOpts) (register.B
 // Session is a placeholder that satisfies BrowserSession.
 type Session struct{}
 
-func (s *Session) Goto(_ context.Context, _ string) error                         { return fmt.Errorf("not implemented") }
-func (s *Session) Fill(_ context.Context, _, _ string) error                      { return fmt.Errorf("not implemented") }
-func (s *Session) Click(_ context.Context, _ string) error                        { return fmt.Errorf("not implemented") }
-func (s *Session) WaitFor(_ context.Context, _ string, _ time.Duration) error     { return fmt.Errorf("not implemented") }
-func (s *Session) Cookies(_ context.Context) ([]register.Cookie, error)           { return nil, fmt.Errorf("not implemented") }
-func (s *Session) LocalStorage(_ context.Context, _ string) (string, error)       { return "", fmt.Errorf("not implemented") }
-func (s *Session) UserAgent(_ context.Context) (string, error)                    { return "", fmt.Errorf("not implemented") }
-func (s *Session) EvalJS(_ context.Context, _ string) (string, error)             { return "", fmt.Errorf("not implemented") }
-func (s *Session) Close() error                                                   { return nil }
+func (s *Session) Goto(_ context.Context, _ string) error    { return fmt.Errorf("not implemented") }
+func (s *Session) Fill(_ context.Context, _, _ string) error { return fmt.Errorf("not implemented") }
+func (s *Session) Click(_ context.Context, _ string) error   { return fmt.Errorf("not implemented") }
+func (s *Session) WaitFor(_ context.Context, _ string, _ time.Duration) error {
+	return fmt.Errorf("not implemented")
+}
+func (s *Session) Cookies(_ context.Context) ([]register.Cookie, error) {
+	return nil, fmt.Errorf("not implemented")
+}
+func (s *Session) LocalStorage(_ context.Context, _ string) (string, error) {
+	return "", fmt.Errorf("not implemented")
+}
+func (s *Session) UserAgent(_ context.Context) (string, error) {
+	return "", fmt.Errorf("not implemented")
+}
+func (s *Session) EvalJS(_ context.Context, _ string) (string, error) {
+	return "", fmt.Errorf("not implemented")
+}
+func (s *Session) Close() error { return nil }
