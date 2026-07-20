@@ -491,28 +491,13 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 		s.Failover.RecordError(ctx, acc.ID, err, err.Error())
 		return nil, mapUpstreamError(err, spec)
 	}
-	// Also update the DB row so the pollworker skips this job on its next tick.
-	if s.Jobs != nil {
-		terminalStatus := domain.JobStatus(final.Status)
-		if terminalStatus == "failed" && final.Refunded {
-			terminalStatus = domain.JobRefunded
-		} else if terminalStatus == "completed" {
-			terminalStatus = domain.JobCompleted
-		} else if terminalStatus == "failed" {
-			terminalStatus = domain.JobFailed
-		}
-		_ = s.Jobs.UpdateStatus(ctx, created.JobID, terminalStatus, ports.JobMeta{
-			ResultURL: final.ResultURL,
-			LatencyMS: s.now().Sub(requestTS).Milliseconds(),
-			Refunded:  final.Refunded,
-		})
-	}
-
 	// Feed the failover controller with the terminal outcome. Only a
 	// "completed" upstream status counts as a healthy run — a "failed"
 	// / "nsfw" / "terminated" job is a content-level outcome (see the
 	// design doc §8.1) and MUST NOT count against the account.
-	// RecordSuccess is nil-safe.
+	// RecordSuccess is nil-safe. Runs independently of the CAS below
+	// because failover feedback is idempotent and the winner may be the
+	// pollworker rather than this sync call.
 	if final.Status == "completed" {
 		s.Failover.RecordSuccess(ctx, acc.ID)
 	}
@@ -548,11 +533,50 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 		FinishedAt:    s.now(),
 	}
 
+	// F1 compare-and-swap: only one observer of the terminal transition
+	// (this sync path OR the background pollworker) may run metering /
+	// webhook. TryMarkTerminal atomically moves the jobs row into
+	// terminalStatus iff it is still queued / pending / in_progress; the
+	// won flag tells us whether we or the pollworker performed the write.
+	//
+	// When we lose the race the winner has already recorded the
+	// usage_event, fired the webhook, and released the in-flight slot,
+	// so we skip all three here. The API response still returns the
+	// terminal outcome because we observed it via PollUntilTerminal —
+	// only the side effects are gated.
+	won := true
+	if s.Jobs != nil {
+		var casErr error
+		won, casErr = s.Jobs.TryMarkTerminal(ctx, created.JobID,
+			[]domain.JobStatus{domain.JobQueued, domain.JobPending, domain.JobRunning},
+			terminalStatus,
+			ports.JobMeta{
+				ResultURL: final.ResultURL,
+				LatencyMS: latency,
+				Refunded:  final.Refunded,
+			})
+		if casErr != nil && s.Logger != nil {
+			s.Logger.Warn("terminal CAS failed",
+				slog.String("job_id", created.JobID),
+				slog.String("err", casErr.Error()))
+		}
+		if !won && s.Logger != nil {
+			s.Logger.Info("terminal CAS lost race — pollworker or another observer already terminated",
+				slog.String("job_id", created.JobID),
+				slog.String("status", string(terminalStatus)))
+		}
+	}
+
 	// Metering: emit a usage event now that we know the terminal outcome.
 	// Fetch the account again to observe the post-job balance so we can
 	// compute actual credits consumed. Best-effort — a missing account or
 	// a metering failure must not block the API response.
-	if s.Meter != nil {
+	//
+	// Gated on `won` so a concurrent pollworker terminal cannot cause a
+	// double insert. The UNIQUE index on usage_events(higgsgo_job_id)
+	// (migration 018) is a second line of defence if this gate ever
+	// regresses.
+	if won && s.Meter != nil {
 		freshAcc, getErr := s.Store.Get(ctx, acc.ID)
 		if getErr != nil || freshAcc == nil {
 			// Fall back to the stale copy; Recorder will use upstream_cost
@@ -561,9 +585,18 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 		}
 		markup := s.resolveMarkup(ctx, req.APIKeyID)
 		if err := s.Meter.OnJobTerminal(ctx, mJob, freshAcc, preBalance, markup); err != nil && s.Logger != nil {
-			s.Logger.Warn("metering failed",
-				slog.String("job_id", created.JobID),
-				slog.String("err", err.Error()))
+			// domain.ErrUsageEventDuplicate can only surface here if the
+			// F1 CAS gate above regressed AND the migration-018 UNIQUE
+			// index caught the double insert. Not a real failure — log
+			// at debug so operators are not paged for a race outcome.
+			if errors.Is(err, domain.ErrUsageEventDuplicate) {
+				s.Logger.Debug("metering skipped (duplicate)",
+					slog.String("job_id", created.JobID))
+			} else {
+				s.Logger.Warn("metering failed",
+					slog.String("job_id", created.JobID),
+					slog.String("err", err.Error()))
+			}
 		}
 	}
 
@@ -571,7 +604,10 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 	// latency or retries. Only fires when the caller supplied a callback URL
 	// AND a Dispatcher is wired in — otherwise this branch is a no-op. The
 	// pollworker owns the analogous fire on the async path.
-	if s.Webhooks != nil && req.CallbackURL != "" {
+	//
+	// Also gated on `won` so we do not double-notify callers when the
+	// pollworker witnessed the same terminal transition.
+	if won && s.Webhooks != nil && req.CallbackURL != "" {
 		s.Webhooks.Fire(req.CallbackURL, mJob)
 	}
 

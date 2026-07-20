@@ -58,6 +58,12 @@ func groupByExpression(col string) string {
 }
 
 // Insert writes a single UsageEvent row.
+//
+// The UNIQUE index on usage_events(higgsgo_job_id) (migration 018) turns a
+// duplicate call into domain.ErrUsageEventDuplicate rather than a hard error
+// — that lets the caller treat "another observer already recorded this
+// terminal" as a benign race outcome. See internal/domain/errors.go and the
+// F1 idempotency work in core/proxy + core/pollworker.
 func (s *UsageEventStore) Insert(ctx context.Context, e *domain.UsageEvent) error {
 	if e == nil {
 		return errors.New("insert usage event: nil event")
@@ -92,9 +98,30 @@ func (s *UsageEventStore) Insert(ctx context.Context, e *domain.UsageEvent) erro
 		e.BillingMonth, e.BillingDay,
 	)
 	if err != nil {
+		if isUniqueUsageEventJobID(err) {
+			return domain.ErrUsageEventDuplicate
+		}
 		return fmt.Errorf("insert usage event %s: %w", e.ID, err)
 	}
 	return nil
+}
+
+// isUniqueUsageEventJobID reports whether err is the SQLite UNIQUE
+// constraint violation on usage_events.higgsgo_job_id installed by
+// migration 018. modernc.org/sqlite formats these as
+//
+//	"constraint failed: UNIQUE constraint failed: usage_events.higgsgo_job_id (2067)"
+//
+// so a substring match keeps the check driver-agnostic without pulling
+// the sqlite lib package into this file just to compare error codes.
+// Kept private to the sqlite adapter; callers see domain.ErrUsageEventDuplicate.
+func isUniqueUsageEventJobID(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "UNIQUE constraint failed") &&
+		strings.Contains(msg, "usage_events.higgsgo_job_id")
 }
 
 // Query returns UsageEvent rows matching the filter, newest first.

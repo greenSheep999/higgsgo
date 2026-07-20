@@ -177,6 +177,9 @@ func (f *fakeJobStore) Create(context.Context, *domain.Job) error { return nil }
 func (f *fakeJobStore) UpdateStatus(context.Context, string, domain.JobStatus, ports.JobMeta) error {
 	return nil
 }
+func (f *fakeJobStore) TryMarkTerminal(context.Context, string, []domain.JobStatus, domain.JobStatus, ports.JobMeta) (bool, error) {
+	return true, nil
+}
 func (f *fakeJobStore) Get(context.Context, string) (*domain.Job, error) {
 	return nil, domain.ErrJobNotFound
 }

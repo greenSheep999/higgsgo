@@ -35,6 +35,15 @@ var (
 
 	ErrJobNotFound = errors.New("job not found")
 
+	// ErrUsageEventDuplicate is returned by UsageEventStore.Insert when a
+	// row with the same higgsgo_job_id already exists. Callers should
+	// treat this as "another observer already recorded this terminal
+	// transition — skip retrying"; it is a race outcome from the F1 fix
+	// (concurrent sync + pollworker terminals) and not a corruption
+	// signal. Metering.Recorder distinguishes it from other insert
+	// failures so the log level stays at debug.
+	ErrUsageEventDuplicate = errors.New("usage event already recorded for this job")
+
 	// ErrSettingNotFound is returned by SettingsStore.Get when the key
 	// has no row. Callers that expect a fallback (e.g. TOML defaults)
 	// should treat this as "no override" rather than propagating it.

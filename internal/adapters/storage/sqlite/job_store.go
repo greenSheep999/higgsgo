@@ -55,8 +55,122 @@ func (s *JobStore) Create(ctx context.Context, j *domain.Job) error {
 	return nil
 }
 
+// TryMarkTerminal atomically moves a job into `to` iff its current status
+// is in `from`. Returns won=true when this call performed the write; a
+// won=false result means another observer (sync path vs pollworker) already
+// terminated the job and this caller MUST skip its side effects — metering,
+// webhook fire, and in-flight release — because the winner already ran
+// them. See F1 in the ROADMAP.
+//
+// meta fields are applied only when this call wins: the columns follow the
+// same "append when non-zero" shape as UpdateStatus so the winner's outcome
+// (result URL, latency, poll count, actual/charged credits, refund flag)
+// lands on the row, while a loser's staler snapshot cannot overwrite it.
+//
+// This is intentionally NOT a general-purpose UpdateStatus replacement.
+// Non-terminal progress writes (queued → in_progress, per-tick poll_count
+// bumps) still go through UpdateStatus; only the terminal transition needs
+// the CAS guard.
+//
+// A won=false outcome is NOT an error — it is a race-lost signal. Real
+// errors (bad SQL, closed DB) still bubble up as err != nil.
+func (s *JobStore) TryMarkTerminal(
+	ctx context.Context,
+	id string,
+	from []domain.JobStatus,
+	to domain.JobStatus,
+	meta ports.JobMeta,
+) (bool, error) {
+	if len(from) == 0 {
+		// A caller with no from statuses has misconfigured the guard;
+		// refuse to touch the row rather than degrade to an unguarded
+		// UPDATE.
+		return false, fmt.Errorf("try mark terminal %s: from statuses required", id)
+	}
+	if !isTerminal(to) {
+		// Defence in depth: TryMarkTerminal is for terminal transitions
+		// only. A caller trying to CAS into a non-terminal state (e.g.
+		// in_progress) should keep using UpdateStatus.
+		return false, fmt.Errorf("try mark terminal %s: %q is not a terminal status", id, to)
+	}
+
+	now := fmtTime(time.Now())
+	q := `UPDATE jobs SET status = ?, last_poll_at = ?, finished_at = ?`
+	args := []any{string(to), now, now}
+	if meta.UpstreamJobID != "" {
+		q += `, upstream_job_id = ?`
+		args = append(args, meta.UpstreamJobID)
+	}
+	if meta.ResultURL != "" {
+		q += `, result_url = ?`
+		args = append(args, meta.ResultURL)
+	}
+	if meta.ErrorType != "" {
+		q += `, error_type = ?`
+		args = append(args, string(meta.ErrorType))
+	}
+	if meta.ErrorDetail != "" {
+		q += `, error_detail = ?`
+		args = append(args, meta.ErrorDetail)
+	}
+	if meta.LatencyMS > 0 {
+		q += `, latency_ms = ?`
+		args = append(args, meta.LatencyMS)
+	}
+	if meta.PollCount > 0 {
+		q += `, poll_count = ?`
+		args = append(args, meta.PollCount)
+	}
+	if meta.ActualCreditsHundredths != 0 {
+		q += `, actual_credits_h = ?`
+		args = append(args, meta.ActualCreditsHundredths)
+	}
+	if meta.ChargedCreditsHundredths != 0 {
+		q += `, charged_credits_h = ?`
+		args = append(args, meta.ChargedCreditsHundredths)
+	}
+	if meta.Refunded {
+		q += `, refunded = 1`
+	}
+
+	// Expand from-status placeholders inline to preserve parameterisation
+	// (no string interpolation of caller-supplied statuses).
+	placeholders := make([]string, len(from))
+	for i, st := range from {
+		placeholders[i] = "?"
+		_ = st // used below
+	}
+	q += ` WHERE id = ? AND status IN (` + strings.Join(placeholders, ",") + `)`
+	args = append(args, id)
+	for _, st := range from {
+		args = append(args, string(st))
+	}
+
+	res, err := s.db.ExecContext(ctx, q, args...)
+	if err != nil {
+		return false, fmt.Errorf("try mark terminal %s: %w", id, err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("try mark terminal %s rows affected: %w", id, err)
+	}
+	// n == 0 has two possible causes: (a) the row exists but its status
+	// is already outside `from` — the race-loss case — or (b) the row
+	// does not exist at all. Both are treated as "lost the race, do not
+	// run side effects". We deliberately do NOT return ErrJobNotFound
+	// here: a caller that has been polling a live job just witnessed
+	// another observer terminate it, which is exactly the F1 race path.
+	return n == 1, nil
+}
+
 // UpdateStatus records a status transition (queued → in_progress → completed/failed/etc).
 // meta.LatencyMS / meta.PollCount / meta.ResultURL are applied when non-zero.
+//
+// Terminal transitions should use TryMarkTerminal instead so metering /
+// webhook / in-flight release can be gated on a single winner. UpdateStatus
+// remains the right call for non-terminal progress writes and for the
+// metering back-fill in core/metering (where UpdateStatus's ErrJobNotFound
+// return is load-bearing for "cf_*" synthetic-id rows without a jobs row).
 func (s *JobStore) UpdateStatus(ctx context.Context, id string, status domain.JobStatus, meta ports.JobMeta) error {
 	// Build UPDATE dynamically so we don't clobber fields set by prior calls.
 	q := `UPDATE jobs SET status = ?, last_poll_at = ?`

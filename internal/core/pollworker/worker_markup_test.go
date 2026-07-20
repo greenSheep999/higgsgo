@@ -160,9 +160,11 @@ func TestWorker_MarkupZeroOnAPIKeyGetError(t *testing.T) {
 		t.Errorf("markup on Get error: got %v want 0 (fallback)", got)
 	}
 	// And the terminal transition still happened — otherwise metering ran
-	// on a still-queued job, which the Recorder would refuse.
-	if len(jobs.updates) == 0 {
-		t.Errorf("expected terminal UpdateStatus despite APIKey lookup error")
+	// on a still-queued job, which the Recorder would refuse. F1 moved
+	// the terminal writer from UpdateStatus to TryMarkTerminal, so the
+	// assertion now looks at the terminals slice.
+	if len(jobs.terminals) == 0 {
+		t.Errorf("expected terminal TryMarkTerminal despite APIKey lookup error")
 	}
 }
 

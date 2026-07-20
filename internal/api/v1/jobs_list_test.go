@@ -41,6 +41,12 @@ func (f *fakeJobStoreForList) UpdateStatus(context.Context, string, domain.JobSt
 	panic("not implemented")
 }
 
+// TryMarkTerminal is unused by the /v1/jobs surface but required by the
+// ports.JobStore interface (F1). Panics to keep the /v1 handler honest.
+func (f *fakeJobStoreForList) TryMarkTerminal(context.Context, string, []domain.JobStatus, domain.JobStatus, ports.JobMeta) (bool, error) {
+	panic("not implemented")
+}
+
 func (f *fakeJobStoreForList) Get(context.Context, string) (*domain.Job, error) {
 	panic("not implemented")
 }

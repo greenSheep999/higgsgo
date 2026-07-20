@@ -32,12 +32,28 @@ type fakeJobStore struct {
 	mu      sync.Mutex
 	pending []domain.Job
 	updates []updateCall
+	// terminals records every TryMarkTerminal call so tests can assert
+	// on the compare-and-swap gate added by F1. The default winWhen
+	// behaviour returns true so pre-F1 tests still see the pollworker
+	// run its terminal side effects; tests that model the race set
+	// winWhen to a stub that returns false to simulate a lost CAS.
+	terminals []terminalCall
+	winWhen   func(id string, from []domain.JobStatus, to domain.JobStatus) bool
 }
 
 type updateCall struct {
 	id     string
 	status domain.JobStatus
 	meta   ports.JobMeta
+}
+
+// terminalCall captures one TryMarkTerminal invocation for assertions.
+type terminalCall struct {
+	id     string
+	from   []domain.JobStatus
+	to     domain.JobStatus
+	meta   ports.JobMeta
+	won    bool
 }
 
 func (s *fakeJobStore) Create(context.Context, *domain.Job) error { return nil }
@@ -47,6 +63,22 @@ func (s *fakeJobStore) UpdateStatus(_ context.Context, id string, status domain.
 	defer s.mu.Unlock()
 	s.updates = append(s.updates, updateCall{id: id, status: status, meta: meta})
 	return nil
+}
+
+// TryMarkTerminal satisfies ports.JobStore for F1. Defaults to won=true so
+// existing tests keep observing the pollworker running its terminal side
+// effects. Tests that need to simulate a lost race set winWhen.
+func (s *fakeJobStore) TryMarkTerminal(_ context.Context, id string, from []domain.JobStatus, to domain.JobStatus, meta ports.JobMeta) (bool, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	won := true
+	if s.winWhen != nil {
+		won = s.winWhen(id, from, to)
+	}
+	s.terminals = append(s.terminals, terminalCall{
+		id: id, from: from, to: to, meta: meta, won: won,
+	})
+	return won, nil
 }
 
 func (s *fakeJobStore) Get(context.Context, string) (*domain.Job, error) { return nil, nil }

@@ -1,0 +1,31 @@
+-- 018_usage_events_unique_job_id.sql
+--
+-- Enforce at most one usage_events row per higgsgo_job_id.
+--
+-- Before this migration the schema shipped only non-unique secondary
+-- indexes (idx_usage_apikey_month / _cpa_month / _group_day / _account_day /
+-- _model_day; see 001_init.sql:172-176). That let two independent observers
+-- of the same terminal transition — the sync path in core/proxy/service.go
+-- and the background pollworker in core/pollworker/worker.go — both call
+-- metering.Recorder.OnJobTerminal for the same job, producing duplicate
+-- usage_events rows: dashboards and monthly bills would then double-count
+-- credits and API-key usage counters would drift.
+--
+-- The application-level fix (F1) gates metering + webhook + in-flight
+-- release on a compare-and-swap on jobs.status: only one observer wins the
+-- transition and runs the side effects. This UNIQUE index is defence in
+-- depth against that CAS window and against any future path that forgets to
+-- gate — the accounting rows themselves are now unique by higgsgo_job_id.
+--
+-- Note on synthetic "cf_..." ids:
+--   The sync path emits a metering event for CreateJob failures with a
+--   locally minted id from idgen.NewID("cf") (see e39abb9 and
+--   internal/util/idgen/idgen.go). That helper embeds a 12-hex-char
+--   random suffix on every call, so distinct create-failures produce
+--   distinct ids and this full UNIQUE index — not a partial one — is
+--   safe. If that generator ever loses its random suffix, this constraint
+--   would surface the collision loudly instead of silently double-billing.
+--
+-- Idempotent (IF NOT EXISTS) and forward-only.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_usage_events_higgsgo_job_id
+    ON usage_events(higgsgo_job_id);

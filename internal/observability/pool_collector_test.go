@@ -87,6 +87,9 @@ func (s *stubJobStore) Create(context.Context, *domain.Job) error { return nil }
 func (s *stubJobStore) UpdateStatus(context.Context, string, domain.JobStatus, ports.JobMeta) error {
 	return nil
 }
+func (s *stubJobStore) TryMarkTerminal(context.Context, string, []domain.JobStatus, domain.JobStatus, ports.JobMeta) (bool, error) {
+	return true, nil
+}
 func (s *stubJobStore) Get(context.Context, string) (*domain.Job, error) { return nil, nil }
 func (s *stubJobStore) ListByAPIKey(ctx context.Context, k string, f ports.JobFilter) ([]domain.Job, error) {
 	if s.listByAPIKeyFn != nil {
