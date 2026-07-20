@@ -188,13 +188,11 @@ func (s *Server) publicRouter() http.Handler {
 	}
 
 	r.Get("/health", s.healthHandler)
-	if s.Metrics != nil {
-		// Public /metrics has no auth for now — Prometheus scrapers
-		// typically hit an unauthenticated endpoint bound to a private
-		// interface. TODO: gate with an IP allowlist or move behind the
-		// admin listener once we have a Prom scraper story.
-		r.Method(http.MethodGet, "/metrics", s.Metrics.Handler())
-	}
+	// /metrics is intentionally NOT mounted on the public listener. It
+	// was moved to the admin listener behind BearerAuth to avoid leaking
+	// route cardinality, error rates, and traffic patterns to any
+	// internet-facing caller. See adminRouter() and
+	// server_metrics_auth_test.go for the new mount + regression tests.
 
 	if s.V1 != nil {
 		r.Route("/v1", func(r chi.Router) {
@@ -271,6 +269,19 @@ func (s *Server) adminRouter() http.Handler {
 	}
 
 	r.Get("/health", s.healthHandler)
+
+	// /metrics lives on the admin listener behind BearerAuth. Prom
+	// scrapers reach it with the same admin bearer every other admin
+	// route uses; the public listener has no /metrics route at all.
+	// Nil-safe: when Server.Metrics is unset the whole route is skipped
+	// and the SPA fallback below claims the path — see
+	// server_metrics_auth_test.go for the regression coverage.
+	if s.Metrics != nil {
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.BearerAuth(s.adminBearerAccepter()))
+			r.Method(http.MethodGet, "/metrics", s.Metrics.Handler())
+		})
+	}
 
 	// Mirror the playground surface on the admin listener so the WebUI
 	// can drive it through a single base URL (VITE_HIGGSGO_ADMIN_URL).
