@@ -48,9 +48,9 @@ Fields you can set in the DB / admin API / WebUI that **have no runtime effect**
 | `group.allowed_models_regex` | `group_store.go` | ✅ **Enforced** (P1-4 landed). `proxy.Service.enforceGroupGates` runs the compiled regex against the resolved alias before pick; miss → `ErrModelNotAllowed` → HTTP 403 `model_not_allowed`. Invalid pattern logs WARN and fails open. |
 | `group.blocked_models_regex` | `group_store.go` | ✅ **Enforced** (P1-4 landed). Same gate; match → `ErrModelBlocked` → HTTP 403 `model_blocked`. Blocked wins over allowed when both patterns match. |
 | `group.monthly_credit_budget` / `monthly_credit_used` | `group_store.go` | ✅ **Enforced** (P1-4 landed). Pre-pick gate compares `MonthlyCreditUsed + EstCost` against `MonthlyCreditBudget`; over → `ErrGroupQuotaExhausted` → HTTP 402 `group_budget_exhausted`. `metering.Recorder.OnJobTerminal` now calls `GroupStore.IncrementUsed` at every non-zero terminal so the counter actually climbs. Zero budget disables the gate. |
-| `account.max_concurrent` | migration `016` | **Ignored.** Never read by pick path. |
+| `account.max_concurrent` | `account_store.go` PickAndLock WHERE | ✅ **Enforced** (F4 fix, 2026-07-20 review). `(max_concurrent = 0 OR in_flight_jobs < max_concurrent)` in the pick predicate. Zero preserves the pre-F4 group/fallback semantics; non-zero acts as an implicit `MIN()` with the group cap. |
 | `AvailableSlots()` | `domain/account.go:140-149` | Const `upstreamLimit = 6` diverges from the enforced literal `5`. |
-| `cfg.Pool.MaxInFlightPerAccount` | `config.go:227,329` | **Ignored** by pick path. Only surfaced by config parser. |
+| `cfg.Pool.MaxInFlightPerAccount` | `config.go:227,329`, `proxy.Service.MaxInFlightPerAccountDefault` | ✅ **Enforced** (2026-07-20 review). Wired through `proxy.Service.MaxInFlightPerAccountDefault` in `main.go`; the pick path prefers `group.max_concurrent_per_account` when set and falls back to this value (then to hardcoded `5`). |
 
 ### UI-only placeholders (resolved)
 

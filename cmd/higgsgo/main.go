@@ -285,19 +285,20 @@ func run() error {
 	}()
 
 	svc := &proxy.Service{
-		Store:            accountStore,
-		Registry:         registry,
-		Upstream:         upstreamClient,
-		Jobs:             jobStore,
-		Groups:           groupStore,
-		Logger:           logger,
-		Clock:            ports.RealClock{},
-		AsyncByDefault:   true,
-		SyncPollDeadline: 3 * time.Minute,
-		APIKeys:          apiKeyStore,
-		Meter:            meter,
-		Webhooks:         webhooks,
-		Failover:         failoverCtl,
+		Store:                        accountStore,
+		Registry:                     registry,
+		Upstream:                     upstreamClient,
+		Jobs:                         jobStore,
+		Groups:                       groupStore,
+		Logger:                       logger,
+		Clock:                        ports.RealClock{},
+		AsyncByDefault:               true,
+		SyncPollDeadline:             3 * time.Minute,
+		APIKeys:                      apiKeyStore,
+		Meter:                        meter,
+		Webhooks:                     webhooks,
+		Failover:                     failoverCtl,
+		MaxInFlightPerAccountDefault: cfg.Pool.MaxInFlightPerAccount,
 	}
 	v1h := v1.New(svc, registry, jobStore, groupStore, apiKeyStore)
 	v1h.Logger = logger

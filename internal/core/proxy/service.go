@@ -76,6 +76,17 @@ type Service struct {
 	// Default 3m. Beyond this we return the job as queued and the client
 	// polls GET /v1/jobs/{id} (backed by the pollworker).
 	SyncPollDeadline time.Duration
+
+	// MaxInFlightPerAccountDefault is the deployment-wide fallback cap on
+	// concurrent jobs per account. Applied via PickParams when neither
+	// accounts.max_concurrent (per-row) nor group.max_concurrent_per_account
+	// (per-group) yield a tighter value. Zero preserves the store's
+	// historical hardcoded fallback of 5, so a deployment that leaves the
+	// TOML default untouched behaves identically to pre-F4.
+	//
+	// Precedence (tightest wins): accounts.max_concurrent (F4) &
+	// group.max_concurrent_per_account & this field & 5.
+	MaxInFlightPerAccountDefault int
 }
 
 // GenerationRequest is the normalized shape produced by the /v1 handler
@@ -249,6 +260,15 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 			}
 			return nil, gateErr
 		}
+		// Per-account cap precedence: prefer the group value, then fall
+		// back to the deployment default so a group that leaves
+		// MaxConcurrentPerAccount at zero (the common case) still
+		// respects the operator's TOML setting. Zero from both sources
+		// lets the store apply its hardcoded fallback (5).
+		perAcctCap := p.MaxConcurrentPerAccount
+		if perAcctCap == 0 {
+			perAcctCap = s.MaxInFlightPerAccountDefault
+		}
 		pickParams := ports.PickParams{
 			JST:                     spec.JST,
 			EstCostHundredths:       spec.EstCostHundredths,
@@ -257,7 +277,7 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 			GroupID:                 gid,
 			RouteStrategy:           p.RouteStrategy,
 			MaxGroupInFlight:        p.MaxGroupInFlight,
-			MaxConcurrentPerAccount: p.MaxConcurrentPerAccount,
+			MaxConcurrentPerAccount: perAcctCap,
 		}
 		var err error
 		acc, lockToken, err = s.Store.PickAndLock(ctx, pickParams)
@@ -403,9 +423,15 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 	}
 
 	// Persist to jobs table so the pollworker (and future /v1/jobs/{id})
-	// can pick it up. Best-effort: if the store call fails we still return
-	// the created job to the caller and log the error.
+	// can pick it up. Track whether the row actually landed — a Create
+	// failure changes the terminal-handling semantics below: without a
+	// jobs row, TryMarkTerminal cannot CAS (there's nothing to update)
+	// and the pollworker's ListPending never sees the job either. In
+	// that case the sync path is the ONLY observer and must run
+	// metering + webhook + unlock unconditionally; async handoff is
+	// unsafe and we degrade to sync polling.
 	requestTS := s.now()
+	jobPersisted := false
 	if s.Jobs != nil {
 		job := &domain.Job{
 			ID:              created.JobID,
@@ -430,20 +456,30 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 			// the caller when the job finishes.
 			CallbackURL: req.CallbackURL,
 		}
-		if err := s.Jobs.Create(ctx, job); err != nil && s.Logger != nil {
-			s.Logger.Warn("persist job failed",
-				slog.String("job_id", created.JobID),
-				slog.String("err", err.Error()))
+		if err := s.Jobs.Create(ctx, job); err != nil {
+			if s.Logger != nil {
+				s.Logger.Warn("persist job failed",
+					slog.String("job_id", created.JobID),
+					slog.String("err", err.Error()))
+			}
+		} else {
+			jobPersisted = true
 		}
 	}
 
-	if async {
+	if async && jobPersisted {
 		// Hand off in_flight ownership to the pollworker so the slot
 		// stays reserved for the whole job lifetime — not just until
 		// CreateJob returns. The deferred unlock() becomes a no-op and
 		// the pollworker calls UpdateInFlight(-1) at every terminal
 		// point (poll terminal, timeout, or fetch abort). See
 		// docs/ROADMAP.md P3-11.
+		//
+		// Requires jobPersisted: if Jobs.Create failed the row does
+		// not exist, ListPending will never surface it, and the
+		// in-flight slot would leak. In that case we fall through to
+		// the sync-poll path below so this request completes on its
+		// own credentials.
 		handedOff.Store(true)
 		return &GenerationResponse{
 			ID:         created.JobID,
@@ -455,6 +491,13 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 			Cost:       created.Cost,
 			PollURL:    fmt.Sprintf("/v1/jobs/%s", created.JobID),
 		}, nil
+	}
+	if async && !jobPersisted && s.Logger != nil {
+		// Async was requested but persistence failed — degrade to sync
+		// so the caller still gets a real terminal outcome instead of
+		// a queued response that no pollworker will ever pick up.
+		s.Logger.Warn("async requested but jobs row missing; degrading to sync poll",
+			slog.String("job_id", created.JobID))
 	}
 
 	// Sync path: poll upstream directly until terminal or deadline.
@@ -544,13 +587,25 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 	// terminalStatus iff it is still queued / pending / in_progress; the
 	// won flag tells us whether we or the pollworker performed the write.
 	//
-	// When we lose the race the winner has already recorded the
-	// usage_event, fired the webhook, and released the in-flight slot,
-	// so we skip all three here. The API response still returns the
-	// terminal outcome because we observed it via PollUntilTerminal —
-	// only the side effects are gated.
+	// Three cases matter for the side-effect gate below:
+	//
+	//   (a) jobPersisted && CAS won  → we own the transition. Run
+	//       meter+webhook, release the slot.
+	//   (b) jobPersisted && CAS lost with err == nil → pollworker (or
+	//       another observer) already terminated the row and ran its
+	//       own meter+webhook+release. Skip ours to avoid double-billing.
+	//   (c) !jobPersisted OR CAS returned err != nil → we cannot prove
+	//       another observer ran the side effects. jobs row is missing
+	//       (Create failed) or the CAS itself errored (DB flakiness).
+	//       In both sub-cases the sync path is the only guaranteed
+	//       observer; treat this as a WIN and run meter+webhook+release
+	//       ourselves. The migration-018 UNIQUE index on
+	//       usage_events(higgsgo_job_id) is the belt-and-braces guard
+	//       against the unlikely case that pollworker ALSO succeeds
+	//       — a duplicate insert there surfaces ErrUsageEventDuplicate
+	//       which the metering layer swallows.
 	won := true
-	if s.Jobs != nil {
+	if jobPersisted && s.Jobs != nil {
 		var casErr error
 		won, casErr = s.Jobs.TryMarkTerminal(ctx, created.JobID,
 			[]domain.JobStatus{domain.JobQueued, domain.JobPending, domain.JobRunning},
@@ -560,12 +615,18 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 				LatencyMS: latency,
 				Refunded:  final.Refunded,
 			})
-		if casErr != nil && s.Logger != nil {
-			s.Logger.Warn("terminal CAS failed",
-				slog.String("job_id", created.JobID),
-				slog.String("err", casErr.Error()))
-		}
-		if !won && s.Logger != nil {
+		if casErr != nil {
+			// Treat CAS DB errors as WIN — the sync path is guaranteed
+			// to have observed the terminal, and we would rather
+			// double-write (blocked by the UNIQUE index) than silently
+			// drop the accounting row entirely.
+			if s.Logger != nil {
+				s.Logger.Warn("terminal CAS failed — treating as winner for side-effects",
+					slog.String("job_id", created.JobID),
+					slog.String("err", casErr.Error()))
+			}
+			won = true
+		} else if !won && s.Logger != nil {
 			s.Logger.Info("terminal CAS lost race — pollworker or another observer already terminated",
 				slog.String("job_id", created.JobID),
 				slog.String("status", string(terminalStatus)))

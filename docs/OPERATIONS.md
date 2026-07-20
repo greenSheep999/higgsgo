@@ -147,12 +147,16 @@ of the partner's keys and preserves the rows for audit.
 
 ## 6. Prometheus scrape
 
-`/metrics` is unauthenticated but bound to the public listener; front it
-with an IP allowlist or reverse proxy in production
-(see `internal/api/server.go` TODO).
+`/metrics` is mounted on the **admin listener** and requires the same
+admin bearer as every other `/admin/*` route (moved from the public
+listener in v0.5.0 for the F5 hardening review — see
+`docs/reviews/2026-07-20-main-validation.md`). Prometheus scrapers must
+send `Authorization: Bearer <admin_bearer>`; when the deploy fronts the
+admin listener with Caddy or another reverse proxy, extend the ACL to
+allow the scraper's IP.
 
 ```bash
-curl -s $BASE/metrics | head -20
+curl -sH "Authorization: Bearer $BEARER" $ADMIN_BASE/metrics | head -20
 ```
 
 Key series (see `internal/observability/metrics.go`):

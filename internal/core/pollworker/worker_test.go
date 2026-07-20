@@ -386,9 +386,9 @@ func TestWorker_TimeoutFiresWebhookAndMeter(t *testing.T) {
 
 	w.tick(context.Background())
 
-	// UpdateStatus is called with JobTimeout.
-	if len(jobs.updates) != 1 || jobs.updates[0].status != domain.JobTimeout {
-		t.Fatalf("expected 1 UpdateStatus(timeout), got %+v", jobs.updates)
+	// TryMarkTerminal (F1 CAS) is called with JobTimeout.
+	if len(jobs.terminals) != 1 || jobs.terminals[0].to != domain.JobTimeout {
+		t.Fatalf("expected 1 TryMarkTerminal(timeout), got %+v", jobs.terminals)
 	}
 	// Meter receives PreBalanceH from the row.
 	if len(meter.calls) != 1 || meter.calls[0].preBalance != 1200 {
@@ -397,5 +397,61 @@ func TestWorker_TimeoutFiresWebhookAndMeter(t *testing.T) {
 	// Webhook fires once.
 	if len(hook.fires) != 1 || hook.fires[0].url != "https://x.example/timeout" {
 		t.Errorf("timeout webhook: got %+v", hook.fires)
+	}
+}
+
+// TestWorker_TimeoutCASLostSkipsSideEffects proves the F1 fix on the
+// timeout path: when the CAS shows the row is no longer in a live
+// status (a concurrent sync observer already terminated the job), the
+// pollworker MUST NOT release in_flight, meter, or fire a webhook.
+// Regression against the pre-F1 UpdateStatus path that would silently
+// overwrite the real terminal with JobTimeout.
+func TestWorker_TimeoutCASLostSkipsSideEffects(t *testing.T) {
+	jobs := &fakeJobStore{
+		pending: []domain.Job{{
+			ID:          "job_timeout_loser",
+			AccountID:   "acc_1",
+			APIKeyID:    "key_1",
+			ModelAlias:  "veo-3",
+			JST:         "veo3",
+			RequestTS:   time.Now().Add(-2 * time.Hour), // past deadline
+			CallbackURL: "https://x.example/should-not-fire",
+			PreBalanceH: 1200,
+		}},
+		// Simulate that the sync path already CAS'd this job into
+		// JobCompleted; the pollworker's timeout CAS finds no matching
+		// row and loses.
+		winWhen: func(_ string, _ []domain.JobStatus, _ domain.JobStatus) bool {
+			return false
+		},
+	}
+	accs := &countingAccountStore{fakeAccountStore: fakeAccountStore{
+		acc: &domain.Account{ID: "acc_1"},
+	}}
+	ups := &fakeUpstream{}
+	meter := &fakeMeter{}
+	hook := &fakeWebhook{}
+
+	w := newWorkerWithAccounts(t, jobs, accs, ups)
+	w.Meter = meter
+	w.Webhooks = hook
+	w.JobDeadline = time.Hour // ensures the pending job is over-deadline
+
+	w.tick(context.Background())
+
+	// CAS was attempted with JobTimeout.
+	if len(jobs.terminals) != 1 || jobs.terminals[0].to != domain.JobTimeout {
+		t.Fatalf("expected 1 TryMarkTerminal(timeout), got %+v", jobs.terminals)
+	}
+	// The CAS lost — meter, webhook, and in-flight release MUST all be
+	// skipped so the winner (sync path) owns the side effects.
+	if len(meter.calls) != 0 {
+		t.Errorf("timeout CAS lost: meter should not fire, got %+v", meter.calls)
+	}
+	if len(hook.fires) != 0 {
+		t.Errorf("timeout CAS lost: webhook should not fire, got %+v", hook.fires)
+	}
+	if got := accs.inFlightCalls.Load(); got != 0 {
+		t.Errorf("timeout CAS lost: releaseInFlight should not run, got %d calls", got)
 	}
 }

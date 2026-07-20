@@ -413,16 +413,34 @@ func (w *Worker) pollOne(ctx context.Context, j *domain.Job, now time.Time) {
 }
 
 // markTimeout sets a job to timeout state and clears its poll gate.
+//
+// Uses TryMarkTerminal (F1 CAS) instead of plain UpdateStatus so a
+// concurrent terminal write by the sync-path or another pollworker
+// tick cannot be silently overwritten with JobTimeout. When we lose
+// the CAS the row already reached a real terminal (completed / failed
+// / refunded); the winner has run metering + webhook + released the
+// in-flight slot, so we skip all three here.
 func (w *Worker) markTimeout(ctx context.Context, j *domain.Job) {
-	err := w.Jobs.UpdateStatus(ctx, j.ID, domain.JobTimeout, ports.JobMeta{
-		ErrorType:   domain.ErrTimeout,
-		ErrorDetail: "job did not reach terminal state within deadline",
-		LatencyMS:   time.Since(j.RequestTS).Milliseconds(),
-	})
+	latency := time.Since(j.RequestTS).Milliseconds()
+	won, err := w.Jobs.TryMarkTerminal(ctx, j.ID,
+		[]domain.JobStatus{domain.JobQueued, domain.JobPending, domain.JobRunning},
+		domain.JobTimeout,
+		ports.JobMeta{
+			ErrorType:   domain.ErrTimeout,
+			ErrorDetail: "job did not reach terminal state within deadline",
+			LatencyMS:   latency,
+		})
 	if err != nil {
-		w.Logger.Warn("pollworker mark timeout",
+		// CAS DB error — bail without side effects. The next pollworker
+		// tick or a sync observer will retry the transition.
+		w.Logger.Warn("pollworker timeout CAS failed",
 			slog.String("job_id", j.ID),
 			slog.String("err", err.Error()))
+		return
+	}
+	if !won {
+		w.Logger.Info("timeout CAS lost race — another observer already terminated",
+			slog.String("job_id", j.ID))
 		return
 	}
 	w.Logger.Warn("job timeout",
@@ -430,7 +448,7 @@ func (w *Worker) markTimeout(ctx context.Context, j *domain.Job) {
 		slog.String("model", j.ModelAlias),
 		slog.Duration("age", time.Since(j.RequestTS)))
 	j.Status = domain.JobTimeout
-	j.LatencyMS = time.Since(j.RequestTS).Milliseconds()
+	j.LatencyMS = latency
 
 	// Release the in_flight slot the proxy reserved when the async
 	// job was created. The upstream job may still be running (upstream

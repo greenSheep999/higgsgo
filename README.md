@@ -2,9 +2,9 @@
 
 OpenAI-compatible reverse proxy for higgsfield.ai, with a pluggable account pool, registration pipeline, and dual delivery modes (standalone WebUI and CPA plugin).
 
-> **Status**: scaffolding
+> **Status**: production (v0.5.0 running at higgs.aibbq.xyz)
 > **Owner**: daniellee2015
-> **Language**: Go 1.22+
+> **Language**: Go 1.25+
 
 ---
 
@@ -62,7 +62,21 @@ higgsgo/
 
 ## Getting started
 
-Not yet runnable. This is scaffolding. See `docs/ARCHITECTURE.md` for the migration plan (Phase 0 → Phase 4).
+```bash
+# Build
+go build -o /usr/local/bin/higgsgo ./cmd/higgsgo
+
+# Configure — copy configs/higgsgo.example.toml, edit admin_bearer / storage.path / models.data_path
+higgsgo -config configs/higgsgo.prod.toml
+```
+
+The binary opens three HTTP listeners:
+
+- **public** (`server.public.addr`, default `127.0.0.1:8180`) — `/v1/*` for API-key consumers, `/health` for load balancers.
+- **admin** (`server.admin.addr`, default `127.0.0.1:8181`) — `/admin/*` and `/metrics` behind the admin bearer, plus the WebUI SPA.
+- **internal** (`server.internal.addr`, default `127.0.0.1:8182`) — `/internal/*` for the CPA plugin.
+
+Front them with a reverse proxy (Caddy, nginx) that terminates TLS and enforces the CF-only ACL if you're publicly reachable. See `docs/OPERATIONS.md` for the production runbook and `docs/ARCHITECTURE.md` for the module map.
 
 ## License
 

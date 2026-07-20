@@ -20,15 +20,19 @@
 
 ---
 
-## Public — `/health`, `/metrics`
+## Public — `/health`
 
 ### `GET /health`
 
 No auth. Mounted on all three listeners. Returns `{"status":"ok","time":"2026-07-17T04:12:33Z"}`.
 
+---
+
+## Admin — `/metrics`
+
 ### `GET /metrics`
 
-No auth (Prometheus scrape). Content-Type `text/plain; version=0.0.4`. Series (see `internal/observability/metrics.go`):
+Admin bearer required (moved from public listener in v0.5.0 as part of the F5 hardening review — an unauthenticated `/metrics` on a Cloudflare-facing deploy leaks pool sizes, in-flight counts, error rates, and monthly credit totals). Route it through the admin listener alongside the rest of `/admin/*`; Prometheus scrapers must send `Authorization: Bearer <admin_bearer>`. Content-Type `text/plain; version=0.0.4`. Series (see `internal/observability/metrics.go`):
 
 | Metric                                        | Type      | Labels                       |
 |-----------------------------------------------|-----------|------------------------------|

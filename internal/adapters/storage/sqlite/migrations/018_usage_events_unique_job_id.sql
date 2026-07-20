@@ -32,39 +32,86 @@
 --   INDEX would refuse to build the index on those DBs, leaving the ship
 --   broken on the deployments most in need of the fix. Collapse each
 --   higgsgo_job_id group down to a single canonical row FIRST, then build
---   the constraint. Which row survives:
---     * Prefer status='completed' over 'failed' — if either observer saw
---       the terminal success, that's the truth. ORDER BY the boolean-coded
---       priority DESC.
---     * Tie-break on latest ts — the winner of the race is typically the
---       observer that finished its metering last (their preBalance-delta is
---       most accurate). MAX(ts) via NOT EXISTS keeps the SQL portable.
+--   the constraint.
+--
+-- Survivor ranking (total order — no ties possible after all four keys):
+--
+--   1. Terminal-status priority (higher wins):
+--        completed = 4   — the definitive success outcome
+--        refunded  = 3   — upstream restored credits; still authoritative
+--        failed    = 2   — content-level failure
+--        timeout   = 1   — we gave up; upstream state unknown
+--        anything else = 0 — belt-and-braces for future statuses
+--      Rationale: if both observers wrote the row, prefer the higher-quality
+--      terminal. A timeout being overwritten by a real completed matches
+--      the F1 CAS ordering (completed wins the race in production).
+--
+--   2. Later ts wins — the observer that finished metering last had the
+--      most accurate post-job balance for the delta path.
+--
+--   3. Higher id (lexicographic) wins — deterministic tiebreak when ts is
+--      identical (idgen.NewID uses monotonic hex so this correlates with
+--      wall time anyway).
+--
+--   4. rowid — SQLite's internal row identifier is the absolute last
+--      tiebreak; guaranteed distinct so the ranking is total.
+--
 --   Rows keyed on the sentinel-empty higgsgo_job_id (never emitted by real
 --   code) are left alone; the WHERE below intentionally scopes to non-empty
 --   ids so we can't accidentally collapse malformed data.
 DELETE FROM usage_events
  WHERE higgsgo_job_id != ''
-   AND id NOT IN (
-     SELECT id FROM (
-       SELECT id
-         FROM usage_events ue1
-        WHERE ue1.higgsgo_job_id != ''
-          AND NOT EXISTS (
-            SELECT 1
-              FROM usage_events ue2
-             WHERE ue2.higgsgo_job_id = ue1.higgsgo_job_id
-               AND (
-                 -- Prefer completed over any other terminal.
-                 (ue2.status = 'completed' AND ue1.status != 'completed')
-                 OR
-                 -- Within same status, prefer the later ts.
-                 (ue2.status = ue1.status AND ue2.ts > ue1.ts)
-                 OR
-                 -- Within same status + ts, prefer the higher id (stable).
-                 (ue2.status = ue1.status AND ue2.ts = ue1.ts AND ue2.id > ue1.id)
-               )
-          )
-     )
+   AND rowid NOT IN (
+     SELECT rowid
+       FROM usage_events ue1
+      WHERE ue1.higgsgo_job_id != ''
+        AND NOT EXISTS (
+          SELECT 1
+            FROM usage_events ue2
+           WHERE ue2.higgsgo_job_id = ue1.higgsgo_job_id
+             AND ue2.rowid != ue1.rowid
+             AND (
+                 -- ue2 wins on terminal-status priority.
+                 CASE ue2.status
+                   WHEN 'completed' THEN 4
+                   WHEN 'refunded'  THEN 3
+                   WHEN 'failed'    THEN 2
+                   WHEN 'timeout'   THEN 1
+                   ELSE 0
+                 END
+                 >
+                 CASE ue1.status
+                   WHEN 'completed' THEN 4
+                   WHEN 'refunded'  THEN 3
+                   WHEN 'failed'    THEN 2
+                   WHEN 'timeout'   THEN 1
+                   ELSE 0
+                 END
+             OR (
+                 -- Same status priority: prefer later ts.
+                 CASE ue2.status
+                   WHEN 'completed' THEN 4
+                   WHEN 'refunded'  THEN 3
+                   WHEN 'failed'    THEN 2
+                   WHEN 'timeout'   THEN 1
+                   ELSE 0
+                 END
+                 =
+                 CASE ue1.status
+                   WHEN 'completed' THEN 4
+                   WHEN 'refunded'  THEN 3
+                   WHEN 'failed'    THEN 2
+                   WHEN 'timeout'   THEN 1
+                   ELSE 0
+                 END
+                 AND (
+                     ue2.ts > ue1.ts
+                     OR (ue2.ts = ue1.ts AND ue2.id > ue1.id)
+                     OR (ue2.ts = ue1.ts AND ue2.id = ue1.id AND ue2.rowid > ue1.rowid)
+                 )
+             )
+             )
+        )
    );
 
 -- Idempotent (IF NOT EXISTS) and forward-only. Now safe because the DELETE
