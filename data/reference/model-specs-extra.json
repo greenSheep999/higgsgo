@@ -17,167 +17,525 @@
   "aliases": {
     "kling-3": {
       "max_resolution": "4k",
-      "max_duration_sec": 10
+      "max_duration_sec": 10,
+      "min_plan": "starter",
+      "unlim_job_set_type": "kling_3_unlimited",
+      "unlim_bundle_types": [
+        "kling_3_1080p",
+        "kling_3_4k"
+      ]
     },
     "kling-2.6": {
       "max_resolution": "1080p",
-      "max_duration_sec": 10
+      "max_duration_sec": 10,
+      "min_plan": "starter"
     },
     "kling-3-turbo": {
       "max_resolution": "1080p",
-      "max_duration_sec": 10
+      "max_duration_sec": 10,
+      "min_plan": "starter"
     },
     "kling2-6-motion-control": {
       "max_resolution": "1080p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "kling-o3-image-reference": {
       "max_resolution": "1080p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "kling-o3-flf": {
       "max_resolution": "1080p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "kling-omni-flf": {
       "max_resolution": "1080p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "kling-omni-image-reference": {
       "max_resolution": "1080p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "kling2-6-lipsync": {
       "max_resolution": "720p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "kling-transition": {
       "max_resolution": "1080p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "seedance-2-0": {
       "max_resolution": "4k",
-      "max_duration_sec": 10
+      "max_duration_sec": 10,
+      "min_plan": "starter",
+      "unlim_job_set_type": "seedance_2_unlimited",
+      "unlim_bundle_types": [
+        "seedance_2_720p",
+        "seedance_2_1080p"
+      ]
     },
     "seedance-2-0-mini": {
       "max_resolution": "720p",
-      "max_duration_sec": 15
+      "max_duration_sec": 15,
+      "min_plan": "starter",
+      "unlim_job_set_type": "seedance_mini_unlimited",
+      "unlim_bundle_types": [
+        "seedance_fast_and_mini"
+      ]
     },
     "seedance-1.5": {
       "max_resolution": "1080p",
-      "max_duration_sec": 10
+      "max_duration_sec": 10,
+      "min_plan": "starter",
+      "unlim_job_set_type": "seedance_unlimited",
+      "unlim_bundle_types": [
+        "seedance_fast_and_mini"
+      ]
     },
     "seedance": {
       "max_resolution": "1080p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "veo3-1": {
       "max_resolution": "1080p",
-      "max_duration_sec": 8
+      "max_duration_sec": 8,
+      "min_plan": "starter"
     },
     "veo-3.1-lite": {
       "max_resolution": "1080p",
-      "max_duration_sec": 8
+      "max_duration_sec": 8,
+      "min_plan": "starter"
     },
     "veo3-1-speak": {
       "max_resolution": "1080p",
-      "max_duration_sec": 8
+      "max_duration_sec": 8,
+      "min_plan": "starter"
     },
     "veo-gemini-omni": {
       "max_resolution": "4k",
-      "max_duration_sec": 8
+      "max_duration_sec": 8,
+      "min_plan": "starter"
     },
     "sora2-video": {
       "max_resolution": "1080p",
-      "max_duration_sec": 8
+      "max_duration_sec": 8,
+      "min_plan": "starter"
     },
     "grok-video-v15": {
       "max_resolution": "720p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "grok-video-edit": {
       "max_resolution": "720p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "grok-video": {
       "max_resolution": "720p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "minimax-hailuo": {
       "max_resolution": "1080p",
-      "max_duration_sec": 6
+      "max_duration_sec": 6,
+      "min_plan": "starter"
     },
     "minimax-hailuo-draw": {
       "max_resolution": "1080p",
-      "max_duration_sec": 6
+      "max_duration_sec": 6,
+      "min_plan": "starter"
     },
     "wan2-2-video": {
       "max_resolution": "720p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "wan2-5-video": {
       "max_resolution": "1080p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter",
+      "free_quota_field": "wan2_5_video_credits"
     },
     "wan2-6": {
       "max_resolution": "1080p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "wan2-7": {
       "max_resolution": "1080p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "wan2-5-speak": {
       "max_resolution": "1080p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter",
+      "free_quota_field": "wan2_5_video_credits"
     },
     "wan2-2-animate": {
       "max_resolution": "720p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "cinematic-studio-3-0": {
       "max_resolution": "4k",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "cinematic-studio-video-3-5": {
       "max_resolution": "4k",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "marketing-studio-video": {
       "max_resolution": "1080p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "happy-horse-video": {
       "max_resolution": "1080p",
-      "max_duration_sec": 5
+      "max_duration_sec": 5,
+      "min_plan": "starter"
     },
     "sync-so": {
       "max_resolution": "4k",
-      "max_duration_sec": 2
+      "max_duration_sec": 2,
+      "min_plan": "starter"
     },
-    "nano-banana-2": { "max_resolution": "1k" },
-    "nano-banana": { "max_resolution": "1k" },
-    "nano-banana-flash": { "max_resolution": "1k" },
-    "nano-banana-2-lite": { "max_resolution": "1k" },
-    "nano-banana-2-upscale": { "max_resolution": "4k" },
-    "seedream": { "max_resolution": "1k" },
-    "seedream-v4-5": { "max_resolution": "4k", "min_plan": "starter" },
-    "seedream-5-lite": { "max_resolution": "2k" },
-    "flux-2": { "max_resolution": "2k" },
-    "flux-kontext": { "max_resolution": "1k" },
-    "gpt-image": { "max_resolution": "1k" },
-    "openai-hazel": { "max_resolution": "1024x1024" },
-    "openai-hazel-mini": { "max_resolution": "1024x1024" },
-    "grok-image": { "max_resolution": "1k" },
-    "imagegen-2": { "max_resolution": "1k" },
-    "recraft-v4": { "max_resolution": "2k" },
-    "reve": { "max_resolution": "1k" },
-    "wan2-2-image": { "max_resolution": "1k" },
-    "z-image": { "max_resolution": "1k" },
-    "kling-omni-image": { "max_resolution": "1k" },
-    "ai-influencer": { "max_resolution": "1k" },
-    "text2image-gpt": { "max_resolution": "1k" },
-    "text2image-soul-v2": { "max_resolution": "1k" },
-    "text2image-soul": { "max_resolution": "1k" }
+    "nano-banana-2": {
+      "max_resolution": "1k",
+      "min_plan": "starter",
+      "unlim_job_set_type": "nano_banana_pro_unlimited",
+      "unlim_bundle_types": [
+        "nano_banana_2_2k",
+        "nano_banana_2_4k"
+      ]
+    },
+    "nano-banana": {
+      "max_resolution": "1k",
+      "min_plan": "starter"
+    },
+    "nano-banana-flash": {
+      "max_resolution": "1k",
+      "min_plan": "starter"
+    },
+    "nano-banana-2-lite": {
+      "max_resolution": "1k",
+      "min_plan": "starter"
+    },
+    "nano-banana-2-upscale": {
+      "max_resolution": "4k",
+      "min_plan": "starter"
+    },
+    "seedream": {
+      "max_resolution": "1k",
+      "min_plan": "starter"
+    },
+    "seedream-v4-5": {
+      "max_resolution": "4k",
+      "min_plan": "starter"
+    },
+    "seedream-5-lite": {
+      "max_resolution": "2k",
+      "min_plan": "starter"
+    },
+    "flux-2": {
+      "max_resolution": "2k",
+      "min_plan": "starter"
+    },
+    "flux-kontext": {
+      "max_resolution": "1k",
+      "min_plan": "starter",
+      "endpoint_status": "dead"
+    },
+    "gpt-image": {
+      "max_resolution": "1k",
+      "min_plan": "starter",
+      "unlim_job_set_type": "gpt_image_2_unlimited",
+      "unlim_bundle_types": [
+        "gpt_image_2_1k",
+        "gpt_image_2_2k",
+        "gpt_image_2_4k"
+      ]
+    },
+    "openai-hazel": {
+      "max_resolution": "1024x1024",
+      "min_plan": "starter"
+    },
+    "openai-hazel-mini": {
+      "max_resolution": "1024x1024",
+      "min_plan": "starter"
+    },
+    "grok-image": {
+      "max_resolution": "1k",
+      "min_plan": "starter"
+    },
+    "imagegen-2": {
+      "max_resolution": "1k",
+      "min_plan": "starter"
+    },
+    "recraft-v4": {
+      "max_resolution": "2k",
+      "min_plan": "starter"
+    },
+    "reve": {
+      "max_resolution": "1k",
+      "min_plan": "starter"
+    },
+    "wan2-2-image": {
+      "max_resolution": "1k",
+      "min_plan": "starter"
+    },
+    "z-image": {
+      "max_resolution": "1k",
+      "min_plan": "starter"
+    },
+    "kling-omni-image": {
+      "max_resolution": "1k",
+      "min_plan": "starter"
+    },
+    "ai-influencer": {
+      "max_resolution": "1k",
+      "min_plan": "starter"
+    },
+    "text2image-gpt": {
+      "max_resolution": "1k",
+      "min_plan": "starter"
+    },
+    "text2image-soul-v2": {
+      "max_resolution": "1k",
+      "min_plan": "starter",
+      "free_quota_field": "soul_credits"
+    },
+    "text2image-soul": {
+      "max_resolution": "1k",
+      "min_plan": "starter",
+      "free_quota_field": "soul_credits"
+    },
+    "autosprite": {
+      "min_plan": "starter"
+    },
+    "bd-studio-kling": {
+      "min_plan": "starter"
+    },
+    "bd-studio-sora2": {
+      "min_plan": "starter"
+    },
+    "bd-studio-soul-location": {
+      "min_plan": "starter"
+    },
+    "brain-activity": {
+      "min_plan": "starter"
+    },
+    "bytedance-image-upscale": {
+      "min_plan": "starter"
+    },
+    "canvas": {
+      "min_plan": "starter"
+    },
+    "canvas-soul": {
+      "min_plan": "starter"
+    },
+    "character-sheet": {
+      "min_plan": "starter"
+    },
+    "cinematic-soul-location": {
+      "min_plan": "starter"
+    },
+    "cinematic-studio-2-5": {
+      "min_plan": "starter",
+      "endpoint_status": "dead"
+    },
+    "cinematic-studio-2-5-edit": {
+      "min_plan": "starter"
+    },
+    "cinematic-studio-3-0-image-edit": {
+      "min_plan": "starter"
+    },
+    "cinematic-studio-image": {
+      "min_plan": "starter"
+    },
+    "cinematic-studio-image-grid": {
+      "min_plan": "starter"
+    },
+    "cinematic-studio-video": {
+      "min_plan": "starter"
+    },
+    "clipify": {
+      "min_plan": "starter"
+    },
+    "color-grading-lut": {
+      "min_plan": "starter"
+    },
+    "headshot": {
+      "min_plan": "starter"
+    },
+    "hf-fnf-video": {
+      "min_plan": "starter"
+    },
+    "image-auto": {
+      "min_plan": "starter"
+    },
+    "image-background-remover": {
+      "min_plan": "starter"
+    },
+    "image-decompose": {
+      "min_plan": "starter"
+    },
+    "image2video": {
+      "min_plan": "starter"
+    },
+    "image2video-mix": {
+      "min_plan": "starter"
+    },
+    "inworld-text-to-speech": {
+      "min_plan": "starter"
+    },
+    "ip-detection": {
+      "min_plan": "starter"
+    },
+    "kling": {
+      "min_plan": "starter"
+    },
+    "llm-text": {
+      "min_plan": "starter"
+    },
+    "marketing-studio-brand-kit-agent": {
+      "min_plan": "starter"
+    },
+    "marketing-studio-brand-kit-scrape": {
+      "min_plan": "starter"
+    },
+    "marketing-studio-hook": {
+      "min_plan": "starter"
+    },
+    "marketing-studio-image": {
+      "min_plan": "starter"
+    },
+    "mirelo-audio": {
+      "min_plan": "starter"
+    },
+    "mockup-studio": {
+      "min_plan": "starter"
+    },
+    "ms-image": {
+      "min_plan": "starter"
+    },
+    "nano-banana-2-ai-stylist": {
+      "min_plan": "starter"
+    },
+    "nano-banana-2-outfit-collage": {
+      "min_plan": "starter"
+    },
+    "nano-banana-2-product-placement": {
+      "min_plan": "starter"
+    },
+    "nano-banana-2-relight": {
+      "min_plan": "starter"
+    },
+    "nano-banana-2-shots": {
+      "min_plan": "starter"
+    },
+    "nano-banana-2-skin-enhancer": {
+      "min_plan": "starter"
+    },
+    "nano-banana-2-zooms": {
+      "min_plan": "starter"
+    },
+    "nano-banana-clothing-cleaner": {
+      "min_plan": "starter"
+    },
+    "next-shots": {
+      "min_plan": "starter"
+    },
+    "outpaint": {
+      "min_plan": "starter"
+    },
+    "qwen-camera-control": {
+      "min_plan": "starter",
+      "free_quota_field": "qwen_camera_control_credits"
+    },
+    "reframe": {
+      "min_plan": "starter"
+    },
+    "sam-3-video": {
+      "min_plan": "starter"
+    },
+    "seedance-draw": {
+      "min_plan": "starter"
+    },
+    "skin-enhancer": {
+      "min_plan": "starter"
+    },
+    "sonilo-music": {
+      "min_plan": "starter"
+    },
+    "soul-cast-edit": {
+      "min_plan": "starter",
+      "free_quota_field": "soul_credits"
+    },
+    "soul-cinema-studio": {
+      "min_plan": "starter",
+      "free_quota_field": "soul_credits"
+    },
+    "soul-cinematic": {
+      "min_plan": "starter",
+      "free_quota_field": "soul_credits"
+    },
+    "soul-location": {
+      "min_plan": "starter",
+      "free_quota_field": "soul_credits"
+    },
+    "soul-location-edit": {
+      "min_plan": "starter",
+      "free_quota_field": "soul_credits"
+    },
+    "speech2text": {
+      "min_plan": "starter"
+    },
+    "text2image": {
+      "min_plan": "starter"
+    },
+    "text2speech": {
+      "min_plan": "starter"
+    },
+    "text2speech-v2": {
+      "min_plan": "starter"
+    },
+    "topaz-image": {
+      "min_plan": "starter"
+    },
+    "topaz-image-generative": {
+      "min_plan": "starter"
+    },
+    "topaz-video": {
+      "min_plan": "starter"
+    },
+    "video-background-remover": {
+      "min_plan": "starter"
+    },
+    "video-deflicker": {
+      "min_plan": "starter"
+    },
+    "video-upscale": {
+      "min_plan": "starter"
+    },
+    "viral-transform-image": {
+      "min_plan": "starter"
+    },
+    "viral-transform-video": {
+      "min_plan": "starter"
+    },
+    "watermark": {
+      "min_plan": "starter"
+    }
   }
 }
