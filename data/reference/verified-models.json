@@ -381,7 +381,7 @@
       "alias": "cinematic-studio-2-5",
       "jst": "cinematic_studio_2_5",
       "endpoint": "/jobs/v2/cinematic_studio_2_5",
-      "version": "v1-hyphen",
+      "version": "v2",
       "output": "image",
       "cost_credits_h": 200,
       "required_params": [
