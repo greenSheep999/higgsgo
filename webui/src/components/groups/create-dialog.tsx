@@ -164,7 +164,10 @@ export function CreateGroupDialog({ open, onOpenChange, onCreated }: Props) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="round_robin">round_robin</SelectItem>
+                <SelectItem value="best_fit">best_fit</SelectItem>
+                <SelectItem value="cheapest_first">cheapest_first</SelectItem>
                 <SelectItem value="least_used">least_used</SelectItem>
+                <SelectItem value="most_credits_first">most_credits_first</SelectItem>
                 <SelectItem value="priority">priority</SelectItem>
               </SelectContent>
             </Select>

@@ -573,6 +573,31 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 		} else {
 			q.WriteString(` ORDER BY COALESCE(priority, 0) DESC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC` + jitterTail)
 		}
+	case domain.RouteBestFit:
+		// Order by plan tier rank ascending so the *closest fit above the
+		// model's floor* wins. min_plan=starter models drain starter
+		// accounts first; only when every starter account is busy /
+		// out of budget does the picker escalate to basic → pro → plus
+		// → ultra-family. Inside the same tier we tiebreak on LRU so
+		// concurrent picks on identical plans still spread out.
+		//
+		// Ranking mirrors PlanType.TierRank() (see internal/domain/account.go)
+		// so free (rank 0) is included at the bottom for callers that
+		// leave MinPlan empty. When MinPlan is set the WHERE clause
+		// already excluded lower ranks, so this ORDER BY only sorts
+		// among survivors.
+		q.WriteString(` ORDER BY CASE plan_type`)
+		q.WriteString(` WHEN 'starter' THEN 1`)
+		q.WriteString(` WHEN 'basic' THEN 2`)
+		q.WriteString(` WHEN 'pro' THEN 3`)
+		q.WriteString(` WHEN 'plus' THEN 4`)
+		q.WriteString(` WHEN 'ultra' THEN 5`)
+		q.WriteString(` WHEN 'ultimate' THEN 5`)
+		q.WriteString(` WHEN 'scale' THEN 5`)
+		q.WriteString(` WHEN 'creator' THEN 5`)
+		q.WriteString(` WHEN 'team' THEN 5`)
+		q.WriteString(` WHEN 'enterprise' THEN 5`)
+		q.WriteString(` ELSE 0 END ASC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC` + jitterTail)
 	default: // RouteRoundRobin (== jittered LRU)
 		q.WriteString(` ORDER BY COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC` + jitterTail)
 	}

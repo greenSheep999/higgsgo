@@ -437,3 +437,93 @@ func TestAccountStore_PickAndLock_RequiresUnlim(t *testing.T) {
 		t.Errorf("RequiresUnlim: got %s, want acc_unlim", acc.ID)
 	}
 }
+
+// TestAccountStore_PickAndLock_BestFit verifies the new RouteBestFit
+// strategy prefers the closest-tier-above-the-floor account, burning
+// starter accounts first before escalating to pro / plus for cheap
+// models. Sets up three accounts (starter/pro/plus) all eligible for a
+// min_plan=starter model, then asserts the first pick lands on starter.
+// After starter's slot fills, the next pick should escalate to pro
+// (rank 3, next closest to the starter floor).
+func TestAccountStore_PickAndLock_BestFit(t *testing.T) {
+	db := openMem(t)
+	accStore := NewAccountStore(db)
+	ctx := context.Background()
+
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Three accounts across three tiers, all with enough balance and
+	// no in-flight jobs. Same last_used_at so tie-breaking falls to
+	// the CASE tier_rank ORDER BY the strategy adds.
+	base := time.Now().Add(-1 * time.Hour)
+	must(accStore.Upsert(ctx, &domain.Account{
+		ID: "acc_starter", Email: "s@x.co", Password: "-", SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
+		PlanType: domain.PlanStarter, SubscriptionBalance: 50000, Status: domain.StatusActive,
+		RegisteredAt: base, ImportedAt: base,
+	}))
+	must(accStore.Upsert(ctx, &domain.Account{
+		ID: "acc_pro", Email: "p@x.co", Password: "-", SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
+		PlanType: domain.PlanPro, SubscriptionBalance: 50000, Status: domain.StatusActive,
+		RegisteredAt: base, ImportedAt: base,
+	}))
+	must(accStore.Upsert(ctx, &domain.Account{
+		ID: "acc_plus", Email: "u@x.co", Password: "-", SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
+		PlanType: domain.PlanPlus, SubscriptionBalance: 50000, Status: domain.StatusActive,
+		RegisteredAt: base, ImportedAt: base,
+	}))
+
+	// First pick: starter (rank 1) is closest to the min_plan=starter
+	// floor, so it wins over pro (rank 3) and plus (rank 4).
+	acc1, _, err := accStore.PickAndLock(ctx, ports.PickParams{
+		EstCostHundredths: 1000,
+		MinPlan:           domain.PlanStarter,
+		RouteStrategy:     domain.RouteBestFit,
+	})
+	if err != nil {
+		t.Fatalf("pick 1: %v", err)
+	}
+	if acc1.ID != "acc_starter" {
+		t.Errorf("best-fit pick 1: got %s (plan=%s), want acc_starter",
+			acc1.ID, acc1.PlanType)
+	}
+
+	// Fill the starter slot by pushing in_flight up to the cap. Use
+	// MaxConcurrentPerAccount=1 to make the first pick's lock exclude
+	// it from the second pick.
+	// After PickAndLock the starter account already has in_flight=1;
+	// with MaxConcurrentPerAccount=1 the WHERE clause excludes it and
+	// pro (rank 3) becomes the next best fit.
+	acc2, _, err := accStore.PickAndLock(ctx, ports.PickParams{
+		EstCostHundredths:       1000,
+		MinPlan:                 domain.PlanStarter,
+		RouteStrategy:           domain.RouteBestFit,
+		MaxConcurrentPerAccount: 1,
+	})
+	if err != nil {
+		t.Fatalf("pick 2: %v", err)
+	}
+	if acc2.ID != "acc_pro" {
+		t.Errorf("best-fit pick 2 (starter busy): got %s (plan=%s), want acc_pro",
+			acc2.ID, acc2.PlanType)
+	}
+
+	// Third pick escalates to plus (rank 4).
+	acc3, _, err := accStore.PickAndLock(ctx, ports.PickParams{
+		EstCostHundredths:       1000,
+		MinPlan:                 domain.PlanStarter,
+		RouteStrategy:           domain.RouteBestFit,
+		MaxConcurrentPerAccount: 1,
+	})
+	if err != nil {
+		t.Fatalf("pick 3: %v", err)
+	}
+	if acc3.ID != "acc_plus" {
+		t.Errorf("best-fit pick 3 (starter+pro busy): got %s (plan=%s), want acc_plus",
+			acc3.ID, acc3.PlanType)
+	}
+}

@@ -26,6 +26,17 @@ const (
 	// the sidebar "priority" mode via the routing_strategy_default
 	// system setting.
 	RoutePriority RouteStrategy = "priority"
+
+	// RouteBestFit picks the account whose plan tier is closest to
+	// (but not below) the model's MinPlan floor. Cheap models
+	// (min_plan=starter) burn starter accounts first, reserving
+	// pro / plus / ultra headroom for models that actually need it.
+	// Falls back to jittered LRU inside the same tier so concurrent
+	// picks on identical-plan accounts still spread out.
+	//
+	// Precedence inside the ORDER BY: tier_rank ASC (closest fit
+	// wins) → last_used_at ASC (LRU) → in_flight_jobs ASC → RANDOM().
+	RouteBestFit RouteStrategy = "best_fit"
 )
 
 // OwnerType describes who a group belongs to.
