@@ -471,8 +471,13 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 		Deadline: deadline,
 		Interval: 4 * time.Second,
 	})
-	unlock()
+	// unlock() release is deferred past the CAS below (line ~610) so the
+	// slot decrement is gated on winning the race — otherwise the
+	// concurrent pollworker's releaseInFlight would double-decrement and
+	// prematurely free a slot (MAX(0,...) prevents underflow, but the
+	// count still drifts under load).
 	if err != nil {
+		unlock() // Error path: no CAS ran, release now.
 		if errors.Is(err, domain.ErrUpstreamTimeout) {
 			// Timeout is not account-attributable — the job may still
 			// complete via the pollworker. Skip the failover feedback
@@ -566,6 +571,18 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 				slog.String("status", string(terminalStatus)))
 		}
 	}
+
+	// In-flight slot release: gated on `won` so we don't double-decrement
+	// the account's in_flight_jobs counter. When the pollworker wins the
+	// CAS it already called releaseInFlight; MAX(0,...) prevents actual
+	// underflow, but a second decrement would still free an extra slot
+	// prematurely and let the pool over-commit that account. Setting
+	// handedOff before unlock() makes the unlockOnce a no-op — the winner
+	// (pollworker) owns the release in the losing branch.
+	if !won {
+		handedOff.Store(true)
+	}
+	unlock()
 
 	// Metering: emit a usage event now that we know the terminal outcome.
 	// Fetch the account again to observe the post-job balance so we can
