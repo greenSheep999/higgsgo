@@ -151,7 +151,7 @@ func (h *Handler) HandlePlaygroundEstimate(w http.ResponseWriter, r *http.Reques
 
 // HandlePlaygroundExecute serves POST /v1/playground/execute.
 //
-// Body mirrors POST /v1/images/generations or /v1/videos/generations
+// Body mirrors POST /v1/images/generations or /v1/video/generations
 // depending on the resolved spec.Output. The endpoint enforces the same
 // per-model scope gate as /estimate before forwarding to the underlying
 // generation handler.

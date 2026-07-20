@@ -217,7 +217,18 @@ func (s *Server) publicRouter() http.Handler {
 					Logger: s.Logger,
 				}
 				r.Use(rl.Middleware)
+				// Video generation is reachable on two paths that share a
+				// handler:
+				//   * /videos/generations — original higgsgo path (kept as
+				//     legacy alias for any client already integrated).
+				//   * /video/generations  — new-api / OneAPI compatibility
+				//     shape, singular "video". Preferred going forward.
+				// OpenAI's own canonical endpoint is POST /v1/videos (no
+				// /generations suffix, different body shape); we don't
+				// mount that yet — no caller has asked for it and its body
+				// contract diverges from images/generations.
 				r.Post("/videos/generations", s.V1.HandleVideoGeneration)
+				r.Post("/video/generations", s.V1.HandleVideoGeneration)
 				r.Post("/images/generations", s.V1.HandleImageGeneration)
 				r.Get("/jobs", s.V1.HandleJobsList)
 				r.Get("/jobs/{id}", s.V1.HandleJobFetch)

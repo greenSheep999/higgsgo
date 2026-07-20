@@ -84,7 +84,15 @@ Auth: API key optional. Returns the raw `ModelSpec` from the registry
 
 Errors: `404 model_not_found`.
 
-### `POST /v1/videos/generations`
+### `POST /v1/video/generations`
+
+Also served at `POST /v1/videos/generations` (legacy alias — same handler,
+same body, same response). The singular form is the new-api / OneAPI
+compatible shape and is the recommended path going forward; the plural
+form is preserved for callers that were minted against the original
+higgsgo surface. OpenAI's own current video endpoint is `POST /v1/videos`
+(no `/generations` suffix, different body contract) — that is a separate
+question and is not mounted here.
 
 Auth: API key required. Body:
 
@@ -106,7 +114,7 @@ Response is a `GenerationResponse`: `{id, object, model, status, created_at, res
 Errors: `400 invalid_body` (missing `model`, malformed JSON, `ambiguous_group`), `404 model_not_found`, `401 missing_api_key|invalid_api_key`, `402 plan_gate`, `403 api_key_revoked`, `429 rate_limited`, `503 no_account_available`, `502 upstream_5xx`, `504 upstream_timeout`.
 
 ```bash
-curl -s $BASE/v1/videos/generations \
+curl -s $BASE/v1/video/generations \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"model":"seedance-2-0-mini","prompt":"a red apple","async":true}'
@@ -130,7 +138,7 @@ Auth: API key required. OpenAI-shaped body:
 }
 ```
 
-Unknown keys are forwarded to upstream `params`. Response shape and error set identical to `/v1/videos/generations`.
+Unknown keys are forwarded to upstream `params`. Response shape and error set identical to `/v1/video/generations`.
 
 ### `GET /v1/jobs`
 
@@ -414,7 +422,7 @@ credit cost so the WebUI can show a warning before submitting.
 ### `POST /v1/playground/execute`
 
 Enqueues a job in the playground pool. Identical semantics to
-`POST /v1/videos/generations` but constrained to models with
+`POST /v1/video/generations` but constrained to models with
 `playground = true`.
 
 ### `GET /v1/playground/models`

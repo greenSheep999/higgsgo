@@ -4,7 +4,8 @@
 //
 //	GET  /v1/models                     list of usable model aliases
 //	GET  /v1/models/{alias}             single-model detail
-//	POST /v1/videos/generations         create a video job
+//	POST /v1/video/generations          create a video job (new-api compatible; preferred)
+//	POST /v1/videos/generations         create a video job (higgsgo legacy alias)
 //	POST /v1/images/generations         create an image job
 //	POST /v1/audio/generations          create an audio (TTS) job
 //	GET  /v1/jobs/{id}                  poll an async job

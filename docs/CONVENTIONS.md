@@ -55,7 +55,11 @@ Chinese is fine in:
 
 ### API
 
-- Public endpoints (`/v1/*`): OpenAI-compatible naming (`/v1/videos/generations`, `/v1/models`)
+- Public endpoints (`/v1/*`): OpenAI-compatible naming. Video generation is
+  served at both `/v1/video/generations` (new-api / OneAPI shape, preferred)
+  and `/v1/videos/generations` (higgsgo's original plural spelling, kept as
+  a legacy alias — same handler, same body). Image generation uses OpenAI's
+  own plural spelling: `/v1/images/generations`.
 - Admin endpoints (`/admin/*`): REST-ish (`/admin/accounts/{id}`)
 - Internal endpoints for CPA plugin (`/internal/*`): also REST-ish
 - Query params: `snake_case`

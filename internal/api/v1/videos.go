@@ -26,7 +26,10 @@ type videoRequest struct {
 	Extra   map[string]any `json:"-"` // populated by unmarshal below
 }
 
-// HandleVideoGeneration serves POST /v1/videos/generations.
+// HandleVideoGeneration serves both video-generation paths:
+//
+//	POST /v1/video/generations   (new-api / OneAPI compatible; preferred)
+//	POST /v1/videos/generations  (higgsgo legacy alias)
 //
 // Body:
 //
