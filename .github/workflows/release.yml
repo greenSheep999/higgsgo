@@ -97,6 +97,11 @@ jobs:
         run: |
           echo "commit=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
           echo "build_time=$(date -u +%FT%TZ)" >> "$GITHUB_OUTPUT"
+          # GHCR tags must be lowercase. Some GitHub org / user names
+          # carry mixed case (e.g. greenSheep999) so `github.repository_owner`
+          # in isolation can't be interpolated straight into the tag.
+          # Precompute a lowercased copy for the tag list below.
+          echo "owner_lc=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
       - name: Build & push
         uses: docker/build-push-action@v6
@@ -110,8 +115,8 @@ jobs:
             COMMIT=${{ steps.meta.outputs.commit }}
             BUILD_TIME=${{ steps.meta.outputs.build_time }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/higgsgo:${{ github.ref_name }}
-            ghcr.io/${{ github.repository_owner }}/higgsgo:latest
+            ghcr.io/${{ steps.meta.outputs.owner_lc }}/higgsgo:${{ github.ref_name }}
+            ghcr.io/${{ steps.meta.outputs.owner_lc }}/higgsgo:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
