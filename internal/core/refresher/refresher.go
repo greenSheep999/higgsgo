@@ -42,6 +42,22 @@ type Refresher struct {
 	Logger      *slog.Logger
 	Interval    time.Duration // default 10m
 	Concurrency int           // default 3
+
+	// Failover, when non-nil, receives RecordError on every FetchWallet
+	// / FetchUser / FetchUnlimActivations failure. This is the wiring
+	// that turns refresher observations (session expired → 401 mint jwt)
+	// into pool-level throttle / disable actions instead of a silent
+	// Warn log. Nil-safe: leaving this unset preserves the pre-wiring
+	// behaviour where dead accounts stay in rotation forever.
+	Failover FailoverSink
+}
+
+// FailoverSink is the narrow subset of failover.Controller the
+// refresher depends on. Defined locally to keep this package free of
+// a hard dependency on internal/core/failover and to let tests pass a
+// counting fake.
+type FailoverSink interface {
+	RecordError(ctx context.Context, accountID string, err error, bodyForRisk string)
 }
 
 // New builds a Refresher populated with sensible defaults for the caller.
@@ -139,6 +155,13 @@ func (r *Refresher) refreshOne(ctx context.Context, acc *domain.Account) {
 		r.Logger.Warn("refresher fetch wallet",
 			slog.String("account_id", acc.ID),
 			slog.String("err", walletErr.Error()))
+		// Feed the failover controller so a chain of consecutive
+		// wallet-fetch failures (401 session expired / 5xx / network)
+		// counts toward the consecutive-fail threshold and eventually
+		// disables the account. Nil-safe when Failover is unwired.
+		if r.Failover != nil {
+			r.Failover.RecordError(ctx, acc.ID, walletErr, walletErr.Error())
+		}
 	} else {
 		if err := r.Accounts.UpdateBalance(ctx, acc.ID,
 			wallet.SubscriptionBalance,
@@ -159,6 +182,12 @@ func (r *Refresher) refreshOne(ctx context.Context, acc *domain.Account) {
 		r.Logger.Warn("refresher fetch user",
 			slog.String("account_id", acc.ID),
 			slog.String("err", userErr.Error()))
+		// Same failover feedback loop as wallet — /user 401s are the
+		// most reliable signal that a Clerk session has expired since
+		// the wallet path uses the exact same mint-jwt code path.
+		if r.Failover != nil {
+			r.Failover.RecordError(ctx, acc.ID, userErr, userErr.Error())
+		}
 		return
 	}
 

@@ -462,3 +462,105 @@ func TestRefresher_HandlesEmptyPool(t *testing.T) {
 			len(store.balances), len(store.entitles))
 	}
 }
+
+// fakeFailoverSink captures RecordError calls so tests can assert
+// refresher-observed failures are forwarded to the failover
+// controller. Kept minimal — a real controller lives in
+// internal/core/failover.
+type fakeFailoverSink struct {
+	mu    sync.Mutex
+	calls []failoverCall
+}
+
+type failoverCall struct {
+	accountID string
+	err       error
+	body      string
+}
+
+func (f *fakeFailoverSink) RecordError(_ context.Context, accountID string, err error, body string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.calls = append(f.calls, failoverCall{accountID: accountID, err: err, body: body})
+}
+
+// TestRefresher_ForwardsFailuresToFailover verifies the Step 1
+// failover wiring: when a wallet or /user fetch fails (real production
+// signal is HTTP 401 from mint-jwt when a Clerk session has expired),
+// the refresher calls Failover.RecordError so the consecutive-fail
+// threshold can eventually pause the account. The test uses a
+// 500-returning server for one account and a healthy server for two
+// others; it asserts exactly two RecordError calls (one for wallet,
+// one for /user) against the bad account and zero against the healthy
+// ones.
+func TestRefresher_ForwardsFailuresToFailover(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.Header.Get("Cookie"), "bad") {
+			// Every endpoint 500s for the bad account so both wallet
+			// AND /user fail, hitting both RecordError call sites.
+			http.Error(w, "boom", http.StatusInternalServerError)
+			return
+		}
+		switch r.URL.Path {
+		case "/workspaces/wallet":
+			_, _ = w.Write([]byte(walletJSON))
+		case "/user":
+			_, _ = w.Write([]byte(userJSON))
+		default:
+			http.Error(w, "not found", http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	store := &fakeAccountStore{
+		accounts: []domain.Account{
+			mkAccount("acc_ok_1", "ok1"),
+			mkAccount("acc_bad", "bad"),
+			mkAccount("acc_ok_2", "ok2"),
+		},
+	}
+	r := newRefresher(t, srv, store, 3)
+	fake := &fakeFailoverSink{}
+	r.Failover = fake
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	r.tick(ctx)
+
+	// Two calls for acc_bad (wallet fail + user fail), zero for the
+	// healthy accounts.
+	fake.mu.Lock()
+	defer fake.mu.Unlock()
+	byAcct := map[string]int{}
+	for _, c := range fake.calls {
+		byAcct[c.accountID]++
+	}
+	if byAcct["acc_bad"] != 2 {
+		t.Errorf("acc_bad: expected 2 RecordError (wallet+user), got %d (all calls: %+v)",
+			byAcct["acc_bad"], fake.calls)
+	}
+	if byAcct["acc_ok_1"] != 0 || byAcct["acc_ok_2"] != 0 {
+		t.Errorf("healthy accounts got RecordError: %+v", byAcct)
+	}
+}
+
+// TestRefresher_NilFailoverIsSafe confirms the failover wiring is
+// nil-safe — deployments that leave Failover unset (or [failover].
+// enabled=false in main.go) must not panic when a fetch fails.
+func TestRefresher_NilFailoverIsSafe(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "boom", http.StatusInternalServerError)
+	}))
+	defer srv.Close()
+
+	store := &fakeAccountStore{
+		accounts: []domain.Account{mkAccount("acc_solo", "any")},
+	}
+	r := newRefresher(t, srv, store, 1)
+	// r.Failover deliberately left nil.
+
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	// Must not panic.
+	r.tick(ctx)
+}

@@ -338,6 +338,13 @@ func run() error {
 	}
 	rf := refresher.New(accountStore, upstreamClient, logger)
 	rf.Interval = refreshInterval
+	// Wire the failover controller so refresher-observed 401s / 5xx
+	// count toward the consecutive-fail threshold and auto-throttle a
+	// stale session before the pool keeps picking it. Nil when
+	// [failover].enabled is false.
+	if failoverCtl != nil {
+		rf.Failover = failoverCtl
+	}
 	logger.Info("refresher started", slog.Duration("interval", refreshInterval))
 	go rf.Run(ctx)
 
