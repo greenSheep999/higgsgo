@@ -438,13 +438,85 @@ func TestAccountStore_PickAndLock_RequiresUnlim(t *testing.T) {
 	}
 }
 
-// TestAccountStore_PickAndLock_BestFit verifies the new RouteBestFit
-// strategy prefers the closest-tier-above-the-floor account, burning
-// starter accounts first before escalating to pro / plus for cheap
-// models. Sets up three accounts (starter/pro/plus) all eligible for a
-// min_plan=starter model, then asserts the first pick lands on starter.
-// After starter's slot fills, the next pick should escalate to pro
-// (rank 3, next closest to the starter floor).
+// TestAccountStore_PickAndLock_LoadBalanceIsTierAware is the v0.5.5
+// regression: the default 'round_robin' (a.k.a. 'load_balance')
+// strategy MUST prefer the closest-tier-above-the-floor account. The
+// tier-aware ordering is no longer opt-in via 'best_fit' — every
+// load-balanced group gets it. Same setup as _BestFit below; asserts
+// starter wins first, pro second, plus third.
+func TestAccountStore_PickAndLock_LoadBalanceIsTierAware(t *testing.T) {
+	db := openMem(t)
+	accStore := NewAccountStore(db)
+	ctx := context.Background()
+
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	base := time.Now().Add(-1 * time.Hour)
+	for _, a := range []struct {
+		id, email string
+		plan      domain.PlanType
+	}{
+		{"acc_starter_lb", "s@lb.co", domain.PlanStarter},
+		{"acc_pro_lb", "p@lb.co", domain.PlanPro},
+		{"acc_plus_lb", "u@lb.co", domain.PlanPlus},
+	} {
+		must(accStore.Upsert(ctx, &domain.Account{
+			ID: a.id, Email: a.email, Password: "-", SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
+			PlanType: a.plan, SubscriptionBalance: 50000, Status: domain.StatusActive,
+			RegisteredAt: base, ImportedAt: base,
+		}))
+	}
+
+	// RouteStrategy left empty → defaults to RouteRoundRobin (the
+	// "load_balance" default). Verify it now behaves like the old
+	// best_fit did.
+	acc1, _, err := accStore.PickAndLock(ctx, ports.PickParams{
+		EstCostHundredths: 1000,
+		MinPlan:           domain.PlanStarter,
+	})
+	if err != nil {
+		t.Fatalf("pick 1: %v", err)
+	}
+	if acc1.ID != "acc_starter_lb" {
+		t.Errorf("load_balance pick 1: got %s (plan=%s), want acc_starter_lb",
+			acc1.ID, acc1.PlanType)
+	}
+
+	acc2, _, err := accStore.PickAndLock(ctx, ports.PickParams{
+		EstCostHundredths:       1000,
+		MinPlan:                 domain.PlanStarter,
+		MaxConcurrentPerAccount: 1,
+	})
+	if err != nil {
+		t.Fatalf("pick 2: %v", err)
+	}
+	if acc2.ID != "acc_pro_lb" {
+		t.Errorf("load_balance pick 2 (starter busy): got %s (plan=%s), want acc_pro_lb",
+			acc2.ID, acc2.PlanType)
+	}
+
+	acc3, _, err := accStore.PickAndLock(ctx, ports.PickParams{
+		EstCostHundredths:       1000,
+		MinPlan:                 domain.PlanStarter,
+		MaxConcurrentPerAccount: 1,
+	})
+	if err != nil {
+		t.Fatalf("pick 3: %v", err)
+	}
+	if acc3.ID != "acc_plus_lb" {
+		t.Errorf("load_balance pick 3 (starter+pro busy): got %s (plan=%s), want acc_plus_lb",
+			acc3.ID, acc3.PlanType)
+	}
+}
+
+// TestAccountStore_PickAndLock_BestFit verifies the legacy RouteBestFit
+// alias still works — kept for backward compatibility with rolling
+// upgrades and API clients that hold the old string. Since v0.5.5 the
+// behaviour is identical to the default round_robin path.
 func TestAccountStore_PickAndLock_BestFit(t *testing.T) {
 	db := openMem(t)
 	accStore := NewAccountStore(db)

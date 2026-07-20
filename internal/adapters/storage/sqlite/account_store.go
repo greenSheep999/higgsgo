@@ -573,19 +573,20 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 		} else {
 			q.WriteString(` ORDER BY COALESCE(priority, 0) DESC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC` + jitterTail)
 		}
-	case domain.RouteBestFit:
-		// Order by plan tier rank ascending so the *closest fit above the
-		// model's floor* wins. min_plan=starter models drain starter
-		// accounts first; only when every starter account is busy /
-		// out of budget does the picker escalate to basic → pro → plus
-		// → ultra-family. Inside the same tier we tiebreak on LRU so
-		// concurrent picks on identical plans still spread out.
+	default: // RouteRoundRobin — the "load_balance" default.
+		// Composed ordering, no operator knobs:
+		//   1. plan_tier_rank ASC  — cheap-first: burn the tier closest
+		//      to the model's min_plan floor. Preserves the higher-tier
+		//      account budgets for models that actually need them.
+		//   2. last_used_at ASC    — LRU inside the same tier so a burst
+		//      of requests on identical-plan accounts spreads out.
+		//   3. in_flight_jobs ASC  — least-loaded next.
+		//   4. RANDOM()            — jitter tiebreak.
 		//
-		// Ranking mirrors PlanType.TierRank() (see internal/domain/account.go)
-		// so free (rank 0) is included at the bottom for callers that
-		// leave MinPlan empty. When MinPlan is set the WHERE clause
-		// already excluded lower ranks, so this ORDER BY only sorts
-		// among survivors.
+		// Rank table mirrors PlanType.TierRank() and the CASE used by
+		// the MinPlan WHERE gate: starter=1, basic=2, pro=3, plus=4,
+		// ultra-family=5, free=0. When the WHERE clause already applied
+		// a MinPlan floor, this ORDER BY only sorts among survivors.
 		q.WriteString(` ORDER BY CASE plan_type`)
 		q.WriteString(` WHEN 'starter' THEN 1`)
 		q.WriteString(` WHEN 'basic' THEN 2`)
@@ -598,8 +599,6 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 		q.WriteString(` WHEN 'team' THEN 5`)
 		q.WriteString(` WHEN 'enterprise' THEN 5`)
 		q.WriteString(` ELSE 0 END ASC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC` + jitterTail)
-	default: // RouteRoundRobin (== jittered LRU)
-		q.WriteString(` ORDER BY COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC` + jitterTail)
 	}
 
 	row := tx.QueryRowContext(ctx, q.String(), args...)

@@ -254,8 +254,7 @@ function InfoTab({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="round_robin">round_robin</SelectItem>
-            <SelectItem value="least_used">least_used</SelectItem>
+            <SelectItem value="round_robin">load_balance</SelectItem>
             <SelectItem value="priority">priority</SelectItem>
           </SelectContent>
         </Select>

@@ -27,15 +27,15 @@ const (
 	// system setting.
 	RoutePriority RouteStrategy = "priority"
 
-	// RouteBestFit picks the account whose plan tier is closest to
-	// (but not below) the model's MinPlan floor. Cheap models
-	// (min_plan=starter) burn starter accounts first, reserving
-	// pro / plus / ultra headroom for models that actually need it.
-	// Falls back to jittered LRU inside the same tier so concurrent
-	// picks on identical-plan accounts still spread out.
+	// RouteBestFit is a legacy alias absorbed into RouteRoundRobin as
+	// of v0.5.5. Kept as a constant so older SQL rows / API payloads
+	// containing the string still parse cleanly; the SQL builder
+	// treats it the same as round_robin. Migration 019 rewrites any
+	// stored value to 'round_robin' so this constant is only reachable
+	// from in-flight API requests during a rolling upgrade.
 	//
-	// Precedence inside the ORDER BY: tier_rank ASC (closest fit
-	// wins) → last_used_at ASC (LRU) → in_flight_jobs ASC → RANDOM().
+	// Deprecated: use RouteRoundRobin (which now performs the same
+	// tier-aware ordering).
 	RouteBestFit RouteStrategy = "best_fit"
 )
 
