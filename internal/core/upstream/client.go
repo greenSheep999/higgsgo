@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -644,8 +645,8 @@ func parseCreateResponse(raw []byte, httpStatus int) (*CreateResponse, error) {
 	var body struct {
 		ID      string `json:"id"`
 		JobSets []struct {
-			ID   string `json:"id"`
-			Cost int64  `json:"cost"`
+			ID   string      `json:"id"`
+			Cost json.Number `json:"cost"`
 			Jobs []struct {
 				ID string `json:"id"`
 			} `json:"jobs"`
@@ -657,11 +658,32 @@ func parseCreateResponse(raw []byte, httpStatus int) (*CreateResponse, error) {
 	if len(body.JobSets) == 0 || len(body.JobSets[0].Jobs) == 0 {
 		return nil, errors.New("create response missing job_sets[0].jobs[0]")
 	}
+	cost, err := parseCreateCost(body.JobSets[0].Cost)
+	if err != nil {
+		return nil, err
+	}
 	return &CreateResponse{
 		JobSetID:   body.JobSets[0].ID,
 		JobID:      body.JobSets[0].Jobs[0].ID,
-		Cost:       body.JobSets[0].Cost,
+		Cost:       cost,
 		Raw:        raw,
 		HTTPStatus: httpStatus,
 	}, nil
+}
+
+func parseCreateCost(n json.Number) (int64, error) {
+	if n == "" {
+		return 0, nil
+	}
+	if v, err := n.Int64(); err == nil {
+		return v, nil
+	}
+	f, err := strconv.ParseFloat(n.String(), 64)
+	if err != nil {
+		return 0, fmt.Errorf("parse create response cost %q: %w", n.String(), err)
+	}
+	if f < 0 || math.Trunc(f) != f {
+		return 0, fmt.Errorf("parse create response cost %q: expected whole number", n.String())
+	}
+	return int64(f), nil
 }

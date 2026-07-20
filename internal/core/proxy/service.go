@@ -272,8 +272,10 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 		pickParams := ports.PickParams{
 			JST:                     spec.JST,
 			EstCostHundredths:       spec.EstCostHundredths,
+			MinPlan:                 spec.MinPlan,
 			RequiresPaid:            s.Registry.StarterLocked(spec.JST) || spec.RequiresPaid,
 			RequiresUltra:           spec.RequiresUltra,
+			RequiresUnlim:           spec.RequiresUnlim,
 			GroupID:                 gid,
 			RouteStrategy:           p.RouteStrategy,
 			MaxGroupInFlight:        p.MaxGroupInFlight,

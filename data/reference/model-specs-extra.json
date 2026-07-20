@@ -161,7 +161,7 @@
     "nano-banana-2-lite": { "max_resolution": "1k" },
     "nano-banana-2-upscale": { "max_resolution": "4k" },
     "seedream": { "max_resolution": "1k" },
-    "seedream-v4-5": { "max_resolution": "4k" },
+    "seedream-v4-5": { "max_resolution": "4k", "min_plan": "basic" },
     "seedream-5-lite": { "max_resolution": "2k" },
     "flux-2": { "max_resolution": "2k" },
     "flux-kontext": { "max_resolution": "1k" },

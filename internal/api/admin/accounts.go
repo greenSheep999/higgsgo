@@ -119,6 +119,7 @@ func (h *AccountsHandler) EligibleModels(w http.ResponseWriter, r *http.Request)
 }
 
 // accountCanRun encodes the same eligibility rules the pool router uses:
+//   - MinPlan       → account plan must meet the explicit floor
 //   - StarterLocked model requires a paid tier (PlanType.IsPaid())
 //   - RequiresPaid  → PlanType.IsPaid()
 //   - RequiresUltra → PlanType in {ultra, ultimate, scale, creator, team, enterprise}
@@ -128,6 +129,9 @@ func (h *AccountsHandler) EligibleModels(w http.ResponseWriter, r *http.Request)
 func accountCanRun(a *domain.Account, m *domain.ModelSpec) (bool, string) {
 	if m.Deprecated {
 		return false, "deprecated"
+	}
+	if !a.PlanType.MeetsMinimum(m.MinPlan) {
+		return false, "min_plan"
 	}
 	if m.StarterLocked && !a.PlanType.IsPaid() {
 		return false, "starter_locked"

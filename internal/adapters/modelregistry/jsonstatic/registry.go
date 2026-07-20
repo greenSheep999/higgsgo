@@ -47,6 +47,7 @@ type Registry struct {
 type extraSpec struct {
 	MaxResolution  string `json:"max_resolution"`
 	MaxDurationSec int    `json:"max_duration_sec"`
+	MinPlan        string `json:"min_plan"`
 }
 
 type aliasEntry struct {
@@ -240,6 +241,10 @@ func (r *Registry) Reload(ctx context.Context) error {
 		if e, ok := extras[m.Alias]; ok {
 			spec.MaxResolution = e.MaxResolution
 			spec.MaxDurationSec = e.MaxDurationSec
+			if minPlan := domain.PlanType(e.MinPlan); minPlan.TierRank() > spec.MinPlan.TierRank() {
+				spec.MinPlan = minPlan
+			}
+			spec.Tags = deriveTags(spec)
 		}
 		// Apply body-template enrichment. The template lookup key is the
 		// alias itself; missing template leaves ExampleBodyJSON/Enums

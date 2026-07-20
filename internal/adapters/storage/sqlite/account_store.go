@@ -493,6 +493,22 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 	if params.RequiresUltra {
 		q.WriteString(` AND plan_type IN ('ultra','ultimate','scale','creator','team','enterprise')`)
 	}
+	if minRank := params.MinPlan.TierRank(); minRank > 0 {
+		q.WriteString(` AND CASE plan_type
+			WHEN 'starter' THEN 1
+			WHEN 'basic' THEN 2
+			WHEN 'pro' THEN 3
+			WHEN 'plus' THEN 4
+			WHEN 'ultra' THEN 5
+			WHEN 'ultimate' THEN 5
+			WHEN 'scale' THEN 5
+			WHEN 'creator' THEN 5
+			WHEN 'team' THEN 5
+			WHEN 'enterprise' THEN 5
+			ELSE 0
+		END >= ?`)
+		args = append(args, minRank)
+	}
 	if params.RequiresUnlim {
 		q.WriteString(` AND has_unlim = 1`)
 	}

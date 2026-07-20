@@ -34,6 +34,39 @@ func (p PlanType) IsPaid() bool {
 	}
 }
 
+// TierRank returns a coarse ordering for minimum-plan routing. It is separate
+// from IsPaid because some upstream gates require Basic-or-newer, while the
+// older "paid" gate intentionally starts at Pro.
+func (p PlanType) TierRank() int {
+	switch p {
+	case PlanStarter:
+		return 1
+	case PlanBasic:
+		return 2
+	case PlanPro:
+		return 3
+	case PlanPlus:
+		return 4
+	case PlanUltra, PlanUltimate, PlanScale, PlanCreator, PlanTeam, PlanEnt:
+		return 5
+	default:
+		return 0
+	}
+}
+
+// MeetsMinimum reports whether this account plan satisfies a model's explicit
+// minimum plan floor. Empty / free minimums mean no plan floor.
+func (p PlanType) MeetsMinimum(min PlanType) bool {
+	if min == "" || min == PlanFree {
+		return true
+	}
+	minRank := min.TierRank()
+	if minRank == 0 {
+		return true
+	}
+	return p.TierRank() >= minRank
+}
+
 // AccountStatus is the lifecycle state we track locally.
 //
 // suspended / banned carry manual, operator-initiated semantics (e.g.,

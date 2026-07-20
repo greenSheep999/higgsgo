@@ -95,6 +95,7 @@ type PickParams struct {
 	// Model requirements.
 	JST               string
 	EstCostHundredths int64
+	MinPlan           domain.PlanType
 	RequiresPaid      bool
 	RequiresUltra     bool
 	RequiresUnlim     bool
@@ -395,6 +396,7 @@ type RegistrationStore interface {
 	// choose.
 	ResetToPending(ctx context.Context, id int64) error
 }
+
 // RegistrationFilter is declared in ports/registrar.go; reused here.
 
 // Registration is a pending or completed account registration attempt.

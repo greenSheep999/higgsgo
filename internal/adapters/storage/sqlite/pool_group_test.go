@@ -335,3 +335,105 @@ func TestAccountStore_ResetAllInFlight(t *testing.T) {
 		t.Errorf("re-reset: got %d rows want 0", n)
 	}
 }
+
+// TestAccountStore_PickAndLock_MinPlan verifies the min-plan gate added
+// for seedream-v4-5-style models: a model with MinPlan=basic must skip
+// free + starter accounts and land on basic (or higher). This is the
+// regression that fixes the "seedream-v4-5 picked a free account → 402"
+// bug from the 2026-07-20 operational review.
+func TestAccountStore_PickAndLock_MinPlan(t *testing.T) {
+	db := openMem(t)
+	accStore := NewAccountStore(db)
+	ctx := context.Background()
+
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Free account: enough balance, but must be skipped by min_plan=basic.
+	must(accStore.Upsert(ctx, &domain.Account{
+		ID: "acc_free", Email: "free@x.co", Password: "-", SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
+		PlanType: domain.PlanFree, SubscriptionBalance: 100000, Status: domain.StatusActive,
+		RegisteredAt: time.Now(), ImportedAt: time.Now(),
+	}))
+	// Basic account: should be chosen.
+	must(accStore.Upsert(ctx, &domain.Account{
+		ID: "acc_basic", Email: "basic@x.co", Password: "-", SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
+		PlanType: domain.PlanBasic, SubscriptionBalance: 100000, Status: domain.StatusActive,
+		RegisteredAt: time.Now(), ImportedAt: time.Now(),
+	}))
+
+	// MinPlan=basic must exclude the free account and pick the basic one.
+	for i := 1; i <= 3; i++ {
+		acc, _, err := accStore.PickAndLock(ctx, ports.PickParams{
+			EstCostHundredths: 1000,
+			MinPlan:           domain.PlanBasic,
+		})
+		if err != nil {
+			t.Fatalf("pick %d: %v", i, err)
+		}
+		if acc.ID != "acc_basic" {
+			t.Fatalf("pick %d: expected acc_basic, got %s (plan=%s)",
+				i, acc.ID, acc.PlanType)
+		}
+	}
+
+	// MinPlan unset (zero value) picks either — both are eligible.
+	// Reset in-flight so the basic account is available again for the
+	// unrestricted assertion.
+	must(accStore.UpdateInFlight(ctx, "acc_basic", -3))
+	acc, _, err := accStore.PickAndLock(ctx, ports.PickParams{
+		EstCostHundredths: 1000,
+	})
+	if err != nil {
+		t.Fatalf("pick without MinPlan: %v", err)
+	}
+	if acc.ID != "acc_free" && acc.ID != "acc_basic" {
+		t.Errorf("pick without MinPlan: got %s, want acc_free or acc_basic", acc.ID)
+	}
+}
+
+// TestAccountStore_PickAndLock_RequiresUnlim confirms the WHERE clause
+// on has_unlim = 1 actually gates when the caller sets RequiresUnlim.
+// Regression against the 2026-07-20 finding that proxy.Service forgot
+// to fill PickParams.RequiresUnlim; even after that wire-up landed, the
+// SQL path is the layer of defence that has to catch bad callers.
+func TestAccountStore_PickAndLock_RequiresUnlim(t *testing.T) {
+	db := openMem(t)
+	accStore := NewAccountStore(db)
+	ctx := context.Background()
+
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	// Normal account without unlim.
+	must(accStore.Upsert(ctx, &domain.Account{
+		ID: "acc_normal", Email: "n@x.co", Password: "-", SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
+		PlanType: domain.PlanPlus, SubscriptionBalance: 100000, HasUnlim: false, Status: domain.StatusActive,
+		RegisteredAt: time.Now(), ImportedAt: time.Now(),
+	}))
+	// Unlim account.
+	must(accStore.Upsert(ctx, &domain.Account{
+		ID: "acc_unlim", Email: "u@x.co", Password: "-", SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
+		PlanType: domain.PlanPlus, SubscriptionBalance: 100000, HasUnlim: true, Status: domain.StatusActive,
+		RegisteredAt: time.Now(), ImportedAt: time.Now(),
+	}))
+
+	acc, _, err := accStore.PickAndLock(ctx, ports.PickParams{
+		EstCostHundredths: 1000,
+		RequiresUnlim:     true,
+	})
+	if err != nil {
+		t.Fatalf("pick with RequiresUnlim: %v", err)
+	}
+	if acc.ID != "acc_unlim" {
+		t.Errorf("RequiresUnlim: got %s, want acc_unlim", acc.ID)
+	}
+}

@@ -83,13 +83,13 @@ type ModelSpec struct {
 	// can leave a "why this override exists" hint.
 	Note string
 
-	// MinPlan is the human-readable minimum plan tier required to run
+	// MinPlan is the minimum plan tier required to run
 	// this model, sourced from official higgsfield plan names in
 	// PlanType. Empty means "free tier / no plan requirement".
 	// Derived by the loader from the four requires_* / starter_locked
-	// flags according to accountCanRun's rules — see the mapping in
-	// internal/adapters/modelregistry/jsonstatic/registry.go. UI-only
-	// hint: the pool router still gates via the individual flags.
+	// flags, then optionally tightened by model-specs-extra.json for
+	// model-specific gates such as Basic-only image models. The pool router
+	// enforces this floor in addition to the individual flags.
 	MinPlan PlanType
 
 	// Tags are internal / operational classification labels rendered
