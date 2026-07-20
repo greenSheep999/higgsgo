@@ -77,6 +77,12 @@ func (f *fakeAdminJobStore) UpdateStatus(context.Context, string, domain.JobStat
 	panic("not implemented")
 }
 
+// TryMarkTerminal is unused by the admin jobs handler; the ports.JobStore
+// interface (F1) requires it, so this stub panics to catch accidental use.
+func (f *fakeAdminJobStore) TryMarkTerminal(context.Context, string, []domain.JobStatus, domain.JobStatus, ports.JobMeta) (bool, error) {
+	panic("not implemented")
+}
+
 func (f *fakeAdminJobStore) ListPending(context.Context) ([]domain.Job, error) {
 	panic("not implemented")
 }

@@ -129,6 +129,20 @@ type PickParams struct {
 type JobStore interface {
 	Create(ctx context.Context, j *domain.Job) error
 	UpdateStatus(ctx context.Context, id string, status domain.JobStatus, meta JobMeta) error
+	// TryMarkTerminal is the compare-and-swap terminal-transition writer
+	// added by F1. It atomically moves a job into `to` iff the row's
+	// current status is in `from`, and returns won=true only for the
+	// call that actually performed the write. Callers use the flag to
+	// gate metering, webhook fire, and in-flight release so a concurrent
+	// sync path + pollworker do not both run those side effects.
+	//
+	// A won=false result is a race-lost signal, NOT an error. Real SQL
+	// failures still surface via err. The winner's meta lands on the
+	// row; a loser's stale snapshot cannot overwrite it. `from` must be
+	// non-empty and `to` must be a terminal status (completed / failed /
+	// refunded / timeout) — implementations should refuse other inputs
+	// so this method is not used as an unguarded UpdateStatus stand-in.
+	TryMarkTerminal(ctx context.Context, id string, from []domain.JobStatus, to domain.JobStatus, meta JobMeta) (bool, error)
 	Get(ctx context.Context, id string) (*domain.Job, error)
 	ListPending(ctx context.Context) ([]domain.Job, error)
 	// ListByAPIKey returns jobs authored by apiKeyID, newest first

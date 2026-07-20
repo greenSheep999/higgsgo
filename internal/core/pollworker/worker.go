@@ -23,6 +23,7 @@ package pollworker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"sync"
 	"time"
@@ -294,17 +295,51 @@ func (w *Worker) pollOne(ctx context.Context, j *domain.Job, now time.Time) {
 		meta.ErrorType = domain.ErrUpstream
 		meta.ErrorDetail = "upstream reported failed status"
 	}
-	if err := w.Jobs.UpdateStatus(ctx, j.ID, finalStatus, meta); err != nil {
-		w.Logger.Warn("pollworker update terminal",
+	// F1 compare-and-swap: only one observer of the terminal transition
+	// (this pollworker OR the sync proxy path) may run metering / webhook /
+	// in-flight release. TryMarkTerminal atomically moves the jobs row into
+	// finalStatus iff its current status is still queued / pending /
+	// in_progress; won=true only for the call that performed the write.
+	//
+	// Losing the race means the sync path already recorded the usage_event
+	// and fired the webhook — running them again would double-charge and
+	// double-notify the caller. Failover feedback stays outside the gate
+	// because it is idempotent and safe to double-signal.
+	won, casErr := w.Jobs.TryMarkTerminal(ctx, j.ID,
+		[]domain.JobStatus{domain.JobQueued, domain.JobPending, domain.JobRunning},
+		finalStatus, meta)
+	if casErr != nil {
+		w.Logger.Warn("pollworker CAS terminal",
 			slog.String("job_id", j.ID),
-			slog.String("err", err.Error()))
+			slog.String("err", casErr.Error()))
+		// A real SQL error means the row may still be non-terminal —
+		// return so the next tick retries. Do not release in_flight or
+		// run side effects on an unknown-state row.
 		return
 	}
+	if !won {
+		w.Logger.Info("pollworker CAS lost race — sync path already terminated",
+			slog.String("job_id", j.ID),
+			slog.String("status", string(finalStatus)))
+		// Sync path won the race: it already ran metering + webhook +
+		// released its lock. Skip our copies of those side effects. Do
+		// NOT release in_flight here either — the sync path's unlock()
+		// already decremented it. This is the conservative choice per
+		// F1: only the winner runs side effects.
+		return
+	}
+
 	// Release the in_flight slot the proxy reserved when the async
-	// job was created. Runs after UpdateStatus so a job that failed
+	// job was created. Runs after the winning CAS so a job that failed
 	// to persist its terminal state still gets retried by the next
 	// tick (we won't have written to jobs, so ListPending still
 	// returns it). ROADMAP P3-11.
+	//
+	// Gated on won=true so a pollworker that lost the race to the sync
+	// path does not double-decrement in_flight (the sync path's
+	// unlock() already handled it). UpdateInFlight uses MAX(0, ...) as
+	// backstop but "correct by construction" is better than "bounded
+	// by clamp".
 	w.releaseInFlight(ctx, j.AccountID, j.ID)
 
 	// Failover feedback: a "completed" upstream terminal is a healthy
@@ -335,6 +370,12 @@ func (w *Worker) pollOne(ctx context.Context, j *domain.Job, now time.Time) {
 	// migration 003 (or was created without a snapshot) and the Recorder
 	// falls back to job.UpstreamCost — never block terminal transitions
 	// on accounting.
+	//
+	// Only runs when we won the CAS: a losing pollworker skipped this
+	// block via the early return above, so the sync path's usage_event
+	// is the only row for this job. The UNIQUE index on
+	// usage_events(higgsgo_job_id) added by migration 018 is the belt
+	// under the gate's suspenders.
 	if w.Meter != nil {
 		freshAcc, getErr := w.Accounts.Get(ctx, j.AccountID)
 		if getErr != nil || freshAcc == nil {
@@ -342,9 +383,18 @@ func (w *Worker) pollOne(ctx context.Context, j *domain.Job, now time.Time) {
 		}
 		markup := w.resolveMarkup(ctx, j.APIKeyID)
 		if err := w.Meter.OnJobTerminal(ctx, j, freshAcc, j.PreBalanceH, markup); err != nil {
-			w.Logger.Warn("metering failed",
-				slog.String("job_id", j.ID),
-				slog.String("err", err.Error()))
+			// Same F1 defence-in-depth signal as service.go: the CAS
+			// gate should already have blocked us; if it did not, the
+			// UNIQUE index on usage_events swallows the duplicate. Not
+			// paging-worthy.
+			if errors.Is(err, domain.ErrUsageEventDuplicate) {
+				w.Logger.Debug("metering skipped (duplicate)",
+					slog.String("job_id", j.ID))
+			} else {
+				w.Logger.Warn("metering failed",
+					slog.String("job_id", j.ID),
+					slog.String("err", err.Error()))
+			}
 		}
 	}
 

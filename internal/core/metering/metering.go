@@ -151,6 +151,21 @@ func (r *Recorder) OnJobTerminal(ctx context.Context, job *domain.Job, account *
 	}
 
 	if err := r.Events.Insert(ctx, event); err != nil {
+		// domain.ErrUsageEventDuplicate is the F1 defence-in-depth
+		// signal: the CAS gate in core/proxy + core/pollworker should
+		// have already blocked this call, but if a caller ever bypasses
+		// the gate the UNIQUE index on usage_events(higgsgo_job_id)
+		// (migration 018) catches the duplicate here. Log at debug so
+		// operators are not spammed by a benign race outcome, and
+		// return the sentinel unchanged so the caller can distinguish
+		// "already recorded" from a real store failure.
+		if errors.Is(err, domain.ErrUsageEventDuplicate) {
+			if r.Logger != nil {
+				r.Logger.Debug("metering insert skipped (duplicate)",
+					slog.String("job_id", job.ID))
+			}
+			return err
+		}
 		if r.Logger != nil {
 			r.Logger.Warn("metering insert failed",
 				slog.String("job_id", job.ID),
