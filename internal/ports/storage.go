@@ -124,6 +124,71 @@ type PickParams struct {
 	// Sourced from Group.MaxConcurrentPerAccount today; will feed from
 	// resolver.Resolve() once ROADMAP P1-4 lands.
 	MaxConcurrentPerAccount int
+
+	// LoadBalance carries the operator-configurable knobs for the
+	// load_balance route strategy. Populated by the proxy service from
+	// the SettingsStore before every Pick; a zero value means "use the
+	// hardcoded defaults" (tier-aware ordering ON, jitter ON, headroom
+	// 120%, richer/unlim/free-quota preferences OFF). Consumed only when
+	// RouteStrategy == "round_robin" (the load_balance mapping); other
+	// strategies ignore this field.
+	LoadBalance LoadBalanceOpts
+}
+
+// LoadBalanceOpts is the operator-editable subset of the load_balance
+// route strategy's internal ordering knobs. Persisted per-key in
+// system_settings under load_balance.* keys and read on every pick.
+//
+// Zero-value semantics: an all-zero struct is treated as "no operator
+// config present" and PickAndLock falls back to the hardcoded defaults
+// (tier-aware ON, jitter ON, headroom 120%, other preferences OFF).
+// Callers should either populate all fields or leave the struct at zero
+// — mixing (e.g. setting TierAware=false but leaving Jitter=false when
+// the operator wanted Jitter=true) is not a supported combination.
+type LoadBalanceOpts struct {
+	// Populated marks whether this struct carries operator-supplied
+	// values. When false, PickAndLock ignores every other field and
+	// applies the hardcoded defaults. This lets callers pass a zero
+	// LoadBalanceOpts through the params without the store having to
+	// distinguish "operator turned everything off" from "no config".
+	Populated bool
+
+	// TierAware, when true, keeps the cheap-first plan-tier CASE in the
+	// ORDER BY clause. When false, PickAndLock skips the tier ranking
+	// so accounts of any plan tier are considered equally.
+	TierAware bool
+
+	// PreferUnlim, when true, prefers accounts that have activated the
+	// model's unlim bundle. Requires the account_unlim_activations
+	// table + model.unlim_job_set_type wiring; when those are absent
+	// this flag is a no-op (see TODO in AccountStore.PickAndLock).
+	PreferUnlim bool
+
+	// PreferFreeQuota, when true, prefers accounts whose free-quota
+	// counter for the model's family is > 0. Requires the account-side
+	// free-quota columns synced by the refresher; when absent this
+	// flag is a no-op (see TODO in AccountStore.PickAndLock).
+	PreferFreeQuota bool
+
+	// PreferRicher, when true, adds subscription_balance DESC to the
+	// ORDER BY tail so the account with the deepest wallet wins ties
+	// within the same tier. Useful when operators want to burn the
+	// richest account down first rather than spreading evenly.
+	PreferRicher bool
+
+	// BalanceHeadroomPct is the percentage of EstCostHundredths the
+	// account's subscription_balance must exceed to qualify. 120 means
+	// "balance >= cost * 1.2" (the historical default). 100 means "no
+	// headroom, balance >= cost exactly"; higher values reserve more
+	// buffer against mid-job cost drift. Valid range: 100..500.
+	// A zero value falls back to 120.
+	BalanceHeadroomPct int
+
+	// Jitter, when true, appends RANDOM() as the final ORDER BY
+	// tiebreaker so concurrent picks with identical primary keys land
+	// on different rows probabilistically. When false, PickAndLock is
+	// fully deterministic — useful for testing.
+	Jitter bool
 }
 
 // JobStore persists proxied job records.

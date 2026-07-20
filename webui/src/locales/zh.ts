@@ -900,6 +900,7 @@ const zh: Dict = {
   settings: {
     menu: "设置",
     updateBearer: "更新登录 Key",
+    loadBalanceAdvanced: "负载均衡高级",
     sourceToml: "配置文件",
     sourceDb: "运行时覆盖",
     bearerDialog: {
@@ -929,6 +930,49 @@ const zh: Dict = {
       errorInvalidCurrent: "当前 Key 不正确，请重试。",
       errorTooShort: "新 Key 至少 16 个字符。",
       errorWhitespace: "新 Key 不能包含空白字符。",
+    },
+  },
+
+  loadBalance: {
+    title: "负载均衡高级设置",
+    description:
+      "调节 load_balance 策略挑账号的内部行为。这些开关只对使用 load_balance 策略的分组生效，priority 分组会忽略。",
+    usingDefault:
+      "尚未覆盖任何字段。修改任意一项即写入数据库。",
+    dormantTag: "待启用",
+    tierAware: {
+      label: "按套餐档位优先",
+      hint:
+        "优先挑更便宜的套餐档位（starter → basic → pro → plus → ultra）。关闭后所有档位一视同仁。",
+    },
+    preferUnlim: {
+      label: "优先 unlim 加购账号",
+      hint:
+        "当模型有 unlim bundle 时，让已加购对应 bundle 的账号排在前面。等 refresher 同步 /workspaces/unlim-activations 之后才会生效。",
+    },
+    preferFreeQuota: {
+      label: "优先剩余免费额度账号",
+      hint:
+        "让对应模型家族免费额度 > 0 的账号排在前面。等 refresher 把 face_swap_credits / soul_credits 等字段同步进 accounts 表之后才会生效。",
+    },
+    preferRicher: {
+      label: "优先余额高的账号",
+      hint:
+        "在同一档位内加入 subscription_balance DESC，让钱包最厚的账号赢下同分。用于优先烧富账号而不是均分。",
+    },
+    headroom: {
+      label: "余额保底比例",
+      hint:
+        "账号 subscription_balance 至少需要达到估算成本的百分比。120 = 历史默认的 20% 安全垫；100 = 允许余额刚好等于成本，无安全垫。",
+      invalid: "请输入 {{min}} 到 {{max}} 之间的整数。",
+    },
+    jitter: {
+      label: "启用抖动",
+      hint:
+        "在 ORDER BY 末尾追加 RANDOM()，让并发挑账号时同分行也能散开。关闭后行为完全确定（测试 / 排查用）。",
+    },
+    toasts: {
+      saved: "负载均衡设置已保存",
     },
   },
 

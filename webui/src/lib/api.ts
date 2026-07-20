@@ -868,6 +868,19 @@ export const admin = {
       body: JSON.stringify(body),
     }),
 
+  // ---- Load-balance advanced settings ---------------------------------
+  //
+  // Six operator-editable knobs that steer the load_balance route
+  // strategy's internal ordering. Reads never 404 — missing rows fall
+  // back to the hardcoded defaults with source="default".
+  getLoadBalanceSettings: () =>
+    request<LoadBalanceSettings>("/admin/settings/load_balance"),
+  updateLoadBalanceSettings: (body: LoadBalanceSettingsInput) =>
+    request<LoadBalanceSettings>("/admin/settings/load_balance", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+
   // ---- Failover --------------------------------------------------------
 
   getFailoverConfig: () =>
@@ -1005,6 +1018,26 @@ export interface UsageAggRow {
 
 export interface RoutingSettings {
   strategy: "load_balance" | "priority";
+  source: "db" | "default";
+}
+
+// ---------- Load-balance advanced settings --------------------------------
+//
+// Mirrors internal/core/loadbalance.Settings. Every field is required
+// on PUT; GET always returns the full struct with defaults filled in.
+export interface LoadBalanceSettingsInput {
+  tier_aware: boolean;
+  prefer_unlim: boolean;
+  prefer_free_quota: boolean;
+  prefer_richer: boolean;
+  balance_headroom_pct: number; // 100..500
+  jitter: boolean;
+}
+
+export interface LoadBalanceSettings extends LoadBalanceSettingsInput {
+  // "db" when at least one key has been written; "default" when every
+  // key is falling back to the hardcoded default. The UI renders a
+  // "using default" hint until the first save.
   source: "db" | "default";
 }
 

@@ -6,6 +6,7 @@ import {
   IconCloudDownload,
   IconExternalLink,
   IconKey,
+  IconScale,
   IconSettings,
 } from "@tabler/icons-react";
 
@@ -31,6 +32,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { LanguageToggle } from "@/components/language-toggle";
 import { BearerDialog } from "@/components/settings/bearer-dialog";
+import { LoadBalanceDialog } from "@/components/settings/load-balance-dialog";
 import { admin, type VersionCheckResult, type VersionInfo } from "@/lib/api";
 
 // SiteHeader shows the last matched route's title (fed by each route via
@@ -47,6 +49,7 @@ export function SiteHeader() {
   const matches = useMatches();
   const { t } = useTranslation();
   const [bearerOpen, setBearerOpen] = useState(false);
+  const [loadBalanceOpen, setLoadBalanceOpen] = useState(false);
 
   const meta = matches
     .map((m) => m.staticData as { titleKey?: string; title?: string } | undefined)
@@ -98,6 +101,10 @@ export function SiteHeader() {
                 <IconKey className="size-4" />
                 <span>{t("settings.updateBearer")}</span>
               </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => setLoadBalanceOpen(true)}>
+                <IconScale className="size-4" />
+                <span>{t("settings.loadBalanceAdvanced")}</span>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <div className="px-2 py-1.5 text-[11px] text-muted-foreground">
                 {summary}
@@ -110,6 +117,10 @@ export function SiteHeader() {
         open={bearerOpen}
         onOpenChange={setBearerOpen}
         current={bearerMetaQ.data ?? null}
+      />
+      <LoadBalanceDialog
+        open={loadBalanceOpen}
+        onOpenChange={setLoadBalanceOpen}
       />
     </header>
   );

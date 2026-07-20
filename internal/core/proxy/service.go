@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/greensheep999/higgsgo/internal/core/failover"
+	"github.com/greensheep999/higgsgo/internal/core/loadbalance"
 	"github.com/greensheep999/higgsgo/internal/core/metering"
 	"github.com/greensheep999/higgsgo/internal/core/upstream"
 	"github.com/greensheep999/higgsgo/internal/core/webhook"
@@ -87,6 +88,14 @@ type Service struct {
 	// Precedence (tightest wins): accounts.max_concurrent (F4) &
 	// group.max_concurrent_per_account & this field & 5.
 	MaxInFlightPerAccountDefault int
+
+	// Settings, when non-nil, is consulted on every Generate() to
+	// populate LoadBalanceOpts on the pick params. When nil the store
+	// applies its hardcoded defaults — matches the pre-load_balance-
+	// settings behaviour byte-for-byte. Kept as a store reference (not
+	// a pre-resolved struct) so operator writes to /admin/settings/
+	// load_balance take effect on the next request without a restart.
+	Settings ports.SettingsStore
 }
 
 // GenerationRequest is the normalized shape produced by the /v1 handler
@@ -280,6 +289,12 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 			RouteStrategy:           p.RouteStrategy,
 			MaxGroupInFlight:        p.MaxGroupInFlight,
 			MaxConcurrentPerAccount: perAcctCap,
+			// LoadBalance is only meaningful when the resolved route
+			// strategy is round_robin (== "load_balance" in operator
+			// vocabulary); other strategies ignore the field on the
+			// store side. A nil Settings store means "no live overrides,
+			// use hardcoded defaults" — matches pre-P5 behaviour.
+			LoadBalance: s.resolveLoadBalanceOpts(ctx),
 		}
 		var err error
 		acc, lockToken, err = s.Store.PickAndLock(ctx, pickParams)
@@ -869,6 +884,19 @@ func (s *Service) now() time.Time {
 		return s.Clock.Now()
 	}
 	return time.Now()
+}
+
+// resolveLoadBalanceOpts reads the operator-editable load_balance.*
+// keys from the SettingsStore and returns a populated
+// ports.LoadBalanceOpts. When Settings is nil the store applies its
+// hardcoded defaults on the pick side (Populated stays false), which
+// matches the pre-P5 behaviour byte-for-byte. Cheap enough for the
+// hot path: sqlite reads system_settings by primary key.
+func (s *Service) resolveLoadBalanceOpts(ctx context.Context) ports.LoadBalanceOpts {
+	if s.Settings == nil {
+		return ports.LoadBalanceOpts{}
+	}
+	return loadbalance.Resolve(ctx, s.Settings).ToOpts()
 }
 
 // groupPolicy is the subset of Group config that PickAndLock consumes.

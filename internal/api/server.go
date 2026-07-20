@@ -384,6 +384,14 @@ func (s *Server) adminRouter() http.Handler {
 		// Routing-strategy default (nil-safe: falls back to
 		// round_robin on Create when Settings is missing).
 		admin.NewRoutingSettingsHandler(s.Settings).Register(r)
+		// Advanced load_balance knobs (tier-aware, jitter, headroom, …).
+		// Mounted only when a SettingsStore is wired — without one the
+		// PUT would have nowhere to persist. Reads on the pool side
+		// remain safe because ResolveLoadBalanceSettings is nil-safe
+		// and returns the hardcoded defaults.
+		if s.Settings != nil {
+			admin.NewLoadBalanceSettingsHandler(s.Settings).Register(r)
+		}
 		// Model overrides layered on top of the static jsonstatic
 		// catalog. Requires a Registry so writes can trigger a Reload
 		// and downstream reads see the merged view immediately.

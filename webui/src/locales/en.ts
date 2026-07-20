@@ -918,6 +918,7 @@ const en = {
   settings: {
     menu: "Settings",
     updateBearer: "Update login key",
+    loadBalanceAdvanced: "Load balance advanced",
     sourceToml: "from config file",
     sourceDb: "runtime override",
     bearerDialog: {
@@ -947,6 +948,49 @@ const en = {
       errorInvalidCurrent: "The current key does not match. Try again.",
       errorTooShort: "The new key must be at least 16 characters.",
       errorWhitespace: "The new key must not contain whitespace.",
+    },
+  },
+
+  loadBalance: {
+    title: "Load balance advanced",
+    description:
+      "Tune how the load_balance strategy picks accounts. These knobs only apply to groups running the load_balance strategy — priority groups ignore them.",
+    usingDefault:
+      "No overrides yet. Editing any field switches the deploy to a DB-persisted config.",
+    dormantTag: "coming soon",
+    tierAware: {
+      label: "Tier-aware ordering",
+      hint:
+        "Prefer the cheapest plan tier first (starter → basic → pro → plus → ultra). Turn off to treat every tier as equal.",
+    },
+    preferUnlim: {
+      label: "Prefer unlim bundle holders",
+      hint:
+        "When a picked model has an unlim bundle, sort accounts that already activated the matching bundle first. Dormant until the refresher syncs /workspaces/unlim-activations.",
+    },
+    preferFreeQuota: {
+      label: "Prefer free-quota holders",
+      hint:
+        "Sort accounts with a non-zero free-quota counter for the model family first. Dormant until the refresher syncs the per-model quota fields (face_swap_credits, soul_credits, …).",
+    },
+    preferRicher: {
+      label: "Prefer richer accounts",
+      hint:
+        "Add subscription_balance DESC to the ORDER BY tail so the deepest wallet inside a tier wins ties — burns richest accounts down first instead of spreading evenly.",
+    },
+    headroom: {
+      label: "Balance headroom",
+      hint:
+        "Percentage of the model's estimated cost the account balance must exceed to qualify. 120 = the historical +20% buffer; 100 = accept balance == cost with no safety margin.",
+      invalid: "Enter a whole number between {{min}} and {{max}}.",
+    },
+    jitter: {
+      label: "Jitter enabled",
+      hint:
+        "Append RANDOM() as the final ORDER BY tiebreaker so concurrent picks spread across tied rows. Turn off for deterministic behaviour (tests, debugging).",
+    },
+    toasts: {
+      saved: "Load balance settings saved",
     },
   },
 

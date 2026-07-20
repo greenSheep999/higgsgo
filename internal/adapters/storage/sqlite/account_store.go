@@ -484,7 +484,25 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 		  AND subscription_balance >= ?`)
 	args = append(args, fmtTime(time.Now()))
 	args = append(args, perAccountCap)
+	// Balance headroom: the caller-provided multiplier overrides the
+	// hardcoded 120% (cost + cost/5). Populated LoadBalanceOpts with a
+	// zero HeadroomPct also lands on 120 so an all-defaults struct is
+	// indistinguishable from unset. Range clamp mirrors the handler's
+	// validator; the store re-applies it here so an SQL-level call
+	// that skipped the API cannot brick the pool.
 	minBalance := params.EstCostHundredths + params.EstCostHundredths/5
+	if params.LoadBalance.Populated {
+		pct := params.LoadBalance.BalanceHeadroomPct
+		if pct < 100 {
+			pct = 120
+		} else if pct > 500 {
+			pct = 500
+		}
+		// Round up so a headroom of 101% still requires a strictly
+		// larger balance than the raw cost (int truncation would eat
+		// the +1%).
+		minBalance = (params.EstCostHundredths*int64(pct) + 99) / 100
+	}
 	args = append(args, minBalance)
 
 	if params.RequiresPaid {
@@ -574,31 +592,103 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 			q.WriteString(` ORDER BY COALESCE(priority, 0) DESC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC` + jitterTail)
 		}
 	default: // RouteRoundRobin — the "load_balance" default.
-		// Composed ordering, no operator knobs:
-		//   1. plan_tier_rank ASC  — cheap-first: burn the tier closest
-		//      to the model's min_plan floor. Preserves the higher-tier
-		//      account budgets for models that actually need them.
-		//   2. last_used_at ASC    — LRU inside the same tier so a burst
-		//      of requests on identical-plan accounts spreads out.
-		//   3. in_flight_jobs ASC  — least-loaded next.
-		//   4. RANDOM()            — jitter tiebreak.
+		// Composed ordering. The layout below is:
+		//
+		//   [prefer_unlim ASC]      — operator opt-in, currently a no-op
+		//                             (see TODO below).
+		//   [prefer_free_quota ASC] — operator opt-in, currently a no-op
+		//                             (see TODO below).
+		//   [plan_tier_rank ASC]    — cheap-first: burn the tier closest
+		//                             to the model's min_plan floor.
+		//                             Skipped when tier_aware=false.
+		//   [subscription_balance DESC] — operator opt-in: burn the
+		//                             richest account down first inside
+		//                             a tier.
+		//   last_used_at ASC        — LRU inside the same rank.
+		//   in_flight_jobs ASC      — least-loaded next.
+		//   [RANDOM()]              — jitter tiebreak. Skipped when
+		//                             jitter=false (deterministic mode).
 		//
 		// Rank table mirrors PlanType.TierRank() and the CASE used by
 		// the MinPlan WHERE gate: starter=1, basic=2, pro=3, plus=4,
 		// ultra-family=5, free=0. When the WHERE clause already applied
 		// a MinPlan floor, this ORDER BY only sorts among survivors.
-		q.WriteString(` ORDER BY CASE plan_type`)
-		q.WriteString(` WHEN 'starter' THEN 1`)
-		q.WriteString(` WHEN 'basic' THEN 2`)
-		q.WriteString(` WHEN 'pro' THEN 3`)
-		q.WriteString(` WHEN 'plus' THEN 4`)
-		q.WriteString(` WHEN 'ultra' THEN 5`)
-		q.WriteString(` WHEN 'ultimate' THEN 5`)
-		q.WriteString(` WHEN 'scale' THEN 5`)
-		q.WriteString(` WHEN 'creator' THEN 5`)
-		q.WriteString(` WHEN 'team' THEN 5`)
-		q.WriteString(` WHEN 'enterprise' THEN 5`)
-		q.WriteString(` ELSE 0 END ASC, COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC` + jitterTail)
+		//
+		// Populated=false preserves the pre-load_balance-settings
+		// contract: tier-aware ordering ON, jitter ON, richer OFF.
+		opts := params.LoadBalance
+		tierAware := true
+		preferRicher := false
+		useJitter := true
+		if opts.Populated {
+			tierAware = opts.TierAware
+			preferRicher = opts.PreferRicher
+			useJitter = opts.Jitter
+		}
+
+		orderParts := []string{}
+
+		// TODO(load_balance): prefer_unlim requires the
+		// account_unlim_activations table + model.unlim_job_set_type
+		// wiring to know which accounts hold the model's bundle. Neither
+		// exists in the current schema — the refresher would need to
+		// call GET /workspaces/unlim-activations per account and persist
+		// the result. Once that lands, replace this block with:
+		//   ORDER BY CASE WHEN EXISTS (
+		//     SELECT 1 FROM account_unlim_activations
+		//     WHERE account_id = accounts.id
+		//       AND job_set_type = ?  -- params.UnlimJobSetType
+		//   ) THEN 0 ELSE 1 END ASC
+		// For now the flag is accepted at the API/handler layer but has
+		// no effect on the ORDER BY.
+		if opts.Populated && opts.PreferUnlim {
+			// intentionally no-op — dormant until schema lands
+			_ = opts
+		}
+
+		// TODO(load_balance): prefer_free_quota requires per-model
+		// free-quota columns on accounts (face_swap_credits,
+		// soul_credits, character_swap_credits, ...) synced by the
+		// refresher, plus a mapping from model → column name. Neither
+		// is wired today. Once that lands, replace this block with a
+		// dynamic ORDER BY that reads the column named by
+		// spec.free_quota_field. For now the flag is a no-op.
+		if opts.Populated && opts.PreferFreeQuota {
+			_ = opts
+		}
+
+		if tierAware {
+			orderParts = append(orderParts,
+				`CASE plan_type`+
+					` WHEN 'starter' THEN 1`+
+					` WHEN 'basic' THEN 2`+
+					` WHEN 'pro' THEN 3`+
+					` WHEN 'plus' THEN 4`+
+					` WHEN 'ultra' THEN 5`+
+					` WHEN 'ultimate' THEN 5`+
+					` WHEN 'scale' THEN 5`+
+					` WHEN 'creator' THEN 5`+
+					` WHEN 'team' THEN 5`+
+					` WHEN 'enterprise' THEN 5`+
+					` ELSE 0 END ASC`)
+		}
+		if preferRicher {
+			orderParts = append(orderParts, `COALESCE(subscription_balance, 0) DESC`)
+		}
+		orderParts = append(orderParts,
+			`COALESCE(last_used_at, '1970-01-01T00:00:00Z') ASC`,
+			`in_flight_jobs ASC`)
+		if useJitter {
+			orderParts = append(orderParts, `RANDOM()`)
+		}
+		q.WriteString(` ORDER BY `)
+		for i, p := range orderParts {
+			if i > 0 {
+				q.WriteString(`, `)
+			}
+			q.WriteString(p)
+		}
+		q.WriteString(` LIMIT 1`)
 	}
 
 	row := tx.QueryRowContext(ctx, q.String(), args...)

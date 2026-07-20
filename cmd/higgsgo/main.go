@@ -299,6 +299,10 @@ func run() error {
 		Webhooks:                     webhooks,
 		Failover:                     failoverCtl,
 		MaxInFlightPerAccountDefault: cfg.Pool.MaxInFlightPerAccount,
+		// Advanced load-balance knobs live in system_settings and are
+		// read on every Generate() so operator edits via
+		// /admin/settings/load_balance take effect without a restart.
+		Settings: settingsStore,
 	}
 	v1h := v1.New(svc, registry, jobStore, groupStore, apiKeyStore)
 	v1h.Logger = logger
