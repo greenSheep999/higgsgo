@@ -948,12 +948,12 @@ const zh: Dict = {
     preferUnlim: {
       label: "优先 unlim 加购账号",
       hint:
-        "当模型有 unlim bundle 时，让已加购对应 bundle 的账号排在前面。等 refresher 同步 /workspaces/unlim-activations 之后才会生效。",
+        "当模型有 unlim bundle 时，让已加购对应 bundle 的账号排在前面。Refresher 每轮同步 /workspaces/unlim-activations，数据实时生效。",
     },
     preferFreeQuota: {
       label: "优先剩余免费额度账号",
       hint:
-        "让对应模型家族免费额度 > 0 的账号排在前面。等 refresher 把 face_swap_credits / soul_credits 等字段同步进 accounts 表之后才会生效。",
+        "让对应模型家族免费额度 > 0 的账号排在前面（face_swap_credits、soul_credits 等）。Refresher 每轮同步 /user，数据实时生效。",
     },
     preferRicher: {
       label: "优先余额高的账号",

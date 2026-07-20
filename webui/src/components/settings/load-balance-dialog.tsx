@@ -28,10 +28,10 @@ import {
 // balance headroom, RANDOM() jitter). Opens from the settings dropdown
 // in the site header.
 //
-// Two of the six flags (prefer_unlim, prefer_free_quota) are dormant
-// until the refresher syncs bundle / free-quota data onto accounts.
-// The dialog surfaces this via a "(coming soon)" hint next to those
-// rows so operators do not think the flag is silently ignored.
+// All six flags are live: the refresher populates the
+// account_unlim_activations table plus the seven per-family free-quota
+// columns on every tick, so prefer_unlim / prefer_free_quota take
+// effect immediately after the operator toggles them on.
 
 interface Props {
   open: boolean;
@@ -140,22 +140,20 @@ export function LoadBalanceDialog({ open, onOpenChange }: Props) {
               hint={t("loadBalance.tierAware.hint")}
             />
 
-            {/* Prefer unlim — dormant */}
+            {/* Prefer unlim */}
             <SwitchRow
               checked={form.prefer_unlim}
               onChange={(v) => setForm({ ...form, prefer_unlim: v })}
               label={t("loadBalance.preferUnlim.label")}
               hint={t("loadBalance.preferUnlim.hint")}
-              tag={t("loadBalance.dormantTag")}
             />
 
-            {/* Prefer free quota — dormant */}
+            {/* Prefer free quota */}
             <SwitchRow
               checked={form.prefer_free_quota}
               onChange={(v) => setForm({ ...form, prefer_free_quota: v })}
               label={t("loadBalance.preferFreeQuota.label")}
               hint={t("loadBalance.preferFreeQuota.hint")}
-              tag={t("loadBalance.dormantTag")}
             />
 
             {/* Prefer richer */}
@@ -225,33 +223,23 @@ export function LoadBalanceDialog({ open, onOpenChange }: Props) {
 }
 
 // SwitchRow is the standard label+hint+switch row shared by the five
-// bool knobs. `tag` renders a small chip on the right (used for the
-// "coming soon" indicator on dormant flags).
+// bool knobs.
 function SwitchRow({
   checked,
   onChange,
   label,
   hint,
-  tag,
 }: {
   checked: boolean;
   onChange: (v: boolean) => void;
   label: string;
   hint: string;
-  tag?: string;
 }) {
   return (
     <label className="flex items-center gap-3 rounded-md border p-3">
       <Switch checked={checked} onCheckedChange={onChange} />
       <div className="flex-1">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          {label}
-          {tag ? (
-            <span className="rounded-full border border-muted-foreground/30 px-2 py-[1px] text-[10px] font-normal text-muted-foreground">
-              {tag}
-            </span>
-          ) : null}
-        </div>
+        <div className="text-sm font-medium">{label}</div>
         <div className="text-[11px] text-muted-foreground">{hint}</div>
       </div>
     </label>

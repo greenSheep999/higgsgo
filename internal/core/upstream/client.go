@@ -349,21 +349,36 @@ type Wallet struct {
 // UserSnapshot mirrors GET /user. Values expressed in "dollars" here are
 // credits in float form; balance-refresher logic converts them to the int64
 // hundredths unit used by the accounts table.
+//
+// The seven `*_credits` / `*_count` fields at the tail are per-family
+// free-generation counters granted monthly by the plan (see the /user
+// sample in higgsfield-register/server/data/archived/spa-net-log.json).
+// starter carries small non-zero grants (face_swap_credits: 2.0,
+// qwen_camera_control_credits: 0.4). Persisted verbatim as REAL —
+// operators route on strictly-positive values, so the fractional
+// precision matters.
 type UserSnapshot struct {
-	ID                  string  `json:"id"`
-	Email               string  `json:"email"`
-	PlanType            string  `json:"plan_type"`
-	SubscriptionCredits float64 `json:"subscription_credits"`
-	PackageCredits      float64 `json:"package_credits"`
-	DailyCredits        float64 `json:"daily_credits"`
-	TotalPlanCredits    float64 `json:"total_plan_credits"`
-	BillingPeriod       string  `json:"billing_period"`
-	PlanEndsAt          string  `json:"plan_ends_at"`
-	HasUnlim            bool    `json:"has_unlim"`
-	HasFlexUnlim        bool    `json:"has_flex_unlim"`
-	IsProVeo3Available  bool    `json:"is_pro_plan_veo3_available"`
-	Cohort              string  `json:"cohort"`
-	WorkspaceID         string  `json:"workspace_id"`
+	ID                        string  `json:"id"`
+	Email                     string  `json:"email"`
+	PlanType                  string  `json:"plan_type"`
+	SubscriptionCredits       float64 `json:"subscription_credits"`
+	PackageCredits            float64 `json:"package_credits"`
+	DailyCredits              float64 `json:"daily_credits"`
+	TotalPlanCredits          float64 `json:"total_plan_credits"`
+	BillingPeriod             string  `json:"billing_period"`
+	PlanEndsAt                string  `json:"plan_ends_at"`
+	HasUnlim                  bool    `json:"has_unlim"`
+	HasFlexUnlim              bool    `json:"has_flex_unlim"`
+	IsProVeo3Available        bool    `json:"is_pro_plan_veo3_available"`
+	Cohort                    string  `json:"cohort"`
+	WorkspaceID               string  `json:"workspace_id"`
+	FaceSwapCredits           float64 `json:"face_swap_credits"`
+	SoulCredits               float64 `json:"soul_credits"`
+	CharacterSwapCredits      float64 `json:"character_swap_credits"`
+	QwenCameraControlCredits  float64 `json:"qwen_camera_control_credits"`
+	Wan25VideoCredits         float64 `json:"wan2_5_video_credits"`
+	Text2KeyframesCredits     float64 `json:"text2keyframes_credits"`
+	Veo3FastGenerationsCount  float64 `json:"veo3_fast_generations_count"`
 }
 
 // FetchUser calls GET /user and returns the per-account entitlement snapshot.
@@ -396,6 +411,146 @@ func (c *Client) FetchUser(ctx context.Context, account *domain.Account) (*UserS
 		return nil, err
 	}
 	return &u, nil
+}
+
+// UnlimActivationsResponse mirrors GET /workspaces/unlim-activations.
+// The response wraps a flat "activations" array whose items each carry
+// the operator-activated bundle plus a nested `models` list — one entry
+// per unlim endpoint that bundle unlocks. Both the bundle type and the
+// nested job_set_type are required for the load-balance router to
+// match a candidate account to a model's UnlimJobSetType.
+//
+// A `null` expires_at means the activation is permanent (no auto-
+// revocation); the client passes it through as an empty string and the
+// refresher normalises to zero time.
+type UnlimActivationsResponse struct {
+	Activations []UnlimActivationRaw `json:"activations"`
+}
+
+// UnlimActivationRaw mirrors one item inside the response envelope.
+// Only fields the refresher needs are decoded — the SPA also uses
+// `is_claimed` and pricing / seat data for its own modal, which the
+// server doesn't care about.
+type UnlimActivationRaw struct {
+	ID          string                 `json:"id"`
+	BundleType  string                 `json:"bundle_type"`
+	Models      []UnlimActivationModel `json:"models"`
+	ExpiresAt   string                 `json:"expires_at"`
+	StartedAt   string                 `json:"started_at"`
+	ActivatedAt string                 `json:"activated_at"`
+}
+
+// UnlimActivationModel is one row of the nested `models` array. The
+// bundle → endpoint relationship is many-to-many (see the "all_above"
+// bundle in the sample response), so one activation record can produce
+// multiple domain.UnlimActivation rows keyed by (bundle_type, job_set_type).
+type UnlimActivationModel struct {
+	JobSetType     string   `json:"job_set_type"`
+	GenerationType string   `json:"generation_type"`
+	Resolutions    []string `json:"resolutions"`
+	MaxDuration    *int     `json:"max_duration"`
+}
+
+// FetchUnlimActivations calls GET /workspaces/unlim-activations and
+// returns the account's currently-active unlim bundles flattened to
+// the domain-side shape. Each response row can produce one-or-more
+// UnlimActivation entries because a bundle can unlock multiple unlim
+// endpoints (the "all_above" case), but the AccountStore keys by
+// (account_id, bundle_type) so we collapse to one row per bundle by
+// picking the first job_set_type — this preserves the sort-first-on-
+// bundle-holder semantics without needing a compound primary key.
+//
+// Actually: to correctly support the "all_above" case where one
+// bundle unlocks multiple unlim endpoints, we emit one row per
+// (bundle_type, job_set_type) pair, prefixing the storage key with
+// the JST index. This preserves the join semantics in PickAndLock
+// (any activation for the requested JST wins).
+//
+// The endpoint responds with `{"activations":[]}` for accounts that
+// haven't purchased any unlim bundles — a non-error nil-slice result.
+func (c *Client) FetchUnlimActivations(ctx context.Context, account *domain.Account) ([]domain.UnlimActivation, error) {
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodGet, c.baseURL+"/workspaces/unlim-activations", nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
+	}
+	resp, err := c.doWithRetry(ctx, "fetch_unlim_activations", account, build)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("unlim-activations: HTTP %d: %s", resp.StatusCode, snip(raw))
+	}
+	var envelope UnlimActivationsResponse
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return nil, err
+	}
+	if len(envelope.Activations) == 0 {
+		return nil, nil
+	}
+	// Flatten each activation's `models` array to a domain-side row per
+	// (bundle_type, job_set_type). The account_unlim_activations PK is
+	// (account_id, bundle_type) so a bundle that unlocks N endpoints
+	// would collide on the second insert — we prefix bundle_type with
+	// the JST index (`<bundle>@<jst>`) for the N>1 case so every
+	// endpoint gets its own row. The prefer_unlim ORDER BY joins on
+	// job_set_type, so the compound key is invisible to the router.
+	//
+	// Rows with no `models` field are dropped: an activation that
+	// doesn't unlock any endpoint carries no routing signal.
+	out := make([]domain.UnlimActivation, 0, len(envelope.Activations))
+	for _, a := range envelope.Activations {
+		if len(a.Models) == 0 {
+			continue
+		}
+		expires := parseUnlimTime(a.ExpiresAt)
+		activated := parseUnlimTime(a.ActivatedAt)
+		if activated.IsZero() {
+			activated = parseUnlimTime(a.StartedAt)
+		}
+		for _, m := range a.Models {
+			bundle := a.BundleType
+			// Compound key when a bundle unlocks multiple endpoints —
+			// the router still matches on job_set_type via the
+			// separate column, so downstream consumers are unaffected.
+			if len(a.Models) > 1 {
+				bundle = a.BundleType + "@" + m.JobSetType
+			}
+			out = append(out, domain.UnlimActivation{
+				BundleType:  bundle,
+				JobSetType:  m.JobSetType,
+				Resolutions: append([]string(nil), m.Resolutions...),
+				ExpiresAt:   expires,
+				ActivatedAt: activated,
+			})
+		}
+	}
+	return out, nil
+}
+
+// parseUnlimTime accepts higgsfield's RFC3339-ish timestamp variants
+// and returns the zero time.Time on parse failure. An empty / "null"
+// string is treated as absent (zero value) so callers can distinguish
+// "never expires" from a real deadline.
+func parseUnlimTime(s string) time.Time {
+	if s == "" || s == "null" {
+		return time.Time{}
+	}
+	if t, err := time.Parse(time.RFC3339Nano, s); err == nil {
+		return t
+	}
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t
+	}
+	return time.Time{}
 }
 
 // FetchWallet calls GET /workspaces/wallet.

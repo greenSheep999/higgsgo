@@ -88,6 +88,15 @@ func (f *fakeAccountStorePG) PickAndLock(context.Context, ports.PickParams) (*do
 func (f *fakeAccountStorePG) Unlock(context.Context, string, string) error {
 	panic("not implemented")
 }
+func (f *fakeAccountStorePG) UpdateFreeQuota(context.Context, string, domain.FreeQuotaCounters) error {
+	return nil
+}
+func (f *fakeAccountStorePG) ListUnlimActivations(context.Context, string) ([]domain.UnlimActivation, error) {
+	return nil, nil
+}
+func (f *fakeAccountStorePG) ReplaceUnlimActivations(context.Context, string, []domain.UnlimActivation) error {
+	return nil
+}
 
 // newPlaygroundHandler builds a Handler wired with the given key + spec
 // list. The returned http.Handler mimics the server.go mount by
@@ -402,6 +411,15 @@ func (s *pickFailStore) PickAndLock(context.Context, ports.PickParams) (*domain.
 }
 func (s *pickFailStore) Unlock(context.Context, string, string) error {
 	panic("not implemented")
+}
+func (s *pickFailStore) UpdateFreeQuota(context.Context, string, domain.FreeQuotaCounters) error {
+	return nil
+}
+func (s *pickFailStore) ListUnlimActivations(context.Context, string) ([]domain.UnlimActivation, error) {
+	return nil, nil
+}
+func (s *pickFailStore) ReplaceUnlimActivations(context.Context, string, []domain.UnlimActivation) error {
+	return nil
 }
 
 // fakeAPIKeyStorePG is a minimal APIKeyStore for the as_api_key_id

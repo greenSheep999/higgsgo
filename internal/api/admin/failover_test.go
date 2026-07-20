@@ -82,6 +82,15 @@ func (f *failoverFakeAccts) PickAndLock(context.Context, ports.PickParams) (*dom
 	return nil, "", nil
 }
 func (f *failoverFakeAccts) Unlock(context.Context, string, string) error { return nil }
+func (f *failoverFakeAccts) UpdateFreeQuota(context.Context, string, domain.FreeQuotaCounters) error {
+	return nil
+}
+func (f *failoverFakeAccts) ListUnlimActivations(context.Context, string) ([]domain.UnlimActivation, error) {
+	return nil, nil
+}
+func (f *failoverFakeAccts) ReplaceUnlimActivations(context.Context, string, []domain.UnlimActivation) error {
+	return nil
+}
 
 type failoverFakeEvents struct {
 	inserts []struct {

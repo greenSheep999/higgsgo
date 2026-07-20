@@ -295,6 +295,14 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 			// store side. A nil Settings store means "no live overrides,
 			// use hardcoded defaults" — matches pre-P5 behaviour.
 			LoadBalance: s.resolveLoadBalanceOpts(ctx),
+			// Load-balance router wiring for prefer_unlim /
+			// prefer_free_quota. Both fields are always populated; the
+			// store only consumes them when the operator toggled the
+			// matching flag on. Empty spec fields make the block a
+			// no-op regardless of the flag — see
+			// AccountStore.PickAndLock for the exact predicate.
+			UnlimJobSetType: spec.UnlimJobSetType,
+			FreeQuotaField:  spec.FreeQuotaField,
 		}
 		var err error
 		acc, lockToken, err = s.Store.PickAndLock(ctx, pickParams)

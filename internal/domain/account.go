@@ -168,6 +168,48 @@ type Account struct {
 
 	RegisteredAt time.Time
 	ImportedAt   time.Time
+
+	// FreeQuota carries the per-family free-generation counters returned
+	// by GET /user. Each field is a float upstream (some values come back
+	// as 0.4 for partial credits) so we preserve REAL precision on disk
+	// rather than rounding into hundredths. Refreshed by the balance
+	// refresher on every tick; read by the load-balance router when the
+	// operator opts into `load_balance.prefer_free_quota`.
+	FreeQuota FreeQuotaCounters
+}
+
+// FreeQuotaCounters mirrors the per-family free-generation counters
+// returned by GET /user. Field names match the JSON keys higgsfield's
+// API uses so the mapping stays 1:1 with the wire format.
+//
+// Zero-valued fields are the common case (no free quota granted for
+// that family). The refresher writes every field on every tick — a
+// dropped-to-zero value means the plan no longer grants that quota,
+// not a "keep the old value" signal.
+type FreeQuotaCounters struct {
+	FaceSwapCredits           float64
+	SoulCredits               float64
+	CharacterSwapCredits      float64
+	QwenCameraControlCredits  float64
+	Wan25VideoCredits         float64
+	Text2KeyframesCredits     float64
+	Veo3FastGenerationsCount  float64
+}
+
+// UnlimActivation is one row of the account_unlim_activations table.
+// Populated by the refresher from GET /workspaces/unlim-activations
+// per active account and consumed by the load-balance router when the
+// operator opts into `load_balance.prefer_unlim`.
+//
+// BundleType is the operator-facing bundle (e.g. "nano_banana_2_2k")
+// and JobSetType is the unlim endpoint that bundle unlocks (e.g.
+// "nano_banana_pro_unlimited"). PickAndLock joins on JobSetType.
+type UnlimActivation struct {
+	BundleType  string
+	JobSetType  string
+	Resolutions []string
+	ExpiresAt   time.Time // zero == no expiry
+	ActivatedAt time.Time
 }
 
 // AvailableSlots returns how many more concurrent jobs this account can accept

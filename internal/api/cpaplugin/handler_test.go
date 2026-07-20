@@ -168,6 +168,15 @@ func (f *fakeAccountStore) PickAndLock(context.Context, ports.PickParams) (*doma
 func (f *fakeAccountStore) Unlock(context.Context, string, string) error {
 	panic("not implemented")
 }
+func (f *fakeAccountStore) UpdateFreeQuota(context.Context, string, domain.FreeQuotaCounters) error {
+	return nil
+}
+func (f *fakeAccountStore) ListUnlimActivations(context.Context, string) ([]domain.UnlimActivation, error) {
+	return nil, nil
+}
+func (f *fakeAccountStore) ReplaceUnlimActivations(context.Context, string, []domain.UnlimActivation) error {
+	return nil
+}
 
 // fakeJobStore is unused by the handlers under test but ports.JobStore is
 // part of the Handler struct so it must at least type-check.

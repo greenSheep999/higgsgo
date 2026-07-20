@@ -122,6 +122,15 @@ func (m *mockAccountStore) PickAndLock(context.Context, ports.PickParams) (*doma
 	return nil, "", nil
 }
 func (m *mockAccountStore) Unlock(context.Context, string, string) error { return nil }
+func (m *mockAccountStore) UpdateFreeQuota(context.Context, string, domain.FreeQuotaCounters) error {
+	return nil
+}
+func (m *mockAccountStore) ListUnlimActivations(context.Context, string) ([]domain.UnlimActivation, error) {
+	return nil, nil
+}
+func (m *mockAccountStore) ReplaceUnlimActivations(context.Context, string, []domain.UnlimActivation) error {
+	return nil
+}
 
 // seed inserts an active account with zero streak so IncrFailStreak has
 // a row to update.

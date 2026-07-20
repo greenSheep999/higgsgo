@@ -111,6 +111,37 @@ type ModelSpec struct {
 	// exposes a fixed upper bound; 0 when unknown or when duration is
 	// not applicable (image models).
 	MaxDurationSec int
+
+	// UnlimJobSetType is the higgsfield "unlim endpoint" identifier this
+	// model routes to when the caller opts into the unlim path (e.g.
+	// "nano_banana_pro_unlimited"). Sourced from
+	// data/reference/model-specs-extra.json. Populated only for models
+	// that have an operator-activatable unlim bundle; empty otherwise.
+	//
+	// Consumed by the load-balance router: when non-empty and the
+	// operator toggled `load_balance.prefer_unlim` on, PickAndLock
+	// sorts accounts that hold a matching row in account_unlim_activations
+	// ahead of the rest.
+	UnlimJobSetType string
+
+	// UnlimBundleTypes lists the bundle identifiers (e.g. "kling_3_4k",
+	// "nano_banana_2_2k") that unlock this model's unlim endpoint. Kept
+	// for observability / admin surfaces — PickAndLock joins on
+	// UnlimJobSetType, so the bundle list is not strictly required for
+	// routing, but the WebUI can surface "which bundle activates this?"
+	// without a second lookup. Empty when the model has no unlim path.
+	UnlimBundleTypes []string
+
+	// FreeQuotaField is the accounts column name that tracks this model's
+	// monthly free-generation counter (e.g. "face_swap_credits",
+	// "soul_credits"). Sourced from
+	// data/reference/model-specs-extra.json. Populated only for models
+	// that have a free-quota grant; empty otherwise.
+	//
+	// Consumed by the load-balance router: when non-empty and the
+	// operator toggled `load_balance.prefer_free_quota` on, PickAndLock
+	// sorts accounts whose named column is > 0 ahead of the rest.
+	FreeQuotaField string
 }
 
 // AliasStrategy defines how an alias is resolved.

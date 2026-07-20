@@ -123,6 +123,15 @@ func (f *fakeAccountStore) ResetFailStreak(context.Context, string) error {
 func (f *fakeAccountStore) PickAndLock(context.Context, ports.PickParams) (*domain.Account, string, error) {
 	panic("unexpected PickAndLock")
 }
+func (f *fakeAccountStore) UpdateFreeQuota(context.Context, string, domain.FreeQuotaCounters) error {
+	return nil
+}
+func (f *fakeAccountStore) ListUnlimActivations(context.Context, string) ([]domain.UnlimActivation, error) {
+	return nil, nil
+}
+func (f *fakeAccountStore) ReplaceUnlimActivations(context.Context, string, []domain.UnlimActivation) error {
+	return nil
+}
 func (f *fakeAccountStore) Unlock(context.Context, string, string) error {
 	panic("unexpected Unlock")
 }

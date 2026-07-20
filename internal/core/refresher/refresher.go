@@ -178,10 +178,53 @@ func (r *Refresher) refreshOne(ctx context.Context, acc *domain.Account) {
 			slog.String("err", err.Error()))
 		return
 	}
+
+	// Free-quota counters. Written verbatim as REAL — the load-balance
+	// router (prefer_free_quota) tests > 0 so fractional grants like
+	// starter's qwen_camera_control_credits: 0.4 still qualify. All
+	// seven columns are overwritten on every tick; a value that
+	// dropped to zero server-side must reflect on disk immediately
+	// (the plan no longer grants that quota).
+	quota := domain.FreeQuotaCounters{
+		FaceSwapCredits:          user.FaceSwapCredits,
+		SoulCredits:              user.SoulCredits,
+		CharacterSwapCredits:     user.CharacterSwapCredits,
+		QwenCameraControlCredits: user.QwenCameraControlCredits,
+		Wan25VideoCredits:        user.Wan25VideoCredits,
+		Text2KeyframesCredits:    user.Text2KeyframesCredits,
+		Veo3FastGenerationsCount: user.Veo3FastGenerationsCount,
+	}
+	if err := r.Accounts.UpdateFreeQuota(ctx, acc.ID, quota); err != nil {
+		r.Logger.Warn("refresher update free quota",
+			slog.String("account_id", acc.ID),
+			slog.String("err", err.Error()))
+	}
+
+	// Unlim activations. GET /workspaces/unlim-activations returns
+	// the authoritative list (upstream never sends deltas), so the
+	// store's Replace path swaps the whole set inside a tx. A failure
+	// here is non-fatal — the previous set stays in place so the
+	// load-balance router can still make progress on stale data.
+	//
+	// Accounts on plans without any unlim bundle grant simply see an
+	// empty response — the ReplaceUnlimActivations call still runs to
+	// clear a stale set from a plan downgrade.
+	activations, actErr := r.Upstream.FetchUnlimActivations(ctx, acc)
+	if actErr != nil {
+		r.Logger.Warn("refresher fetch unlim activations",
+			slog.String("account_id", acc.ID),
+			slog.String("err", actErr.Error()))
+	} else if err := r.Accounts.ReplaceUnlimActivations(ctx, acc.ID, activations); err != nil {
+		r.Logger.Warn("refresher replace unlim activations",
+			slog.String("account_id", acc.ID),
+			slog.String("err", err.Error()))
+	}
+
 	r.Logger.Debug("account refreshed",
 		slog.String("account_id", acc.ID),
 		slog.String("plan_type", user.PlanType),
 		slog.Bool("has_unlim", user.HasUnlim),
+		slog.Int("unlim_activations", len(activations)),
 	)
 }
 

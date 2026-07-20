@@ -54,6 +54,10 @@ func intToBool(i int) bool { return i != 0 }
 // the accounts table. Kept as a package-level constant so a schema
 // extension only needs a single edit rather than N string-literal
 // duplicates.
+//
+// The seven `*_credits` / `*_count` columns at the tail were added by
+// migration 020 to hold the per-family free-quota counters returned by
+// GET /user. scanAccount reads them into domain.FreeQuotaCounters.
 const accountColumns = `id, email, password_enc, session_id, cookies_json, user_agent,
 		datadome_client_id, workspace_id, plan_type,
 		has_unlim, has_flex_unlim, is_pro_veo3_available, cohort,
@@ -61,7 +65,10 @@ const accountColumns = `id, email, password_enc, session_id, cookies_json, user_
 		status, in_flight_jobs, last_balance_at, last_used_at, last_failed_at, fail_streak,
 		bound_proxy_url, priority, throttled_until, status_reason,
 		max_concurrent, note, source,
-		registered_at, imported_at`
+		registered_at, imported_at,
+		face_swap_credits, soul_credits, character_swap_credits,
+		qwen_camera_control_credits, wan2_5_video_credits,
+		text2keyframes_credits, veo3_fast_generations_count`
 
 // Get returns a single account by id.
 func (s *AccountStore) Get(ctx context.Context, id string) (*domain.Account, error) {
@@ -628,33 +635,39 @@ func (s *AccountStore) PickAndLock(ctx context.Context, params ports.PickParams)
 
 		orderParts := []string{}
 
-		// TODO(load_balance): prefer_unlim requires the
-		// account_unlim_activations table + model.unlim_job_set_type
-		// wiring to know which accounts hold the model's bundle. Neither
-		// exists in the current schema — the refresher would need to
-		// call GET /workspaces/unlim-activations per account and persist
-		// the result. Once that lands, replace this block with:
-		//   ORDER BY CASE WHEN EXISTS (
-		//     SELECT 1 FROM account_unlim_activations
-		//     WHERE account_id = accounts.id
-		//       AND job_set_type = ?  -- params.UnlimJobSetType
-		//   ) THEN 0 ELSE 1 END ASC
-		// For now the flag is accepted at the API/handler layer but has
-		// no effect on the ORDER BY.
-		if opts.Populated && opts.PreferUnlim {
-			// intentionally no-op — dormant until schema lands
-			_ = opts
+		// prefer_unlim: sort accounts that have activated the model's
+		// unlim bundle ahead of the rest. The EXISTS subquery joins
+		// account_unlim_activations on job_set_type and filters out
+		// expired activations (NULL expires_at means "no expiry" — a
+		// permanent activation, so it always qualifies). Populated by
+		// the refresher from GET /workspaces/unlim-activations.
+		//
+		// Requires PickParams.UnlimJobSetType to be set — an empty
+		// value means the model has no unlim endpoint (see
+		// data/reference/model-specs-extra.json) and the block becomes
+		// a no-op regardless of the flag.
+		if opts.Populated && opts.PreferUnlim && params.UnlimJobSetType != "" {
+			orderParts = append(orderParts,
+				`CASE WHEN EXISTS (
+					SELECT 1 FROM account_unlim_activations
+					WHERE account_id = accounts.id
+					  AND job_set_type = ?
+					  AND (expires_at IS NULL OR expires_at > ?)
+				) THEN 0 ELSE 1 END ASC`)
+			args = append(args, params.UnlimJobSetType, fmtTime(time.Now()))
 		}
 
-		// TODO(load_balance): prefer_free_quota requires per-model
-		// free-quota columns on accounts (face_swap_credits,
-		// soul_credits, character_swap_credits, ...) synced by the
-		// refresher, plus a mapping from model → column name. Neither
-		// is wired today. Once that lands, replace this block with a
-		// dynamic ORDER BY that reads the column named by
-		// spec.free_quota_field. For now the flag is a no-op.
-		if opts.Populated && opts.PreferFreeQuota {
-			_ = opts
+		// prefer_free_quota: sort accounts whose named free-quota
+		// column is > 0 ahead of the rest. Column dispatch is done
+		// via a static CASE on the field name so a mis-configured
+		// spec cannot inject SQL — only the seven column names
+		// PickAndLock enumerates below take effect; anything else
+		// makes the whole block a no-op (matches the "empty
+		// FreeQuotaField" contract).
+		if opts.Populated && opts.PreferFreeQuota && params.FreeQuotaField != "" {
+			if part, ok := freeQuotaOrderClause(params.FreeQuotaField); ok {
+				orderParts = append(orderParts, part)
+			}
 		}
 
 		if tierAware {
@@ -723,6 +736,160 @@ func (s *AccountStore) Unlock(ctx context.Context, id string, lockToken string) 
 	return s.UpdateInFlight(ctx, id, -1)
 }
 
+// freeQuotaOrderClause returns an ORDER BY fragment that ranks
+// accounts whose named free-quota column is > 0 ahead of the rest.
+// The column name comes from ModelSpec.FreeQuotaField (sourced from
+// data/reference/model-specs-extra.json) so it is not user-supplied,
+// but we still gate it through a static allowlist here rather than
+// splicing the field into a fmt.Sprintf — a mis-configured spec then
+// silently falls back to no-op instead of injecting SQL. Unknown
+// field names return ok=false and PickAndLock skips the block.
+func freeQuotaOrderClause(field string) (string, bool) {
+	switch field {
+	case "face_swap_credits":
+		return `CASE WHEN face_swap_credits > 0 THEN 0 ELSE 1 END ASC`, true
+	case "soul_credits":
+		return `CASE WHEN soul_credits > 0 THEN 0 ELSE 1 END ASC`, true
+	case "character_swap_credits":
+		return `CASE WHEN character_swap_credits > 0 THEN 0 ELSE 1 END ASC`, true
+	case "qwen_camera_control_credits":
+		return `CASE WHEN qwen_camera_control_credits > 0 THEN 0 ELSE 1 END ASC`, true
+	case "wan2_5_video_credits":
+		return `CASE WHEN wan2_5_video_credits > 0 THEN 0 ELSE 1 END ASC`, true
+	case "text2keyframes_credits":
+		return `CASE WHEN text2keyframes_credits > 0 THEN 0 ELSE 1 END ASC`, true
+	case "veo3_fast_generations_count":
+		return `CASE WHEN veo3_fast_generations_count > 0 THEN 0 ELSE 1 END ASC`, true
+	default:
+		return "", false
+	}
+}
+
+// UpdateFreeQuota overwrites the seven per-family free-quota counters
+// on the accounts row. Called by the refresher on every tick after
+// GET /user. All seven columns are written every call — a zero value
+// from upstream means the plan no longer grants that quota and must
+// land on disk as zero. Returns ErrAccountNotFound when id is unknown.
+func (s *AccountStore) UpdateFreeQuota(ctx context.Context, id string, q domain.FreeQuotaCounters) error {
+	res, err := s.db.ExecContext(ctx, `
+		UPDATE accounts
+		SET face_swap_credits            = ?,
+		    soul_credits                 = ?,
+		    character_swap_credits       = ?,
+		    qwen_camera_control_credits  = ?,
+		    wan2_5_video_credits         = ?,
+		    text2keyframes_credits       = ?,
+		    veo3_fast_generations_count  = ?
+		WHERE id = ?`,
+		q.FaceSwapCredits, q.SoulCredits, q.CharacterSwapCredits,
+		q.QwenCameraControlCredits, q.Wan25VideoCredits,
+		q.Text2KeyframesCredits, q.Veo3FastGenerationsCount,
+		id,
+	)
+	if err != nil {
+		return fmt.Errorf("update free quota %s: %w", id, err)
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return domain.ErrAccountNotFound
+	}
+	return nil
+}
+
+// ListUnlimActivations returns every account_unlim_activations row
+// for the given account. Resolutions are decoded from the compact CSV
+// on-disk form back to a []string. Ordered by bundle_type ASC for
+// determinism (tests + admin surface diffs).
+func (s *AccountStore) ListUnlimActivations(ctx context.Context, accountID string) ([]domain.UnlimActivation, error) {
+	rows, err := s.db.QueryContext(ctx, `
+		SELECT bundle_type, job_set_type, resolutions, expires_at, activated_at
+		FROM account_unlim_activations
+		WHERE account_id = ?
+		ORDER BY bundle_type ASC`, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("list unlim activations %s: %w", accountID, err)
+	}
+	defer rows.Close()
+	var out []domain.UnlimActivation
+	for rows.Next() {
+		var (
+			bundle    string
+			jst       string
+			resCSV    string
+			expiresAt sql.NullString
+			actAt     sql.NullString
+		)
+		if err := rows.Scan(&bundle, &jst, &resCSV, &expiresAt, &actAt); err != nil {
+			return nil, err
+		}
+		out = append(out, domain.UnlimActivation{
+			BundleType:  bundle,
+			JobSetType:  jst,
+			Resolutions: splitResolutions(resCSV),
+			ExpiresAt:   parseTime(expiresAt.String),
+			ActivatedAt: parseTime(actAt.String),
+		})
+	}
+	return out, rows.Err()
+}
+
+// ReplaceUnlimActivations swaps the full activations set for the given
+// account inside a single transaction. The refresher calls this after
+// every /workspaces/unlim-activations fetch — upstream returns the
+// authoritative list, so an activation that vanished server-side must
+// vanish locally too. The DELETE + INSERT pair inside one tx ensures
+// concurrent PickAndLock readers see either the old set or the new
+// set, never a partial merge.
+//
+// Resolutions are stored as a CSV string to avoid needing a second
+// table for what is empirically a short list ("1k,2k,4k").
+func (s *AccountStore) ReplaceUnlimActivations(ctx context.Context, accountID string, activations []domain.UnlimActivation) error {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = tx.Rollback() }()
+	if _, err := tx.ExecContext(ctx, `DELETE FROM account_unlim_activations WHERE account_id = ?`, accountID); err != nil {
+		return fmt.Errorf("replace unlim: delete: %w", err)
+	}
+	now := fmtTime(time.Now())
+	for _, a := range activations {
+		if _, err := tx.ExecContext(ctx, `
+			INSERT INTO account_unlim_activations
+			  (account_id, bundle_type, job_set_type, resolutions, expires_at, activated_at, synced_at)
+			VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			accountID, a.BundleType, a.JobSetType,
+			joinResolutions(a.Resolutions),
+			nullableTime(a.ExpiresAt),
+			fmtTime(a.ActivatedAt),
+			now,
+		); err != nil {
+			return fmt.Errorf("replace unlim: insert %s/%s: %w", accountID, a.BundleType, err)
+		}
+	}
+	return tx.Commit()
+}
+
+// joinResolutions collapses the resolutions slice into the CSV form
+// used on disk. An empty slice is stored as an empty string so a
+// downstream Split returns nil rather than [""]" — matching the
+// domain-side zero-value expectation.
+func joinResolutions(rs []string) string {
+	if len(rs) == 0 {
+		return ""
+	}
+	return strings.Join(rs, ",")
+}
+
+// splitResolutions is the inverse of joinResolutions. An empty column
+// value returns nil so the domain-side round-trip is lossless.
+func splitResolutions(csv string) []string {
+	if csv == "" {
+		return nil
+	}
+	return strings.Split(csv, ",")
+}
+
 // scanAccount reads a single accounts row from either *sql.Row or *sql.Rows.
 type scanner interface {
 	Scan(dest ...any) error
@@ -758,6 +925,9 @@ func scanAccount(sc scanner) (*domain.Account, error) {
 		&boundProxy, &a.Priority, &throttledUntil, &statusReason,
 		&a.MaxConcurrent, &a.Note, &a.Source,
 		&registeredAt, &importedAt,
+		&a.FreeQuota.FaceSwapCredits, &a.FreeQuota.SoulCredits, &a.FreeQuota.CharacterSwapCredits,
+		&a.FreeQuota.QwenCameraControlCredits, &a.FreeQuota.Wan25VideoCredits,
+		&a.FreeQuota.Text2KeyframesCredits, &a.FreeQuota.Veo3FastGenerationsCount,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrAccountNotFound

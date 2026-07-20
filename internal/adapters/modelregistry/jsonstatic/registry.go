@@ -44,10 +44,26 @@ type Registry struct {
 // data/reference/model-specs-extra.json. Only fields the loader knows
 // how to fold into ModelSpec are decoded; any other keys (e.g.
 // _schema) are ignored.
+//
+// UnlimJobSetType / UnlimBundleTypes / FreeQuotaField are the load-
+// balance router's per-model wiring: the first two identify the model's
+// unlim endpoint + activatable bundles (consumed by prefer_unlim), the
+// third names the accounts column that tracks its free-generation
+// counter (consumed by prefer_free_quota). All three are optional.
+//
+// EndpointStatus == "dead" is the loader's short-circuit for aliases
+// whose upstream endpoint returns 404 (currently `cinematic-studio-2-5`
+// and `flux-kontext`): the loader skips them entirely so /v1/models
+// doesn't advertise a broken route and PickAndLock never gets asked to
+// route to one.
 type extraSpec struct {
-	MaxResolution  string `json:"max_resolution"`
-	MaxDurationSec int    `json:"max_duration_sec"`
-	MinPlan        string `json:"min_plan"`
+	MaxResolution    string   `json:"max_resolution"`
+	MaxDurationSec   int      `json:"max_duration_sec"`
+	MinPlan          string   `json:"min_plan"`
+	UnlimJobSetType  string   `json:"unlim_job_set_type"`
+	UnlimBundleTypes []string `json:"unlim_bundle_types"`
+	FreeQuotaField   string   `json:"free_quota_field"`
+	EndpointStatus   string   `json:"endpoint_status"`
 }
 
 type aliasEntry struct {
@@ -212,6 +228,16 @@ func (r *Registry) Reload(ctx context.Context) error {
 	byAlias := make(map[string]*domain.ModelSpec, len(raw.Models))
 	locked := make(map[string]struct{})
 	for _, m := range raw.Models {
+		// Dead-endpoint short-circuit: extras can flag an alias whose
+		// upstream endpoint returns 404 (e.g. cinematic-studio-2-5,
+		// flux-kontext). Skip it entirely so /v1/models doesn't
+		// advertise it and PickAndLock never gets asked to route to it.
+		// The alias also drops out of the transparent-alias fallback
+		// map below because we skip inserting into byAlias — a
+		// subsequent Resolve() returns ErrModelNotFound.
+		if e, ok := extras[m.Alias]; ok && e.EndpointStatus == "dead" {
+			continue
+		}
 		spec := &domain.ModelSpec{
 			Alias:                m.Alias,
 			JST:                  m.JST,
@@ -237,10 +263,17 @@ func (r *Registry) Reload(ctx context.Context) error {
 		spec.MinPlan = deriveMinPlan(spec)
 		spec.Tags = deriveTags(spec)
 		// Apply the max-output extras (if any) — safe no-op when the
-		// alias has no entry.
+		// alias has no entry. Fold the load-balance wiring in from the
+		// same struct so a single extras lookup drives every optional
+		// enrichment.
 		if e, ok := extras[m.Alias]; ok {
 			spec.MaxResolution = e.MaxResolution
 			spec.MaxDurationSec = e.MaxDurationSec
+			spec.UnlimJobSetType = e.UnlimJobSetType
+			if len(e.UnlimBundleTypes) > 0 {
+				spec.UnlimBundleTypes = append([]string(nil), e.UnlimBundleTypes...)
+			}
+			spec.FreeQuotaField = e.FreeQuotaField
 			if minPlan := domain.PlanType(e.MinPlan); minPlan.TierRank() > spec.MinPlan.TierRank() {
 				spec.MinPlan = minPlan
 			}

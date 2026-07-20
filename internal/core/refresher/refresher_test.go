@@ -32,6 +32,12 @@ type balanceCall struct {
 // fakeAccountStore is a minimal ports.AccountStore for refresher tests.
 // Only List / UpdateBalance / UpdateEntitlements do real work; every other
 // method panics so an accidental dependency shows up immediately.
+//
+// The three sync fields (quotaCalls / unlimReplaces / listUnlimResp)
+// were added when the refresher gained free-quota + unlim-activation
+// syncing (task 6 of the load-balance dormant flag wiring). They record
+// what the ticker persisted per account so tests can assert on the
+// captured side effects without hitting a real DB.
 type fakeAccountStore struct {
 	mu       sync.Mutex
 	accounts []domain.Account
@@ -40,6 +46,20 @@ type fakeAccountStore struct {
 		ID  string
 		Ent ports.EntitlementUpdate
 	}
+	quotaCalls    []quotaCall
+	unlimReplaces []unlimReplaceCall
+}
+
+// quotaCall captures one UpdateFreeQuota invocation.
+type quotaCall struct {
+	ID string
+	Q  domain.FreeQuotaCounters
+}
+
+// unlimReplaceCall captures one ReplaceUnlimActivations invocation.
+type unlimReplaceCall struct {
+	ID          string
+	Activations []domain.UnlimActivation
 }
 
 func (f *fakeAccountStore) List(ctx context.Context, filter ports.AccountFilter) ([]domain.Account, error) {
@@ -98,6 +118,21 @@ func (f *fakeAccountStore) PickAndLock(ctx context.Context, p ports.PickParams) 
 }
 func (f *fakeAccountStore) Unlock(ctx context.Context, id, tok string) error {
 	panic("fakeAccountStore.Unlock not implemented")
+}
+func (f *fakeAccountStore) UpdateFreeQuota(_ context.Context, id string, q domain.FreeQuotaCounters) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.quotaCalls = append(f.quotaCalls, quotaCall{ID: id, Q: q})
+	return nil
+}
+func (f *fakeAccountStore) ListUnlimActivations(_ context.Context, _ string) ([]domain.UnlimActivation, error) {
+	return nil, nil
+}
+func (f *fakeAccountStore) ReplaceUnlimActivations(_ context.Context, id string, a []domain.UnlimActivation) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.unlimReplaces = append(f.unlimReplaces, unlimReplaceCall{ID: id, Activations: append([]domain.UnlimActivation(nil), a...)})
+	return nil
 }
 
 // fakeHTTPClient short-circuits clerk.higgsfield.ai to a stub JWT-mint

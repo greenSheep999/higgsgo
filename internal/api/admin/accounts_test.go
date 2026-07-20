@@ -114,6 +114,18 @@ func (f *fakeAccountStore) Unlock(context.Context, string, string) error {
 	panic("not implemented")
 }
 
+func (f *fakeAccountStore) UpdateFreeQuota(context.Context, string, domain.FreeQuotaCounters) error {
+	return nil
+}
+
+func (f *fakeAccountStore) ListUnlimActivations(context.Context, string) ([]domain.UnlimActivation, error) {
+	return nil, nil
+}
+
+func (f *fakeAccountStore) ReplaceUnlimActivations(context.Context, string, []domain.UnlimActivation) error {
+	return nil
+}
+
 // newAccountsRouter builds a chi.Router with the AccountsHandler mounted so
 // tests can hit the real routing surface end-to-end.
 func newAccountsRouter(store ports.AccountStore) chi.Router {

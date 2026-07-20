@@ -156,6 +156,15 @@ func (s *fakeAccountStore) PickAndLock(context.Context, ports.PickParams) (*doma
 	panic("not implemented")
 }
 func (s *fakeAccountStore) Unlock(context.Context, string, string) error { panic("not implemented") }
+func (s *fakeAccountStore) UpdateFreeQuota(context.Context, string, domain.FreeQuotaCounters) error {
+	return nil
+}
+func (s *fakeAccountStore) ListUnlimActivations(context.Context, string) ([]domain.UnlimActivation, error) {
+	return nil, nil
+}
+func (s *fakeAccountStore) ReplaceUnlimActivations(context.Context, string, []domain.UnlimActivation) error {
+	return nil
+}
 
 type fakeUpstream struct {
 	status *upstream.StatusResponse

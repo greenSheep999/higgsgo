@@ -66,6 +66,30 @@ type AccountStore interface {
 
 	// Unlock releases the in_flight increment claimed by PickAndLock.
 	Unlock(ctx context.Context, id string, lockToken string) error
+
+	// UpdateFreeQuota overwrites the seven per-family free-quota counters
+	// on the given account row. Called by the refresher on every tick
+	// after GET /user. Values that ship as zero from upstream still land
+	// as zero on disk (the plan no longer grants that quota); the
+	// refresher is the sole writer so there is no partial-update path.
+	UpdateFreeQuota(ctx context.Context, id string, q domain.FreeQuotaCounters) error
+
+	// ListUnlimActivations returns every account_unlim_activations row
+	// for the given account. Ordered by bundle_type ASC for determinism
+	// so a caller diffing two calls sees a stable sequence. Callers
+	// interested in "which accounts hold this bundle" should use the
+	// join in PickAndLock's ORDER BY instead — this method is intended
+	// for the admin surface and refresher diff logic.
+	ListUnlimActivations(ctx context.Context, accountID string) ([]domain.UnlimActivation, error)
+
+	// ReplaceUnlimActivations swaps the full activations set for the
+	// given account. Used by the refresher: upstream returns the
+	// authoritative list on every /workspaces/unlim-activations call so
+	// a "delete + insert" replace is the correct model (an activation
+	// that vanished server-side must vanish locally too). The write
+	// runs inside a transaction so concurrent PickAndLock calls see
+	// either the old set or the new set, never a partial mix.
+	ReplaceUnlimActivations(ctx context.Context, accountID string, activations []domain.UnlimActivation) error
 }
 
 // EntitlementUpdate carries the API-side permission fields refreshed from
@@ -133,6 +157,26 @@ type PickParams struct {
 	// RouteStrategy == "round_robin" (the load_balance mapping); other
 	// strategies ignore this field.
 	LoadBalance LoadBalanceOpts
+
+	// UnlimJobSetType is the model's unlim endpoint identifier (e.g.
+	// "nano_banana_pro_unlimited"). Populated by the proxy service from
+	// ModelSpec.UnlimJobSetType. Consumed only when the operator toggled
+	// `load_balance.prefer_unlim` on: PickAndLock sorts accounts that
+	// hold a matching row in account_unlim_activations first. Empty
+	// disables the preference regardless of the flag.
+	UnlimJobSetType string
+
+	// FreeQuotaField is the accounts column name that tracks this
+	// model's free-quota counter (e.g. "face_swap_credits"). Populated
+	// by the proxy service from ModelSpec.FreeQuotaField. Consumed only
+	// when the operator toggled `load_balance.prefer_free_quota` on:
+	// PickAndLock sorts accounts whose named column is > 0 first. Empty
+	// disables the preference regardless of the flag.
+	//
+	// The column dispatch happens via a static CASE inside PickAndLock
+	// (rather than fmt.Sprintf) so a mis-configured spec cannot inject
+	// SQL — only names PickAndLock explicitly enumerates take effect.
+	FreeQuotaField string
 }
 
 // LoadBalanceOpts is the operator-editable subset of the load_balance

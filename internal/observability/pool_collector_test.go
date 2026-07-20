@@ -61,6 +61,15 @@ func (s *stubAccountStore) PickAndLock(context.Context, ports.PickParams) (*doma
 	return nil, "", nil
 }
 func (s *stubAccountStore) Unlock(context.Context, string, string) error { return nil }
+func (s *stubAccountStore) UpdateFreeQuota(context.Context, string, domain.FreeQuotaCounters) error {
+	return nil
+}
+func (s *stubAccountStore) ListUnlimActivations(context.Context, string) ([]domain.UnlimActivation, error) {
+	return nil, nil
+}
+func (s *stubAccountStore) ReplaceUnlimActivations(context.Context, string, []domain.UnlimActivation) error {
+	return nil
+}
 
 // stubJobStore implements ports.JobStore. Only ListPending is used by
 // the collector.

@@ -966,12 +966,12 @@ const en = {
     preferUnlim: {
       label: "Prefer unlim bundle holders",
       hint:
-        "When a picked model has an unlim bundle, sort accounts that already activated the matching bundle first. Dormant until the refresher syncs /workspaces/unlim-activations.",
+        "When a picked model has an unlim bundle, sort accounts that already activated the matching bundle first. Populated by the refresher from /workspaces/unlim-activations on every tick.",
     },
     preferFreeQuota: {
       label: "Prefer free-quota holders",
       hint:
-        "Sort accounts with a non-zero free-quota counter for the model family first. Dormant until the refresher syncs the per-model quota fields (face_swap_credits, soul_credits, …).",
+        "Sort accounts whose free-quota counter for the model family is > 0 first (face_swap_credits, soul_credits, …). Populated by the refresher from /user on every tick.",
     },
     preferRicher: {
       label: "Prefer richer accounts",
