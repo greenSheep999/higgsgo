@@ -18,7 +18,6 @@ import {
   IconKey,
   IconLogout,
   IconMessageChatbot,
-  IconPlug,
   IconScale,
   IconUserPlus,
   IconUsers,
@@ -72,13 +71,15 @@ const observability: NavEntry[] = [
   { titleKey: "nav.audit", to: "/audit", icon: IconClockHour5 },
 ];
 
-// Plugin family. cpaplugin is the existing "Mode B" entrypoint;
-// registrations is the higgsfield-signup Registrar provider added
-// behind build tag `register`. Grouping them makes the "pluggable
-// providers" mental model obvious to operators.
+// Plugin family. Only Registrations shows by default — the CPA plugin
+// entry point exists in the codebase but the /internal/* listener is
+// off (modes.cpa_plugin=false) in every standalone deploy, so surfacing
+// the UI would just lead operators to a page that can't reach the
+// backend. The route file (routes/cpaplugin.tsx) stays wired in the
+// router so an operator who explicitly navigates to /cpaplugin still
+// gets it — this is a nav-level hide, not a delete.
 const plugins: NavEntry[] = [
   { titleKey: "nav.registrations", to: "/registrations", icon: IconUserPlus },
-  { titleKey: "nav.cpaplugin", to: "/cpaplugin", icon: IconPlug },
 ];
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
