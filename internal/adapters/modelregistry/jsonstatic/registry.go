@@ -203,7 +203,7 @@ func (r *Registry) Reload(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("load body templates: %w", err)
 	}
-	catalogs, err := loadCatalogs(r.catalogsDir)
+	catalogs, catalogTrees, err := loadCatalogs(r.catalogsDir)
 	if err != nil {
 		return fmt.Errorf("load catalogs: %w", err)
 	}
@@ -250,9 +250,28 @@ func (r *Registry) Reload(ctx context.Context) error {
 			}
 			if len(t.catalogRefs) > 0 {
 				enums := make(map[string][]string, len(t.catalogRefs))
-				for paramName, catalogPath := range t.catalogRefs {
-					if ids, ok := catalogs[catalogPath]; ok && len(ids) > 0 {
-						enums[paramName] = ids
+				for paramName, rawRef := range t.catalogRefs {
+					path, extractor, literal, kind := normalizeCatalogRef(rawRef)
+					switch kind {
+					case refCatalog:
+						if extractor != "" {
+							if tree, ok := catalogTrees[path]; ok {
+								if vals := extractFromCatalogTree(tree, extractor); len(vals) > 0 {
+									enums[paramName] = vals
+									continue
+								}
+							}
+						}
+						if ids, ok := catalogs[path]; ok && len(ids) > 0 {
+							enums[paramName] = ids
+						}
+					case refLiteral:
+						if len(literal) > 0 {
+							enums[paramName] = literal
+						}
+					case refUnknown:
+						// Skip — orphan / SPA-only refs the loader
+						// cannot resolve on disk.
 					}
 				}
 				if len(enums) > 0 {
@@ -644,22 +663,34 @@ func loadBodyTemplates(dir string) (map[string]bodyTemplate, error) {
 	return out, nil
 }
 
-// loadCatalogs walks CatalogsDir and returns a map keyed by
+// loadCatalogs walks CatalogsDir and returns two maps keyed by
 // "catalogs/<name>.json" (matching the catalogRefs values in body
-// templates) whose value is the ordered list of item ids. Each catalog
-// file follows the shape `{"items": [{"id": "...", ...}, ...]}`. An
-// empty or missing dir returns an empty map without error.
-func loadCatalogs(dir string) (map[string][]string, error) {
-	out := map[string][]string{}
+// templates):
+//
+//   - ids: the flat ordered list of item identifiers, used by
+//     catalog refs without an extractor path.
+//   - trees: the raw JSON bytes, retained for annotated refs like
+//     `catalogs/foo.json → item.some.field` that need to walk into
+//     the parsed tree rather than the flat id list.
+//
+// Both maps are populated together — every readable catalog appears in
+// `trees` regardless of whether it produced any ids. An empty or missing
+// dir returns empty maps without error. A syntactically invalid catalog
+// file (json.Valid == false) is a hard error: catalogs are authoritative
+// enum sources and a silent corruption would surface as random blank
+// dropdowns in the admin UI.
+func loadCatalogs(dir string) (map[string][]string, map[string]json.RawMessage, error) {
+	ids := map[string][]string{}
+	trees := map[string]json.RawMessage{}
 	if dir == "" {
-		return out, nil
+		return ids, trees, nil
 	}
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return out, nil
+			return ids, trees, nil
 		}
-		return nil, fmt.Errorf("read catalogs dir %q: %w", dir, err)
+		return nil, nil, fmt.Errorf("read catalogs dir %q: %w", dir, err)
 	}
 	for _, e := range entries {
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
@@ -671,24 +702,36 @@ func loadCatalogs(dir string) (map[string][]string, error) {
 		}
 		body, err := os.ReadFile(filepath.Join(dir, e.Name()))
 		if err != nil {
-			return nil, fmt.Errorf("read catalog %q: %w", e.Name(), err)
+			return nil, nil, fmt.Errorf("read catalog %q: %w", e.Name(), err)
 		}
+		// Fail loud on syntactically invalid catalogs. A missing
+		// file / empty items array is fine (see reference_elements),
+		// but a corrupt file must abort boot — silently swallowing
+		// it would hide the corruption behind an enum enrichment
+		// gap that only surfaces when a downstream form breaks.
+		if !json.Valid(body) {
+			return nil, nil, fmt.Errorf("catalog %q is not valid JSON", e.Name())
+		}
+		key := "catalogs/" + e.Name()
+		// Copy the bytes: os.ReadFile's slice is safe here but the
+		// json.RawMessage will outlive this loop and end up in the
+		// registry's long-lived map.
+		buf := make([]byte, len(body))
+		copy(buf, body)
+		trees[key] = buf
 		// Two shapes appear in practice:
 		//   * {"items": [{"id": "...", ...}, ...]} — the common case
 		//     (styles / motions / soul_v2_presets / ...)
 		//   * [{"job_id": "...", ...}, ...] — a top-level array with
 		//     job_id as the identifier (marketing_studio_presets)
 		// Both variants are decoded to a flat []string of ids. Some
-		// files may have neither and simply produce an empty slice.
-		ids := parseCatalogIDs(body)
-		if len(ids) == 0 {
-			continue
+		// files may have neither and simply produce an empty slice —
+		// still a valid catalog, just no flat-lookup enum values.
+		if flat := parseCatalogIDs(body); len(flat) > 0 {
+			ids[key] = flat
 		}
-		// The key uses the "catalogs/foo.json" form that body-templates
-		// use in catalogRefs so lookups can be direct map hits.
-		out["catalogs/"+e.Name()] = ids
 	}
-	return out, nil
+	return ids, trees, nil
 }
 
 // parseCatalogIDs handles the two on-disk catalog shapes and returns
