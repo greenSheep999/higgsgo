@@ -1,6 +1,22 @@
 # syntax=docker/dockerfile:1.7
 
-# ---- build stage ----
+# ---- webui build stage ----
+# webui/embed.go embeds webui/dist via //go:embed all:dist, so the Go
+# build below refuses to compile without the compiled SPA on disk.
+# The release-workflow's native-binary jobs run `pnpm --dir webui build`
+# on the host before invoking `go build`; the docker build has to do the
+# same thing inside its own multi-stage layer.
+FROM node:22-alpine AS webui
+WORKDIR /src/webui
+RUN corepack enable && corepack prepare pnpm@10 --activate
+# Bring the lockfile + package manifest first so the install layer
+# caches independently of the source tree.
+COPY webui/package.json webui/pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY webui/ ./
+RUN pnpm build
+
+# ---- go build stage ----
 FROM golang:1.25-alpine AS build
 
 WORKDIR /src
@@ -10,6 +26,9 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+# Overlay the compiled SPA produced by the webui stage into
+# /src/webui/dist so //go:embed all:dist finds it.
+COPY --from=webui /src/webui/dist ./webui/dist
 
 # Build-time metadata. VERSION is the semver tag (from the CI ref name or a
 # manual --build-arg); COMMIT is the short git sha; BUILD_TIME is ISO-8601 UTC.
