@@ -364,15 +364,15 @@ func createFormFile(w *multipart.Writer, field, filename, contentType string) (i
 // result_url, error_detail).
 func TestSoraViewFromJob_ExcludesForbiddenFields(t *testing.T) {
 	j := &domain.Job{
-		ID:            "job_x",
-		ModelAlias:    "kling-3-turbo",
-		JST:           "text2video_kling",
-		Status:        domain.JobCompleted,
-		RequestTS:     time.Unix(1784570000, 0),
-		FinishedAt:    time.Unix(1784570100, 0),
-		UpstreamJobID: "up_secret",
-		UpstreamCost:  12345,
-		ResultURL:     "https://cdn.higgsfield.ai/x.mp4",
+		ID:              "job_x",
+		ModelAlias:      "kling-3-turbo",
+		JST:             "text2video_kling",
+		Status:          domain.JobCompleted,
+		RequestTS:       time.Unix(1784570000, 0),
+		FinishedAt:      time.Unix(1784570100, 0),
+		UpstreamJobID:   "up_secret",
+		UpstreamCost:    12345,
+		ResultURL:       "https://cdn.higgsfield.ai/x.mp4",
 		RequestBodyJSON: `{"params":{"duration":5,"width":1280,"height":720}}`,
 	}
 	view := soraViewFromJob(j)
