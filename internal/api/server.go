@@ -232,6 +232,24 @@ func (s *Server) publicRouter() http.Handler {
 				r.Post("/images/generations", s.V1.HandleImageGeneration)
 				r.Get("/jobs", s.V1.HandleJobsList)
 				r.Get("/jobs/{id}", s.V1.HandleJobFetch)
+				// OpenAI-compatible Sora video surface. See
+				// docs/OPENAI-VIDEO-COMPAT.md for the wire spec.
+				// Mounted alongside the legacy generations routes;
+				// downstream new-api / OneAPI deployments can point
+				// their Sora TaskAdaptor at these endpoints with no
+				// code changes.
+				r.Post("/videos", s.V1.HandleSoraVideoCreate)
+				// Static-priority shim: without an explicit GET on
+				// /videos/generations, chi's radix router routes GET
+				// there into /videos/{id} with id="generations",
+				// surfacing a bogus 404. The legacy route is
+				// POST-only, so GET must surface as 405.
+				r.Get("/videos/generations", func(w http.ResponseWriter, r *http.Request) {
+					w.Header().Set("Allow", "POST")
+					http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+				})
+				r.Get("/videos/{id}", s.V1.HandleSoraVideoGet)
+				r.Get("/videos/{id}/content", s.V1.HandleSoraVideoContent)
 			})
 			// Playground surface for the WebUI. Uses a bespoke auth
 			// middleware that accepts either the deploy-wide admin bearer
