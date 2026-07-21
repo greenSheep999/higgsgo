@@ -553,6 +553,101 @@ func parseUnlimTime(s string) time.Time {
 	return time.Time{}
 }
 
+// UploadImage reserves a media slot, PUTs the raw bytes to the presigned
+// S3 URL, then commits the reservation. Returns the media_id that
+// higgsfield later accepts as `media_id` in a job body.
+//
+// Three-step protocol (see docs/OPENAI-VIDEO-COMPAT.md Appendix C and
+// higgsfield-register/src/upstream/media.mjs):
+//
+//  1. POST /media  {"content_type":"..."}  ->  {id, url, upload_url}
+//  2. PUT  upload_url   raw bytes           ->  S3 direct, no higgsfield auth
+//  3. POST /media/{id}/upload  {}           ->  flips to "uploaded"
+//
+// Failures at any step are wrapped so the caller can distinguish the
+// phase (media_reserve_failed / media_upload_failed / media_commit_failed).
+// The body is streamed once into memory because S3 needs the raw bytes
+// (with matching Content-Type) as a single PUT payload; callers with
+// very large images should chunk upstream of us.
+func (c *Client) UploadImage(ctx context.Context, account *domain.Account, contentType string, body io.Reader) (string, error) {
+	raw, err := io.ReadAll(body)
+	if err != nil {
+		return "", fmt.Errorf("read image bytes: %w", err)
+	}
+	// Step 1: reserve.
+	reserveBody, err := json.Marshal(map[string]string{"content_type": contentType})
+	if err != nil {
+		return "", fmt.Errorf("marshal reserve body: %w", err)
+	}
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodPost, c.baseURL+"/media", bytes.NewReader(reserveBody))
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, true)
+		return req, nil
+	}
+	resp, err := c.doWithRetry(ctx, "media_reserve", account, build)
+	if err != nil {
+		return "", fmt.Errorf("media_reserve_failed: %w", err)
+	}
+	defer resp.Body.Close()
+	respRaw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", fmt.Errorf("media_reserve_failed: HTTP %d: %s", resp.StatusCode, snip(respRaw))
+	}
+	var reserved struct {
+		ID        string `json:"id"`
+		URL       string `json:"url"`
+		UploadURL string `json:"upload_url"`
+	}
+	if err := json.Unmarshal(respRaw, &reserved); err != nil {
+		return "", fmt.Errorf("media_reserve_failed: parse: %w", err)
+	}
+	if reserved.ID == "" || reserved.UploadURL == "" {
+		return "", fmt.Errorf("media_reserve_failed: missing id / upload_url")
+	}
+
+	// Step 2: PUT bytes to S3 directly. No higgsfield auth headers —
+	// this URL is a presigned S3 upload_url which carries its own sig
+	// in the query string.
+	putReq, err := http.NewRequestWithContext(ctx, http.MethodPut, reserved.UploadURL, bytes.NewReader(raw))
+	if err != nil {
+		return "", fmt.Errorf("media_upload_failed: build: %w", err)
+	}
+	putReq.Header.Set("Content-Type", contentType)
+	putReq.ContentLength = int64(len(raw))
+	putResp, err := c.http.Do(ctx, putReq)
+	if err != nil {
+		return "", fmt.Errorf("media_upload_failed: %w", err)
+	}
+	putBody, _ := io.ReadAll(putResp.Body)
+	_ = putResp.Body.Close()
+	if putResp.StatusCode < 200 || putResp.StatusCode >= 300 {
+		return "", fmt.Errorf("media_upload_failed: HTTP %d: %s", putResp.StatusCode, snip(putBody))
+	}
+
+	// Step 3: commit.
+	commitBuild := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodPost, c.baseURL+"/media/"+reserved.ID+"/upload", strings.NewReader("{}"))
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, true)
+		return req, nil
+	}
+	commitResp, err := c.doWithRetry(ctx, "media_commit", account, commitBuild)
+	if err != nil {
+		return "", fmt.Errorf("media_commit_failed: %w", err)
+	}
+	commitRaw, _ := io.ReadAll(commitResp.Body)
+	_ = commitResp.Body.Close()
+	if commitResp.StatusCode < 200 || commitResp.StatusCode >= 300 {
+		return "", fmt.Errorf("media_commit_failed: HTTP %d: %s", commitResp.StatusCode, snip(commitRaw))
+	}
+	return reserved.ID, nil
+}
+
 // FetchWallet calls GET /workspaces/wallet.
 func (c *Client) FetchWallet(ctx context.Context, account *domain.Account) (*Wallet, error) {
 	build := func(token string) (*http.Request, error) {
