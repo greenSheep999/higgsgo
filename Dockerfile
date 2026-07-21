@@ -12,7 +12,11 @@ RUN corepack enable && corepack prepare pnpm@10 --activate
 # Bring the lockfile + package manifest first so the install layer
 # caches independently of the source tree.
 COPY webui/package.json webui/pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+# --mount=type=cache pins the pnpm store to a persistent BuildKit
+# volume so repeat builds skip network fetches. `sharing=locked` is
+# safe across parallel platform contexts (amd64/arm64).
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store,sharing=locked \
+    pnpm install --frozen-lockfile
 COPY webui/ ./
 RUN pnpm build
 
@@ -21,9 +25,12 @@ FROM golang:1.25-alpine AS build
 
 WORKDIR /src
 
-# Cache module downloads.
+# Cache module downloads. The BuildKit cache mount keeps GOMODCACHE
+# populated across builds so `go mod download` is a network no-op on
+# rebuilds.
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=cache,target=/go/pkg/mod,sharing=locked \
+    go mod download
 
 COPY . .
 # Overlay the compiled SPA produced by the webui stage into
@@ -41,7 +48,16 @@ ARG TARGETOS
 ARG TARGETARCH
 ENV CGO_ENABLED=0
 
-RUN GOOS=$TARGETOS GOARCH=$TARGETARCH go build \
+# Two BuildKit cache mounts turn repeat compiles from ~15 min into
+# seconds:
+#   - /root/.cache/go-build : go build's compiler artefact cache
+#   - /go/pkg/mod           : module download cache (shared with the
+#                             `go mod download` step above)
+# `sharing=locked` prevents cross-platform (amd64/arm64) writes from
+# stomping on each other when buildx runs the stages in parallel.
+RUN --mount=type=cache,target=/root/.cache/go-build,sharing=locked \
+    --mount=type=cache,target=/go/pkg/mod,sharing=locked \
+    GOOS=$TARGETOS GOARCH=$TARGETARCH go build \
       -trimpath \
       -ldflags "-s -w \
         -X github.com/greensheep999/higgsgo/internal/version.Version=${VERSION} \
