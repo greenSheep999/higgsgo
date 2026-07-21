@@ -517,6 +517,12 @@ func TestAccountStore_PickAndLock_LoadBalanceIsTierAware(t *testing.T) {
 // alias still works — kept for backward compatibility with rolling
 // upgrades and API clients that hold the old string. Since v0.5.5 the
 // behaviour is identical to the default round_robin path.
+//
+// deprecated RouteBestFit alias so the backward-compat shim does not
+// silently regress. staticcheck would otherwise flag every literal
+// reference on lines 557 / 576 / 591 below.
+//
+//lint:file-ignore SA1019 The whole point of this test is to exercise the
 func TestAccountStore_PickAndLock_BestFit(t *testing.T) {
 	db := openMem(t)
 	accStore := NewAccountStore(db)

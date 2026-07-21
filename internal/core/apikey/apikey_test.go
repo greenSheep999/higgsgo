@@ -40,7 +40,13 @@ func TestParseRejectsGarbage(t *testing.T) {
 
 func TestHashDeterministic(t *testing.T) {
 	pt := "sk-hg-0123456789abcdef0123456789abcdef01234567"
-	if Hash(pt) != Hash(pt) {
+	// Two independent calls with the same input must return the same
+	// digest. staticcheck's SA4000 flags `Hash(pt) != Hash(pt)` as an
+	// identical-expression comparison, but here the two calls are
+	// deliberate — we are asserting the function is pure and stateless,
+	// not comparing a value to itself.
+	a, b := Hash(pt), Hash(pt)
+	if a != b {
 		t.Fatal("hash not deterministic")
 	}
 	if Hash(pt) == Hash(pt+"x") {

@@ -44,6 +44,19 @@ type Handler struct {
 	APIKeys  ports.APIKeyStore  // optional; enables the api_keys.group_id direct 1:1 binding shortcut in resolveGroup
 	Accounts ports.AccountStore // optional; enables the pool-side unlim override check for /v1/playground/estimate
 	Logger   *slog.Logger       // optional; used for warnings during best-effort auto-resolution
+
+	// SoraUploader handles the media-upload side of POST /v1/videos when
+	// the caller sends a data-URI or multipart file part in
+	// input_reference. Optional: leaving it nil short-circuits those
+	// requests to a 400 error, while HTTP(S) URL forms and pure text
+	// prompts keep working. Wired at boot from main.go so this package
+	// stays free of an upstream / account-store dependency.
+	SoraUploader SoraMediaUploader
+
+	// ContentProxy overrides the default GET /v1/videos/{id}/content
+	// fetcher. Tests plug in a deterministic fake; production leaves
+	// this nil so defaultContentProxy runs.
+	ContentProxy ContentProxy
 }
 
 // New builds a Handler. The groups argument is optional and enables the

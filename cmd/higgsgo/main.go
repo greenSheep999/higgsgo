@@ -310,6 +310,11 @@ func run() error {
 	// so RequiresUnlim models correctly report will_charge=false when at
 	// least one unlim account is live in the pool.
 	v1h.Accounts = accountStore
+	// Wire the Sora media uploader — powers POST /v1/videos when the
+	// caller sends input_reference as a data-URI or multipart file. The
+	// uploader picks any active higgsfield account to sign the /media
+	// upload; the returned media_id is account-agnostic once committed.
+	v1h.SoraUploader = newSoraUploader(upstreamClient, accountStore)
 
 	// Background poll worker: catches slow B-class models that finish
 	// after the sync HTTP request has returned. Without this, users would

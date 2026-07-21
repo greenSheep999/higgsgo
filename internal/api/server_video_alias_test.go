@@ -51,17 +51,22 @@ func newVideoAliasTestServer(t *testing.T) *Server {
 	}
 }
 
-// TestPublicRouter_VideoAliasBothPathsMounted asserts that BOTH
-// `/v1/videos/generations` (legacy) and `/v1/video/generations`
-// (new-api compatible) resolve to a routed handler. Getting a 401
-// (not 404) proves the mux matched.
+// TestPublicRouter_VideoAliasBothPathsMounted asserts that the
+// legacy plural / new-api singular / OpenAI Sora shapes all resolve
+// to a routed handler. Getting a 401 (not 404) proves the mux
+// matched.
 func TestPublicRouter_VideoAliasBothPathsMounted(t *testing.T) {
 	cases := []struct {
-		name string
-		path string
+		name   string
+		method string
+		path   string
 	}{
-		{"legacy_plural", "/v1/videos/generations"},
-		{"new_api_singular", "/v1/video/generations"},
+		{"legacy_plural", http.MethodPost, "/v1/videos/generations"},
+		{"new_api_singular", http.MethodPost, "/v1/video/generations"},
+		// OpenAI-compatible Sora shape (docs/OPENAI-VIDEO-COMPAT.md).
+		{"sora_create", http.MethodPost, "/v1/videos"},
+		{"sora_get", http.MethodGet, "/v1/videos/some-id"},
+		{"sora_content", http.MethodGet, "/v1/videos/some-id/content"},
 	}
 	s := newVideoAliasTestServer(t)
 	router := s.publicRouter()
@@ -70,7 +75,7 @@ func TestPublicRouter_VideoAliasBothPathsMounted(t *testing.T) {
 		tc := tc
 		t.Run(tc.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodPost, tc.path, nil)
+			req := httptest.NewRequest(tc.method, tc.path, nil)
 			// No Authorization header on purpose.
 			router.ServeHTTP(rec, req)
 
@@ -83,6 +88,23 @@ func TestPublicRouter_VideoAliasBothPathsMounted(t *testing.T) {
 			// — both prove the route existed and the middleware chain
 			// ran. The one thing we refuse is 404.
 		})
+	}
+}
+
+// TestPublicRouter_GetVideosGenerationsIs405 guards against a chi
+// routing regression where GET /v1/videos/generations would be
+// absorbed by the /v1/videos/{id} sora-poll route (with id set to
+// the literal string "generations") and surface as a bogus 404
+// "video not found". The legacy /videos/generations route is
+// POST-only; a GET must surface as a real 405.
+func TestPublicRouter_GetVideosGenerationsIs405(t *testing.T) {
+	s := newVideoAliasTestServer(t)
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/v1/videos/generations", nil)
+	s.publicRouter().ServeHTTP(rec, req)
+	if rec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("GET /v1/videos/generations returned %d, want 405 (body=%q). This most likely means the static-GET shim in server.go was dropped and the request is being routed into the Sora poll handler with id='generations'.",
+			rec.Code, rec.Body.String())
 	}
 }
 
