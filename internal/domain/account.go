@@ -148,6 +148,21 @@ type Account struct {
 	// by the failover controller.
 	StatusReason string
 
+	// Upstream-derived lifecycle signals (migration 021). These mirror
+	// higgsfield's own flags and are orthogonal to Status: they do NOT
+	// gate pool eligibility (status='active' remains the sole入池 gate).
+	// The replenish alerter reads them; an operator decides whether to
+	// pull a flagged account.
+	//   GraceStatus:  normalized /workspaces/notice token (grace /
+	//                 enforcement / access_lose / ...), "" when none.
+	//   BlockedAt / SuspendedAt: raw upstream timestamp strings, ""
+	//                 when unset; non-empty = flagged.
+	//   IsPaused:     account paused (or pause scheduled) upstream.
+	GraceStatus  string
+	BlockedAt    string
+	SuspendedAt  string
+	IsPaused     bool
+
 	// Optional IP binding for models that require sticky IP (image2video_extend etc.).
 	BoundProxyURL string
 
@@ -205,11 +220,19 @@ type FreeQuotaCounters struct {
 // and JobSetType is the unlim endpoint that bundle unlocks (e.g.
 // "nano_banana_pro_unlimited"). PickAndLock joins on JobSetType.
 type UnlimActivation struct {
+	// ID is the activation's server-side id, needed to POST a claim
+	// (/workspaces/unlim-activations/{id}). Not persisted — the store
+	// keys by (account_id, bundle_type) and never reads ID back.
+	ID          string
 	BundleType  string
 	JobSetType  string
 	Resolutions []string
 	ExpiresAt   time.Time // zero == no expiry
 	ActivatedAt time.Time
+	// IsClaimed is false for bundles the platform granted but the user
+	// has not activated yet. The claimer POSTs a claim for these; the
+	// store does not persist this flag.
+	IsClaimed bool
 }
 
 // AvailableSlots returns how many more concurrent jobs this account can accept

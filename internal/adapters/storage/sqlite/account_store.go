@@ -68,7 +68,8 @@ const accountColumns = `id, email, password_enc, session_id, cookies_json, user_
 		registered_at, imported_at,
 		face_swap_credits, soul_credits, character_swap_credits,
 		qwen_camera_control_credits, wan2_5_video_credits,
-		text2keyframes_credits, veo3_fast_generations_count`
+		text2keyframes_credits, veo3_fast_generations_count,
+		grace_status, blocked_at, suspended_at, is_paused`
 
 // Get returns a single account by id.
 func (s *AccountStore) Get(ctx context.Context, id string) (*domain.Account, error) {
@@ -870,6 +871,84 @@ func (s *AccountStore) ReplaceUnlimActivations(ctx context.Context, accountID st
 	return tx.Commit()
 }
 
+// HasActiveUnlimFor reports whether the account holds an active unlim
+// bundle covering jobSetType. This is the same EXISTS predicate that
+// PickAndLock uses as a sort hint (see the prefer_unlim block), lifted
+// into a standalone lookup so the proxy service can make the binary
+// "route to the _unlimited variant or not" decision after an account is
+// picked. A bundle counts as active when expires_at is NULL/empty (never
+// expires) or strictly in the future. Empty inputs return false rather
+// than erroring so callers need not special-case models without an unlim
+// variant.
+func (s *AccountStore) HasActiveUnlimFor(ctx context.Context, accountID, jobSetType string) (bool, error) {
+	if accountID == "" || jobSetType == "" {
+		return false, nil
+	}
+	const q = `SELECT EXISTS (
+		SELECT 1 FROM account_unlim_activations
+		WHERE account_id = ?
+		  AND job_set_type = ?
+		  AND (expires_at IS NULL OR expires_at = '' OR expires_at > ?)
+	)`
+	var has int
+	if err := s.db.QueryRowContext(ctx, q, accountID, jobSetType, fmtTime(time.Now())).Scan(&has); err != nil {
+		return false, fmt.Errorf("has active unlim %s/%s: %w", accountID, jobSetType, err)
+	}
+	return has == 1, nil
+}
+
+// CountActiveUnlimByJST groups active accounts' live unlim bundles by
+// job_set_type. Only status='active' accounts and non-expired bundles
+// count — this is the "how deep is the unlim pool for model X right now"
+// query the replenish ticker's S1 signal reads.
+func (s *AccountStore) CountActiveUnlimByJST(ctx context.Context) (map[string]int, error) {
+	const q = `SELECT u.job_set_type, COUNT(DISTINCT u.account_id)
+		FROM account_unlim_activations u
+		JOIN accounts a ON a.id = u.account_id
+		WHERE a.status = 'active'
+		  AND (u.expires_at IS NULL OR u.expires_at = '' OR u.expires_at > ?)
+		GROUP BY u.job_set_type`
+	rows, err := s.db.QueryContext(ctx, q, fmtTime(time.Now()))
+	if err != nil {
+		return nil, fmt.Errorf("count active unlim by jst: %w", err)
+	}
+	defer rows.Close()
+	out := make(map[string]int)
+	for rows.Next() {
+		var jst string
+		var n int
+		if err := rows.Scan(&jst, &n); err != nil {
+			return nil, err
+		}
+		out[jst] = n
+	}
+	return out, rows.Err()
+}
+
+// UpdateUpstreamStatus writes the /user-derived lifecycle columns. It
+// touches only blocked_at / suspended_at / is_paused — never status or
+// fail_streak (those belong to failover / operator lifecycle).
+func (s *AccountStore) UpdateUpstreamStatus(ctx context.Context, id string, u ports.UpstreamStatusUpdate) error {
+	_, err := s.db.ExecContext(ctx, `
+		UPDATE accounts
+		SET blocked_at = ?, suspended_at = ?, is_paused = ?
+		WHERE id = ?`,
+		u.BlockedAt, u.SuspendedAt, boolToInt(u.IsPaused), id)
+	if err != nil {
+		return fmt.Errorf("update upstream status %s: %w", id, err)
+	}
+	return nil
+}
+
+// UpdateGraceStatus writes only the grace_status token.
+func (s *AccountStore) UpdateGraceStatus(ctx context.Context, id, graceStatus string) error {
+	_, err := s.db.ExecContext(ctx, `UPDATE accounts SET grace_status = ? WHERE id = ?`, graceStatus, id)
+	if err != nil {
+		return fmt.Errorf("update grace status %s: %w", id, err)
+	}
+	return nil
+}
+
 // joinResolutions collapses the resolutions slice into the CSV form
 // used on disk. An empty slice is stored as an empty string so a
 // downstream Split returns nil rather than [""]" — matching the
@@ -915,6 +994,7 @@ func scanAccount(sc scanner) (*domain.Account, error) {
 		hasUnlim       int
 		hasFlexUnlim   int
 		isProVeo3      int
+		isPaused       int
 	)
 	if err := sc.Scan(
 		&a.ID, &a.Email, &a.Password, &a.SessionID, &a.CookiesJSON, &a.UserAgent,
@@ -928,6 +1008,7 @@ func scanAccount(sc scanner) (*domain.Account, error) {
 		&a.FreeQuota.FaceSwapCredits, &a.FreeQuota.SoulCredits, &a.FreeQuota.CharacterSwapCredits,
 		&a.FreeQuota.QwenCameraControlCredits, &a.FreeQuota.Wan25VideoCredits,
 		&a.FreeQuota.Text2KeyframesCredits, &a.FreeQuota.Veo3FastGenerationsCount,
+		&a.GraceStatus, &a.BlockedAt, &a.SuspendedAt, &isPaused,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, domain.ErrAccountNotFound
@@ -939,6 +1020,7 @@ func scanAccount(sc scanner) (*domain.Account, error) {
 	a.HasUnlim = intToBool(hasUnlim)
 	a.HasFlexUnlim = intToBool(hasFlexUnlim)
 	a.IsProVeo3Available = intToBool(isProVeo3)
+	a.IsPaused = intToBool(isPaused)
 	a.Cohort = cohort.String
 	a.DataDomeClientID = datadomeCID.String
 	a.WorkspaceID = workspaceID.String

@@ -90,6 +90,45 @@ type AccountStore interface {
 	// runs inside a transaction so concurrent PickAndLock calls see
 	// either the old set or the new set, never a partial mix.
 	ReplaceUnlimActivations(ctx context.Context, accountID string, activations []domain.UnlimActivation) error
+
+	// HasActiveUnlimFor reports whether the account currently holds an
+	// active unlim bundle covering the given job_set_type. Active means
+	// the bundle either has no expires_at set, or expires_at > now. The
+	// proxy service calls this after picking an account to decide whether
+	// to route the request to the `_unlimited` variant endpoint (which is
+	// billed against the unlim window instead of subscription credits).
+	HasActiveUnlimFor(ctx context.Context, accountID, jobSetType string) (bool, error)
+
+	// CountActiveUnlimByJST returns, per job_set_type, how many active
+	// accounts hold a currently-active unlim bundle for it (expires_at
+	// null/empty or in the future). Powers the replenish S1 signal
+	// (pool-depletion alert) — a job_set_type whose count drops below the
+	// operator threshold means the unlim pool for that model is drying up.
+	CountActiveUnlimByJST(ctx context.Context) (map[string]int, error)
+
+	// UpdateUpstreamStatus writes the upstream-derived lifecycle columns
+	// (blocked_at / suspended_at / is_paused) from a /user snapshot. It
+	// deliberately does NOT touch status / fail_streak — those belong to
+	// the failover controller and operator lifecycle, and these signals
+	// are informational (they feed the replenish alerter, not pool
+	// gating). grace_status is written separately (UpdateGraceStatus) so
+	// a failed /workspaces/notice fetch does not clobber it.
+	UpdateUpstreamStatus(ctx context.Context, id string, u UpstreamStatusUpdate) error
+
+	// UpdateGraceStatus writes only the normalized grace_status token
+	// derived from /workspaces/notice. Split from UpdateUpstreamStatus so
+	// the refresher can skip it when the notice fetch fails, leaving the
+	// prior value intact instead of blanking it.
+	UpdateGraceStatus(ctx context.Context, id, graceStatus string) error
+}
+
+// UpstreamStatusUpdate carries the /user-derived lifecycle flags written
+// by the refresher. blocked_at / suspended_at are raw upstream timestamp
+// strings ("" when unset).
+type UpstreamStatusUpdate struct {
+	BlockedAt   string
+	SuspendedAt string
+	IsPaused    bool
 }
 
 // EntitlementUpdate carries the API-side permission fields refreshed from
