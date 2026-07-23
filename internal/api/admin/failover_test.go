@@ -92,6 +92,22 @@ func (f *failoverFakeAccts) ReplaceUnlimActivations(context.Context, string, []d
 	return nil
 }
 
+func (f *failoverFakeAccts) HasActiveUnlimFor(context.Context, string, string) (bool, error) {
+	return false, nil
+}
+
+func (f *failoverFakeAccts) CountActiveUnlimByJST(context.Context) (map[string]int, error) {
+	return nil, nil
+}
+
+func (f *failoverFakeAccts) UpdateUpstreamStatus(context.Context, string, ports.UpstreamStatusUpdate) error {
+	return nil
+}
+
+func (f *failoverFakeAccts) UpdateGraceStatus(context.Context, string, string) error {
+	return nil
+}
+
 type failoverFakeEvents struct {
 	inserts []struct {
 		id, reason string

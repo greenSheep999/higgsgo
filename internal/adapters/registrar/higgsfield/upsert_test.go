@@ -135,6 +135,18 @@ func (f *fakeAccountStore) ListUnlimActivations(context.Context, string) ([]doma
 func (f *fakeAccountStore) ReplaceUnlimActivations(context.Context, string, []domain.UnlimActivation) error {
 	return nil
 }
+func (f *fakeAccountStore) HasActiveUnlimFor(context.Context, string, string) (bool, error) {
+	return false, nil
+}
+func (f *fakeAccountStore) CountActiveUnlimByJST(context.Context) (map[string]int, error) {
+	return nil, nil
+}
+func (f *fakeAccountStore) UpdateUpstreamStatus(context.Context, string, ports.UpstreamStatusUpdate) error {
+	return nil
+}
+func (f *fakeAccountStore) UpdateGraceStatus(context.Context, string, string) error {
+	return nil
+}
 func (f *fakeAccountStore) Unlock(context.Context, string, string) error {
 	panic("unexpected Unlock")
 }

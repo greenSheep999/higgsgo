@@ -53,6 +53,12 @@ func (f *fakeUsageStore) Aggregate(_ context.Context, q ports.UsageAggQuery) ([]
 	return f.aggRows, nil
 }
 
+// SumChargedCreditsHForAccount is unused by the admin usage handler — panic
+// so a mistaken call from that surface breaks the test loudly.
+func (f *fakeUsageStore) SumChargedCreditsHForAccount(context.Context, string, time.Time, time.Time) (int64, error) {
+	panic("not implemented")
+}
+
 // newUsageRouter mounts a UsageHandler onto a plain chi router so tests can
 // exercise the full routing path (no auth middleware attached).
 func newUsageRouter(store ports.UsageEventStore) chi.Router {

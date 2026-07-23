@@ -98,6 +98,22 @@ func (f *fakeAccountStorePG) ReplaceUnlimActivations(context.Context, string, []
 	return nil
 }
 
+func (f *fakeAccountStorePG) HasActiveUnlimFor(context.Context, string, string) (bool, error) {
+	return false, nil
+}
+
+func (f *fakeAccountStorePG) CountActiveUnlimByJST(context.Context) (map[string]int, error) {
+	return nil, nil
+}
+
+func (f *fakeAccountStorePG) UpdateUpstreamStatus(context.Context, string, ports.UpstreamStatusUpdate) error {
+	return nil
+}
+
+func (f *fakeAccountStorePG) UpdateGraceStatus(context.Context, string, string) error {
+	return nil
+}
+
 // newPlaygroundHandler builds a Handler wired with the given key + spec
 // list. The returned http.Handler mimics the server.go mount by
 // preseeding the request context with the APIKey (skipping APIKeyAuth).
@@ -419,6 +435,22 @@ func (s *pickFailStore) ListUnlimActivations(context.Context, string) ([]domain.
 	return nil, nil
 }
 func (s *pickFailStore) ReplaceUnlimActivations(context.Context, string, []domain.UnlimActivation) error {
+	return nil
+}
+
+func (s *pickFailStore) HasActiveUnlimFor(context.Context, string, string) (bool, error) {
+	return false, nil
+}
+
+func (s *pickFailStore) CountActiveUnlimByJST(context.Context) (map[string]int, error) {
+	return nil, nil
+}
+
+func (s *pickFailStore) UpdateUpstreamStatus(context.Context, string, ports.UpstreamStatusUpdate) error {
+	return nil
+}
+
+func (s *pickFailStore) UpdateGraceStatus(context.Context, string, string) error {
 	return nil
 }
 
