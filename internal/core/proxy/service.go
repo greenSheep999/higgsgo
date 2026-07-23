@@ -395,12 +395,46 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 			slog.Int64("est_cost_h", spec.EstCostHundredths))
 	}
 
+	// Decide whether this request rides an active unlim window. When the
+	// model has an `_unlimited` variant (spec.UnlimJobSetType, populated
+	// from model-specs-extra.json) AND the picked account currently holds
+	// an active bundle covering that job_set_type, we route to the
+	// variant endpoint and set use_unlim=true in the body. higgsfield then
+	// bills the request against the unlim window instead of subscription
+	// credits — the whole point of the 7/14/365-day windows. A lookup
+	// error is non-fatal: we log and fall back to the paid base endpoint
+	// so a transient DB hiccup degrades to "charged" rather than "failed".
+	endpoint := spec.Endpoint
+	useUnlim := false
+	if spec.UnlimJobSetType != "" {
+		has, herr := s.Store.HasActiveUnlimFor(ctx, acc.ID, spec.UnlimJobSetType)
+		switch {
+		case herr != nil:
+			if s.Logger != nil {
+				s.Logger.Warn("has-active-unlim lookup failed; using paid endpoint",
+					slog.String("account_id", acc.ID),
+					slog.String("unlim_jst", spec.UnlimJobSetType),
+					slog.String("err", herr.Error()))
+			}
+		case has:
+			endpoint = "/jobs/v2/" + spec.UnlimJobSetType
+			useUnlim = true
+			if s.Logger != nil {
+				s.Logger.Info("routed to unlim variant",
+					slog.String("account_id", acc.ID),
+					slog.String("model", spec.Alias),
+					slog.String("base_jst", spec.JST),
+					slog.String("unlim_jst", spec.UnlimJobSetType))
+			}
+		}
+	}
+
 	// Build request body.
-	body := buildBody(spec, req)
+	body := buildBody(spec, req, useUnlim)
 
 	created, err := s.Upstream.CreateJob(ctx, upstream.CreateRequest{
 		Account:  acc,
-		Endpoint: spec.Endpoint,
+		Endpoint: endpoint,
 		Body:     body,
 	})
 	if err != nil {
@@ -428,7 +462,7 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 				AccountID:    acc.ID,
 				ModelAlias:   spec.Alias,
 				JST:          spec.JST,
-				Endpoint:     spec.Endpoint,
+				Endpoint:     endpoint,
 				RequestTS:    s.now(),
 				UpstreamCost: 0,
 				Status:       domain.JobFailed,
@@ -466,7 +500,7 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 			AccountID:       acc.ID,
 			ModelAlias:      spec.Alias,
 			JST:             spec.JST,
-			Endpoint:        spec.Endpoint,
+			Endpoint:        endpoint,
 			RequestBodyJSON: EnsureBodyJSON(body),
 			RequestTS:       requestTS,
 			UpstreamJobID:   created.JobID,
@@ -757,7 +791,7 @@ func (s *Service) Generate(ctx context.Context, req GenerationRequest) (*Generat
 // can zero out spec.ExampleBodyJSON before passing spec in — but every
 // production path benefits from defaults because they close the "422
 // missing param X" holes the WebUI cannot signal in advance.
-func buildBody(spec *domain.ModelSpec, req GenerationRequest) map[string]any {
+func buildBody(spec *domain.ModelSpec, req GenerationRequest, useUnlim bool) map[string]any {
 	top := map[string]any{}
 	// Seed from the template. On any parse error we fall back to an
 	// empty top-level object so pre-template behaviour is preserved.
@@ -781,30 +815,54 @@ func buildBody(spec *domain.ModelSpec, req GenerationRequest) map[string]any {
 	}
 	// Inject media if provided and the model wants it. The template may
 	// carry an example media reference; user-provided media replaces it.
-	if req.Media != nil && req.Media.PreUploadedID != "" {
+	// URL-only inputs are valid for callers that want higgsfield to fetch a
+	// public reference directly, while uploaded inputs carry an ID and may
+	// also carry the committed CDN URL.
+	if req.Media != nil && (req.Media.PreUploadedID != "" || req.Media.URL != "") {
 		mediaObj := map[string]any{
 			"id":   req.Media.PreUploadedID,
 			"type": mediaTypeFor(req.Media.Type),
 			"url":  req.Media.URL,
 		}
-		switch spec.MediaRole {
+		role := mediaRoleFor(spec, params)
+		switch role {
 		case "medias":
 			params["medias"] = []any{
 				map[string]any{"role": "start_image", "data": mediaObj},
 			}
-		case "input_image", "":
-			// Default: flat input_image when spec doesn't say otherwise.
+		case "input_images":
+			params["input_images"] = []any{mediaObj}
+		default:
 			params["input_image"] = mediaObj
 		}
 	}
 	// Hard top-level defaults. These are higgsgo-owned so we always
 	// stamp them last, overriding whatever the template carried.
-	top["use_unlim"] = false
+	// use_unlim is true only when the caller resolved an active unlim
+	// window for the picked account (see Generate's routing block) — it
+	// must travel together with the /jobs/v2/{unlim_jst} endpoint switch,
+	// otherwise higgsfield rejects the mismatch.
+	top["use_unlim"] = useUnlim
 	top["use_seedream_bonus"] = false
 	if spec != nil && spec.ApplicationSlug != "" {
 		top["application_slug"] = spec.ApplicationSlug
 	}
 	return top
+}
+
+func mediaRoleFor(spec *domain.ModelSpec, params map[string]any) string {
+	if spec != nil && spec.MediaRole != "" {
+		return spec.MediaRole
+	}
+	for _, role := range []string{"input_images", "medias", "input_image"} {
+		if _, ok := params[role]; ok {
+			return role
+		}
+	}
+	if spec != nil && spec.Version == "v2" {
+		return "input_images"
+	}
+	return "input_image"
 }
 
 func mediaTypeFor(kind string) string {
