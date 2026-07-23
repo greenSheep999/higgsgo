@@ -171,3 +171,42 @@ func TestRefresher_SyncsFreeQuota(t *testing.T) {
 		t.Errorf("expected zero fields to be zero, got %+v", q)
 	}
 }
+
+// TestRefresher_DerivesUpstreamStatus wires a /user carrying blocked_at +
+// is_paused and a /workspaces/notice returning a grace notice, asserting
+// the refresher records both derived writes.
+func TestRefresher_DerivesUpstreamStatus(t *testing.T) {
+	userBlocked := `{"id":"user_x","email":"e","plan_type":"plus","has_unlim":false,"cohort":"c1","total_plan_credits":100.0,"plan_ends_at":"2026-08-17T10:00:00Z","workspace_id":"ws_1","blocked_at":"2026-07-20T00:00:00Z","is_paused":true}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/workspaces/wallet":
+			_, _ = w.Write([]byte(walletJSON))
+		case "/user":
+			_, _ = w.Write([]byte(userBlocked))
+		case "/workspaces/unlim-activations":
+			_, _ = w.Write([]byte(`{"activations":[]}`))
+		case "/workspaces/notice":
+			_, _ = w.Write([]byte(`{"status":"add_card_grace_notice"}`))
+		default:
+			http.Error(w, "not found", http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	store := &fakeAccountStore{accounts: []domain.Account{mkAccount("acc_1", "m1")}}
+	r := newRefresher(t, srv, store, 1)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	r.tick(ctx)
+
+	if len(store.upstreamStat) != 1 {
+		t.Fatalf("expected 1 UpdateUpstreamStatus, got %d", len(store.upstreamStat))
+	}
+	u := store.upstreamStat[0]
+	if u.BlockedAt != "2026-07-20T00:00:00Z" || !u.IsPaused {
+		t.Errorf("derived upstream status wrong: %+v", u)
+	}
+	if len(store.graceStatuses) != 1 || store.graceStatuses[0] != "grace" {
+		t.Errorf("grace status: got %v want [grace]", store.graceStatuses)
+	}
+}

@@ -48,6 +48,8 @@ type fakeAccountStore struct {
 	}
 	quotaCalls    []quotaCall
 	unlimReplaces []unlimReplaceCall
+	upstreamStat  []ports.UpstreamStatusUpdate
+	graceStatuses []string
 }
 
 // quotaCall captures one UpdateFreeQuota invocation.
@@ -132,6 +134,28 @@ func (f *fakeAccountStore) ReplaceUnlimActivations(_ context.Context, id string,
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.unlimReplaces = append(f.unlimReplaces, unlimReplaceCall{ID: id, Activations: append([]domain.UnlimActivation(nil), a...)})
+	return nil
+}
+
+func (f *fakeAccountStore) HasActiveUnlimFor(context.Context, string, string) (bool, error) {
+	return false, nil
+}
+
+func (f *fakeAccountStore) CountActiveUnlimByJST(context.Context) (map[string]int, error) {
+	return nil, nil
+}
+
+func (f *fakeAccountStore) UpdateUpstreamStatus(_ context.Context, _ string, u ports.UpstreamStatusUpdate) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.upstreamStat = append(f.upstreamStat, u)
+	return nil
+}
+
+func (f *fakeAccountStore) UpdateGraceStatus(_ context.Context, _, graceStatus string) error {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.graceStatuses = append(f.graceStatuses, graceStatus)
 	return nil
 }
 
@@ -563,4 +587,135 @@ func TestRefresher_NilFailoverIsSafe(t *testing.T) {
 	defer cancel()
 	// Must not panic.
 	r.tick(ctx)
+}
+
+// TestRefresher_FreeGensV2Calibration asserts that when FreeGensV2Enabled is
+// on, the refresher overlays the authoritative GET /user/free-gens/v2
+// counters onto the free_quota columns — the soul family counter (298) wins
+// over the stale soul_credits: 0 that /user reports. The max-across-soul
+// rule is exercised by returning differing counters for the three soul
+// job_set_types; the largest (300) must land on soul_credits.
+func TestRefresher_FreeGensV2Calibration(t *testing.T) {
+	// /user reports soul_credits: 0 but face_swap_credits: 2 — the latter
+	// has no v2 job_set_type so it must survive untouched.
+	const userWithQuota = `{"id":"user_x","email":"e","plan_type":"plus","has_unlim":false,"cohort":"c1","total_plan_credits":100.0,"plan_ends_at":"2026-08-17T10:00:00Z","workspace_id":"ws_1","soul_credits":0,"face_swap_credits":2}`
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/workspaces/wallet":
+			_, _ = w.Write([]byte(walletJSON))
+		case "/user":
+			_, _ = w.Write([]byte(userWithQuota))
+		case "/user/free-gens/v2":
+			_, _ = w.Write([]byte(`{"items":[
+				{"job_set_type":"text2image_soul_v2","counter":298,"config":null},
+				{"job_set_type":"soul_cinematic","counter":300,"config":null},
+				{"job_set_type":"soul_location","counter":299,"config":null}
+			]}`))
+		default:
+			http.Error(w, "not found", http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	store := &fakeAccountStore{accounts: []domain.Account{mkAccount("acc_1", "m1")}}
+	r := newRefresher(t, srv, store, 1)
+	r.FreeGensV2Enabled = true
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	r.tick(ctx)
+
+	if len(store.quotaCalls) != 1 {
+		t.Fatalf("expected 1 UpdateFreeQuota call, got %d", len(store.quotaCalls))
+	}
+	q := store.quotaCalls[0].Q
+	// v2 wins: max soul counter (300) overrides /user's soul_credits: 0.
+	if q.SoulCredits != 300 {
+		t.Errorf("SoulCredits: got %v want 300 (max soul counter from v2)", q.SoulCredits)
+	}
+	// Column with no v2 job_set_type keeps its /user value.
+	if q.FaceSwapCredits != 2 {
+		t.Errorf("FaceSwapCredits: got %v want 2 (/user value, untouched)", q.FaceSwapCredits)
+	}
+}
+
+// TestRefresher_FreeGensV2Disabled asserts that with the flag off, the v2
+// endpoint is never consulted and the stale /user soul_credits: 0 is
+// persisted verbatim (pre-P1-3 behaviour).
+func TestRefresher_FreeGensV2Disabled(t *testing.T) {
+	const userWithQuota = `{"id":"user_x","email":"e","plan_type":"plus","cohort":"c1","plan_ends_at":"2026-08-17T10:00:00Z","workspace_id":"ws_1","soul_credits":0,"face_swap_credits":2}`
+	var v2Hits int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/workspaces/wallet":
+			_, _ = w.Write([]byte(walletJSON))
+		case "/user":
+			_, _ = w.Write([]byte(userWithQuota))
+		case "/user/free-gens/v2":
+			v2Hits++
+			http.Error(w, "should not be called", http.StatusTeapot)
+		default:
+			http.Error(w, "not found", http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	store := &fakeAccountStore{accounts: []domain.Account{mkAccount("acc_1", "m1")}}
+	r := newRefresher(t, srv, store, 1)
+	r.FreeGensV2Enabled = false
+
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	r.tick(ctx)
+
+	if v2Hits != 0 {
+		t.Errorf("v2 endpoint hit %d times with flag disabled, want 0", v2Hits)
+	}
+	if len(store.quotaCalls) != 1 {
+		t.Fatalf("expected 1 UpdateFreeQuota call, got %d", len(store.quotaCalls))
+	}
+	if store.quotaCalls[0].Q.SoulCredits != 0 {
+		t.Errorf("SoulCredits: got %v want 0 (v2 disabled, /user value stands)", store.quotaCalls[0].Q.SoulCredits)
+	}
+}
+
+// TestReconcileFreeGensV2 unit-tests the overlay rule in isolation: nil/empty
+// v2 is a no-op, mapped job_set_types overwrite their column (max-wins for
+// the soul family), and unmapped job_set_types are ignored.
+func TestReconcileFreeGensV2(t *testing.T) {
+	base := domain.FreeQuotaCounters{SoulCredits: 5, FaceSwapCredits: 2, QwenCameraControlCredits: 1}
+
+	// nil v2 → untouched.
+	q := base
+	reconcileFreeGensV2(&q, nil)
+	if q != base {
+		t.Errorf("nil v2 mutated counters: %+v", q)
+	}
+
+	// empty v2 → untouched.
+	q = base
+	reconcileFreeGensV2(&q, map[string]float64{})
+	if q != base {
+		t.Errorf("empty v2 mutated counters: %+v", q)
+	}
+
+	// max-wins across soul family; qwen overwritten; unknown ignored;
+	// face_swap (no v2 mapping) preserved.
+	q = base
+	reconcileFreeGensV2(&q, map[string]float64{
+		"text2image_soul_v2":  100,
+		"soul_cinematic":      300,
+		"soul_location":       200,
+		"qwen_camera_control": 7,
+		"totally_unknown_jst": 999,
+	})
+	if q.SoulCredits != 300 {
+		t.Errorf("SoulCredits: got %v want 300", q.SoulCredits)
+	}
+	if q.QwenCameraControlCredits != 7 {
+		t.Errorf("QwenCameraControlCredits: got %v want 7", q.QwenCameraControlCredits)
+	}
+	if q.FaceSwapCredits != 2 {
+		t.Errorf("FaceSwapCredits: got %v want 2 (preserved)", q.FaceSwapCredits)
+	}
 }

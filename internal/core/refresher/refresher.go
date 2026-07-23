@@ -50,6 +50,14 @@ type Refresher struct {
 	// Warn log. Nil-safe: leaving this unset preserves the pre-wiring
 	// behaviour where dead accounts stay in rotation forever.
 	Failover FailoverSink
+
+	// FreeGensV2Enabled turns on the extra GET /user/free-gens/v2 fetch
+	// that calibrates the free_quota columns from the authoritative
+	// per-job_set_type counters. Defaults to true (set by New). When off,
+	// only the flat /user *_credits fields are persisted — the pre-P1-3
+	// behaviour. A v2 fetch failure is always non-fatal regardless of
+	// this flag.
+	FreeGensV2Enabled bool
 }
 
 // FailoverSink is the narrow subset of failover.Controller the
@@ -64,11 +72,12 @@ type FailoverSink interface {
 // The caller must still assign Accounts, Upstream, and Logger.
 func New(accounts ports.AccountStore, up *upstream.Client, logger *slog.Logger) *Refresher {
 	return &Refresher{
-		Accounts:    accounts,
-		Upstream:    up,
-		Logger:      logger,
-		Interval:    defaultInterval,
-		Concurrency: defaultConcurrency,
+		Accounts:          accounts,
+		Upstream:          up,
+		Logger:            logger,
+		Interval:          defaultInterval,
+		Concurrency:       defaultConcurrency,
+		FreeGensV2Enabled: true,
 	}
 }
 
@@ -223,6 +232,24 @@ func (r *Refresher) refreshOne(ctx context.Context, acc *domain.Account) {
 		Text2KeyframesCredits:    user.Text2KeyframesCredits,
 		Veo3FastGenerationsCount: user.Veo3FastGenerationsCount,
 	}
+
+	// Calibrate against GET /user/free-gens/v2 when enabled. The v2 surface
+	// is the authoritative per-job_set_type counter — /user reports a stale
+	// soul_credits: 0 in every captured tier snapshot even though the
+	// account holds hundreds of soul generations, so v2 wins where the two
+	// disagree. The fetch is non-fatal: on failure we persist the /user
+	// values unchanged (a warn, no failover feedback — this is an accuracy
+	// enhancement, not a health signal). See reconcileFreeGensV2.
+	if r.FreeGensV2Enabled {
+		if v2, v2Err := r.Upstream.FetchFreeGensV2(ctx, acc); v2Err != nil {
+			r.Logger.Warn("refresher fetch free-gens/v2",
+				slog.String("account_id", acc.ID),
+				slog.String("err", v2Err.Error()))
+		} else {
+			reconcileFreeGensV2(&quota, v2)
+		}
+	}
+
 	if err := r.Accounts.UpdateFreeQuota(ctx, acc.ID, quota); err != nil {
 		r.Logger.Warn("refresher update free quota",
 			slog.String("account_id", acc.ID),
@@ -249,12 +276,110 @@ func (r *Refresher) refreshOne(ctx context.Context, acc *domain.Account) {
 			slog.String("err", err.Error()))
 	}
 
+	// Upstream-derived lifecycle signals. blocked_at / suspended_at /
+	// is_paused come straight from the /user snapshot we already have;
+	// is_pause_scheduled is folded into is_paused ("paused or about to
+	// be" is a single alert dimension). These are informational — they
+	// feed the replenish alerter, never pool gating — so a write failure
+	// is non-fatal.
+	if err := r.Accounts.UpdateUpstreamStatus(ctx, acc.ID, ports.UpstreamStatusUpdate{
+		BlockedAt:   user.BlockedAt,
+		SuspendedAt: user.SuspendedAt,
+		IsPaused:    user.IsPaused || user.IsPauseScheduled,
+	}); err != nil {
+		r.Logger.Warn("refresher update upstream status",
+			slog.String("account_id", acc.ID),
+			slog.String("err", err.Error()))
+	}
+
+	// grace_status from /workspaces/notice, written separately so a
+	// notice-fetch failure leaves the prior value intact rather than
+	// blanking it. NormalizeNoticeStatus collapses the raw enum to a
+	// payment-risk token ("" for marketing / hide notices).
+	if raw, nErr := r.Upstream.FetchWorkspaceNotice(ctx, acc); nErr != nil {
+		r.Logger.Warn("refresher fetch notice",
+			slog.String("account_id", acc.ID),
+			slog.String("err", nErr.Error()))
+	} else if err := r.Accounts.UpdateGraceStatus(ctx, acc.ID, upstream.NormalizeNoticeStatus(raw)); err != nil {
+		r.Logger.Warn("refresher update grace status",
+			slog.String("account_id", acc.ID),
+			slog.String("err", err.Error()))
+	}
+
 	r.Logger.Debug("account refreshed",
 		slog.String("account_id", acc.ID),
 		slog.String("plan_type", user.PlanType),
 		slog.Bool("has_unlim", user.HasUnlim),
 		slog.Int("unlim_activations", len(activations)),
 	)
+}
+
+// freeGensV2Field maps a GET /user/free-gens/v2 job_set_type to the
+// accounts free_quota column it feeds. Sourced from the free_quota_field
+// assignments in data/reference/model-specs-extra.json (alias hyphens →
+// job_set_type underscores). Only families that both (a) appear as a
+// free-gens/v2 job_set_type and (b) have a dedicated free_quota column are
+// listed — everything else is left to the flat /user value.
+//
+// The three soul job_set_types confirmed in the entitlements snapshots all
+// collapse to soul_credits; qwen / wan2_5 are included from the same
+// mapping table for forward-compatibility should upstream start returning
+// them here. 待真实样本确认: only the soul trio is live-confirmed on this
+// endpoint; the qwen/wan2_5 rows are grounded in the alias table, not a
+// captured v2 response.
+var freeGensV2Field = map[string]string{
+	"text2image_soul_v2":  "soul_credits",
+	"text2image_soul":     "soul_credits",
+	"soul_cinematic":      "soul_credits",
+	"soul_location":       "soul_credits",
+	"soul_location_edit":  "soul_credits",
+	"soul_cast_edit":      "soul_credits",
+	"soul_cinema_studio":  "soul_credits",
+	"qwen_camera_control": "qwen_camera_control_credits",
+	"wan2_5_video":        "wan2_5_video_credits",
+	"wan2_5_speak":        "wan2_5_video_credits",
+}
+
+// reconcileFreeGensV2 overlays the authoritative per-job_set_type counters
+// from GET /user/free-gens/v2 onto the free_quota counters derived from
+// GET /user. v2 is treated as the source of truth: for every column a v2
+// job_set_type maps to, the column is overwritten with the v2 counter.
+// When several job_set_types map to the same column (the soul family), the
+// maximum counter wins — "any soul endpoint still has quota" is the signal
+// the load-balance router needs. Columns no v2 item maps to keep their
+// /user value untouched.
+//
+// A nil / empty v2 map is a no-op, so an account with no free-gens surface
+// (404 → nil) or an empty items array falls back cleanly to the /user
+// numbers.
+func reconcileFreeGensV2(q *domain.FreeQuotaCounters, v2 map[string]float64) {
+	if len(v2) == 0 {
+		return
+	}
+	// Aggregate v2 counters per target column, taking the max across
+	// every job_set_type that maps to it.
+	byField := make(map[string]float64, len(v2))
+	seen := make(map[string]bool, len(v2))
+	for jst, counter := range v2 {
+		field, ok := freeGensV2Field[jst]
+		if !ok {
+			continue // no dedicated column — the /user value (if any) stands
+		}
+		if !seen[field] || counter > byField[field] {
+			byField[field] = counter
+			seen[field] = true
+		}
+	}
+	for field := range byField {
+		switch field {
+		case "soul_credits":
+			q.SoulCredits = byField[field]
+		case "qwen_camera_control_credits":
+			q.QwenCameraControlCredits = byField[field]
+		case "wan2_5_video_credits":
+			q.Wan25VideoCredits = byField[field]
+		}
+	}
 }
 
 // parsePlanEndsAt accepts the RFC3339 (and RFC3339Nano) forms higgsfield
