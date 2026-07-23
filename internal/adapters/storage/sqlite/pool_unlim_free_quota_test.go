@@ -323,3 +323,184 @@ func TestAccountStore_PickAndLock_PreferFreeQuota_HitQuotaHolder(t *testing.T) {
 	}
 	must(store.Unlock(ctx, got2.ID, tok2))
 }
+
+// TestAccountStore_HasActiveUnlimFor covers the standalone predicate the
+// proxy service uses to decide whether to route a request to the
+// `_unlimited` variant endpoint. It mirrors the expiry semantics of the
+// prefer_unlim sort hint: NULL/empty expires_at means "never expires",
+// a future timestamp is active, a past one is not, and the job_set_type
+// must match exactly.
+func TestAccountStore_HasActiveUnlimFor(t *testing.T) {
+	db := openMem(t)
+	store := NewAccountStore(db)
+	ctx := context.Background()
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	now := time.Now().UTC().Truncate(time.Second)
+	must(store.Upsert(ctx, &domain.Account{
+		ID: "acc_u", Email: "u@x", Password: "-",
+		SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
+		PlanType: domain.PlanPlus, Status: domain.StatusActive,
+		SubscriptionBalance: 100000,
+		RegisteredAt:        now, ImportedAt: now,
+	}))
+
+	// Three activations on one account:
+	//   - never-expiring seedance bundle (zero-value ExpiresAt → stored NULL)
+	//   - future-dated kling bundle
+	//   - already-expired gpt-image bundle
+	must(store.ReplaceUnlimActivations(ctx, "acc_u", []domain.UnlimActivation{
+		{
+			BundleType:  "seedance_2_720p",
+			JobSetType:  "seedance_2_unlimited",
+			ActivatedAt: now.Add(-1 * time.Hour),
+		},
+		{
+			BundleType:  "kling_3_4k",
+			JobSetType:  "kling_3_unlimited",
+			ExpiresAt:   now.Add(48 * time.Hour),
+			ActivatedAt: now.Add(-2 * time.Hour),
+		},
+		{
+			BundleType:  "gpt_image_2_hd",
+			JobSetType:  "gpt_image_2_unlimited",
+			ExpiresAt:   now.Add(-1 * time.Hour),
+			ActivatedAt: now.Add(-72 * time.Hour),
+		},
+	}))
+
+	cases := []struct {
+		name       string
+		accountID  string
+		jst        string
+		wantActive bool
+	}{
+		{"never-expires bundle is active", "acc_u", "seedance_2_unlimited", true},
+		{"future-dated bundle is active", "acc_u", "kling_3_unlimited", true},
+		{"expired bundle is inactive", "acc_u", "gpt_image_2_unlimited", false},
+		{"unknown jst is inactive", "acc_u", "veo_3_unlimited", false},
+		{"unknown account is inactive", "acc_missing", "seedance_2_unlimited", false},
+		{"empty jst returns false", "acc_u", "", false},
+		{"empty account returns false", "", "seedance_2_unlimited", false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := store.HasActiveUnlimFor(ctx, tc.accountID, tc.jst)
+			if err != nil {
+				t.Fatalf("HasActiveUnlimFor: %v", err)
+			}
+			if got != tc.wantActive {
+				t.Errorf("got %v want %v", got, tc.wantActive)
+			}
+		})
+	}
+}
+
+// TestAccountStore_CountActiveUnlimByJST checks the replenish S1 grouping:
+// only active accounts + non-expired bundles count, grouped by
+// job_set_type, distinct per account.
+func TestAccountStore_CountActiveUnlimByJST(t *testing.T) {
+	db := openMem(t)
+	store := NewAccountStore(db)
+	ctx := context.Background()
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	now := time.Now().UTC().Truncate(time.Second)
+
+	// Two active accounts + one suspended account.
+	for _, id := range []string{"act_1", "act_2"} {
+		must(store.Upsert(ctx, &domain.Account{
+			ID: id, Email: id + "@x", Password: "-", SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
+			PlanType: domain.PlanPlus, Status: domain.StatusActive, SubscriptionBalance: 100000,
+			RegisteredAt: now, ImportedAt: now,
+		}))
+	}
+	must(store.Upsert(ctx, &domain.Account{
+		ID: "susp", Email: "susp@x", Password: "-", SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
+		PlanType: domain.PlanPlus, Status: domain.StatusSuspended, SubscriptionBalance: 100000,
+		RegisteredAt: now, ImportedAt: now,
+	}))
+
+	// act_1 + act_2 hold live seedance; act_2 also holds an EXPIRED kling;
+	// susp holds live seedance but is not active.
+	must(store.ReplaceUnlimActivations(ctx, "act_1", []domain.UnlimActivation{
+		{BundleType: "seedance_2_720p", JobSetType: "seedance_2_unlimited", ActivatedAt: now},
+	}))
+	must(store.ReplaceUnlimActivations(ctx, "act_2", []domain.UnlimActivation{
+		{BundleType: "seedance_2_720p", JobSetType: "seedance_2_unlimited", ActivatedAt: now},
+		{BundleType: "kling_3_4k", JobSetType: "kling_3_unlimited", ExpiresAt: now.Add(-time.Hour), ActivatedAt: now},
+	}))
+	must(store.ReplaceUnlimActivations(ctx, "susp", []domain.UnlimActivation{
+		{BundleType: "seedance_2_720p", JobSetType: "seedance_2_unlimited", ActivatedAt: now},
+	}))
+
+	got, err := store.CountActiveUnlimByJST(ctx)
+	if err != nil {
+		t.Fatalf("CountActiveUnlimByJST: %v", err)
+	}
+	// seedance: act_1 + act_2 (susp excluded, not active) = 2.
+	if got["seedance_2_unlimited"] != 2 {
+		t.Errorf("seedance count: got %d want 2 (%v)", got["seedance_2_unlimited"], got)
+	}
+	// kling: act_2's only kling bundle is expired → not counted.
+	if _, ok := got["kling_3_unlimited"]; ok {
+		t.Errorf("expired kling should not appear: %v", got)
+	}
+}
+
+// TestAccountStore_UpdateUpstreamStatusAndGrace round-trips the migration
+// 021 derived columns: UpdateUpstreamStatus writes blocked/suspended/
+// paused, UpdateGraceStatus writes grace_status, and neither touches
+// status or fail_streak.
+func TestAccountStore_UpdateUpstreamStatusAndGrace(t *testing.T) {
+	db := openMem(t)
+	store := NewAccountStore(db)
+	ctx := context.Background()
+	must := func(err error) {
+		t.Helper()
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	now := time.Now().UTC().Truncate(time.Second)
+	must(store.Upsert(ctx, &domain.Account{
+		ID: "acc_s", Email: "s@x", Password: "-", SessionID: "-", CookiesJSON: "{}", UserAgent: "-",
+		PlanType: domain.PlanPlus, Status: domain.StatusActive, FailStreak: 2,
+		RegisteredAt: now, ImportedAt: now,
+	}))
+
+	must(store.UpdateUpstreamStatus(ctx, "acc_s", ports.UpstreamStatusUpdate{
+		BlockedAt: "2026-07-20T00:00:00Z", SuspendedAt: "", IsPaused: true,
+	}))
+	must(store.UpdateGraceStatus(ctx, "acc_s", "grace"))
+
+	got, err := store.Get(ctx, "acc_s")
+	if err != nil {
+		t.Fatalf("get: %v", err)
+	}
+	if got.BlockedAt != "2026-07-20T00:00:00Z" {
+		t.Errorf("blocked_at: got %q", got.BlockedAt)
+	}
+	if !got.IsPaused {
+		t.Errorf("is_paused: got false want true")
+	}
+	if got.GraceStatus != "grace" {
+		t.Errorf("grace_status: got %q want grace", got.GraceStatus)
+	}
+	// Derived writes must not disturb lifecycle fields.
+	if got.Status != domain.StatusActive {
+		t.Errorf("status changed: got %q want active", got.Status)
+	}
+	if got.FailStreak != 2 {
+		t.Errorf("fail_streak changed: got %d want 2", got.FailStreak)
+	}
+}

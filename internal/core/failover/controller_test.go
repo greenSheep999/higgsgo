@@ -132,6 +132,22 @@ func (m *mockAccountStore) ReplaceUnlimActivations(context.Context, string, []do
 	return nil
 }
 
+func (m *mockAccountStore) HasActiveUnlimFor(context.Context, string, string) (bool, error) {
+	return false, nil
+}
+
+func (m *mockAccountStore) CountActiveUnlimByJST(context.Context) (map[string]int, error) {
+	return nil, nil
+}
+
+func (m *mockAccountStore) UpdateUpstreamStatus(context.Context, string, ports.UpstreamStatusUpdate) error {
+	return nil
+}
+
+func (m *mockAccountStore) UpdateGraceStatus(context.Context, string, string) error {
+	return nil
+}
+
 // seed inserts an active account with zero streak so IncrFailStreak has
 // a row to update.
 func (m *mockAccountStore) seed(id string) {

@@ -71,6 +71,22 @@ func (s *stubAccountStore) ReplaceUnlimActivations(context.Context, string, []do
 	return nil
 }
 
+func (s *stubAccountStore) HasActiveUnlimFor(context.Context, string, string) (bool, error) {
+	return false, nil
+}
+
+func (s *stubAccountStore) CountActiveUnlimByJST(context.Context) (map[string]int, error) {
+	return nil, nil
+}
+
+func (s *stubAccountStore) UpdateUpstreamStatus(context.Context, string, ports.UpstreamStatusUpdate) error {
+	return nil
+}
+
+func (s *stubAccountStore) UpdateGraceStatus(context.Context, string, string) error {
+	return nil
+}
+
 // stubJobStore implements ports.JobStore. Only ListPending is used by
 // the collector.
 type stubJobStore struct {

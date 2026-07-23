@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"testing"
+	"time"
 
 	"github.com/greensheep999/higgsgo/internal/domain"
 	"github.com/greensheep999/higgsgo/internal/ports"
@@ -34,6 +35,10 @@ func (s *fakeEventStore) Query(context.Context, ports.UsageQuery) ([]domain.Usag
 }
 
 func (s *fakeEventStore) Aggregate(context.Context, ports.UsageAggQuery) ([]ports.UsageAggRow, error) {
+	panic("not implemented")
+}
+
+func (s *fakeEventStore) SumChargedCreditsHForAccount(context.Context, string, time.Time, time.Time) (int64, error) {
 	panic("not implemented")
 }
 

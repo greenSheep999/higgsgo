@@ -166,6 +166,22 @@ func (s *fakeAccountStore) ReplaceUnlimActivations(context.Context, string, []do
 	return nil
 }
 
+func (s *fakeAccountStore) HasActiveUnlimFor(context.Context, string, string) (bool, error) {
+	return false, nil
+}
+
+func (s *fakeAccountStore) CountActiveUnlimByJST(context.Context) (map[string]int, error) {
+	return nil, nil
+}
+
+func (s *fakeAccountStore) UpdateUpstreamStatus(context.Context, string, ports.UpstreamStatusUpdate) error {
+	return nil
+}
+
+func (s *fakeAccountStore) UpdateGraceStatus(context.Context, string, string) error {
+	return nil
+}
+
 type fakeUpstream struct {
 	status *upstream.StatusResponse
 	job    *upstream.FetchResponse
