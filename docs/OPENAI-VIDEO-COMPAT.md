@@ -1,13 +1,13 @@
 # OpenAI-Compatible Video Surface
 
-> Draft 2026-07-21. Owner: higgsgo core.
+> Implemented 2026-07-21; reviewed 2026-07-23. Owner: higgsgo core.
 >
-> This document is the wire-level specification for a new set of video
+> This document is the wire-level specification for the video
 > endpoints on higgsgo that mimic OpenAI's Sora / video shape closely enough
 > that downstream new-api / OneAPI deployments can plug higgsgo in behind
-> their built-in Sora TaskAdaptor with zero code changes. It is written
-> *before* implementation and treated as the single source of truth: PRs
-> that diverge from this file need to update the file first.
+> their built-in Sora TaskAdaptor with zero code changes for create, poll,
+> and content. It is the implementation contract: changes to the wire shape
+> must update this file in the same PR.
 
 ## 1. Motivation
 
@@ -46,14 +46,16 @@ If the source and this document disagree, the source wins.
 - Passing an unmodified OpenAI SDK call `client.videos.create(model=...,
   prompt=..., size="1280x720", seconds="5")` at higgsgo produces a valid
   higgsgo job and a Sora-shaped response.
-- All 16 higgsgo video models (kling-3-turbo, seedance-2-0-mini, sora2-video,
-  veo3-1, …) are reachable through the new surface without changes to the
-  model registry.
+- Every video-output alias in the registry is routable through the new
+  surface. Successful generation still depends on the model's body template,
+  required parameters, plan gate, media inputs, and resolution vocabulary;
+  routable does not mean that a minimal Sora request is sufficient.
 - All higgsgo-private request parameters (`mode`, `sound`, `resolution`,
   `aspect_ratio`, `quality`, `generate_audio`, `audio`, …) are reachable
   by SDK callers via OpenAI SDK's `extra_body`.
-- Image-to-video works for every higgsgo model that supports it, accepting
-  either an HTTP(S) URL, a `data:` URI, or a raw multipart file upload.
+- Ordinary image-to-video accepts an HTTP(S) URL, a `data:` URI, or a raw
+  multipart upload. Video/audio/end-frame transforms still need their
+  model-specific fields and are not covered by `input_reference` alone.
 - The final MP4 is delivered through higgsgo itself; downstream clients
   never see the higgsfield.ai CDN URL.
 - `billing_expr` unchanged: after body conversion the internal request is
@@ -144,20 +146,23 @@ The handler applies these rules **before** calling `proxy.Service.Generate`:
   parse failure the handler returns HTTP 400 with an `invalid_body`
   error.
 - `input_reference`:
-  - Prefix `http://` or `https://` → `UserParams["image_url"]` (the URL
-    is forwarded to higgsfield, which fetches it itself, matching the
-    existing legacy path).
+  - Prefix `http://` or `https://` → a URL-only `MediaInput`. `buildBody`
+    injects it into the media slot present in the model template:
+    `input_images`, `medias`, or `input_image`.
   - Prefix `data:image/*;base64,...` → decoded to raw bytes; uploaded to
     higgsfield's media store via the three-step protocol documented in
-    §Appendix C; the resulting `media_id` is set on
-    `UserParams["media_id"]`.
+    §Appendix C; the resulting media object is injected into the same
+    template-selected slot.
   - Multipart file part (see §4.1.2) → same three-step upload as the
-    data-URI case, ending in `UserParams["media_id"]`.
+    data-URI case, ending in the template-selected media slot.
 - `model` and `prompt` → verbatim into the internal request.
 - `group_id`, `async`, `callback_url` → mapped onto the same fields on
   the internal `GenerationRequest` that the legacy handler uses.
-- All other top-level keys (including anything the caller passed via
-  OpenAI SDK's `extra_body`) → merged verbatim into UserParams. This is
+- All other top-level keys and keys inside an explicit `extra_body` object →
+  merged verbatim into UserParams. OpenAI SDKs normally flatten
+  `extra_body` before sending; accepting the explicit object also supports
+  raw JSON/new-api callers and allows `extra_body.model` to reach
+  `params.model` without colliding with the public alias. This is
   how private higgsgo params (`mode`, `sound`, `generate_audio`,
   `quality`, `aspect_ratio`, `preset_id`, …) travel through.
 
@@ -479,7 +484,7 @@ scope. Wrap it as `UpstreamClient.UploadImage(ctx, contentType, r io.Reader) (me
 | `prompt`            | `UserParams["prompt"]`   | verbatim                         |
 | `seconds` (str/int) | `UserParams["duration"]` | int; string parsed via `strconv` |
 | `size`              | `UserParams["width"]`, `UserParams["height"]`, `UserParams["resolution"]` | tier from §4.2 |
-| `input_reference`   | `UserParams["image_url"]` or `UserParams["media_id"]` after upload | reuse images.go path |
+| `input_reference`   | template media slot (`input_images`, `medias`, or `input_image`) | URL-only or uploaded media object |
 | `extra_body.*`      | `UserParams[*]`          | verbatim, all higgsgo private params reachable |
 | `group_id`          | request `GroupID`        | passthrough                      |
 | `async`             | request `Async`          | passthrough                      |

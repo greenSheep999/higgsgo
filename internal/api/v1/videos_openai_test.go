@@ -201,6 +201,14 @@ func TestResolutionTierFor(t *testing.T) {
 	}
 }
 
+func TestSoraStatus_ContentTerminalStatesFail(t *testing.T) {
+	for _, status := range []string{"nsfw", "terminated", "cancelled"} {
+		if got := soraStatus(status); got != "failed" {
+			t.Errorf("soraStatus(%q) = %q, want failed", status, got)
+		}
+	}
+}
+
 // TestParseSoraJSON_SecondsAsInt covers the JSON-int variant. OpenAI's
 // TypeScript SDK stringifies but callers writing curl by hand often
 // send the raw int.
@@ -246,6 +254,32 @@ func TestParseSoraJSON_ExtraBodyPassthrough(t *testing.T) {
 		if _, ok := sr.Extra[k]; ok {
 			t.Errorf("known key %q leaked into Extra", k)
 		}
+	}
+}
+
+func TestParseSoraJSON_NestedExtraBodyFlattens(t *testing.T) {
+	body := `{"model":"sora2-video","prompt":"x","extra_body":{"model":"sora-2","quality":"high"}}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/videos", strings.NewReader(body))
+	sr, _, _, err := parseSoraJSON(req)
+	if err != nil {
+		t.Fatalf("parseSoraJSON: %v", err)
+	}
+	if sr.Model != "sora2-video" {
+		t.Fatalf("route model = %q, want sora2-video", sr.Model)
+	}
+	if got := sr.Extra["model"]; got != "sora-2" {
+		t.Fatalf("params model = %v, want sora-2", got)
+	}
+	if got := sr.Extra["quality"]; got != "high" {
+		t.Fatalf("quality = %v, want high", got)
+	}
+}
+
+func TestParseSoraJSON_RejectsOversizeBody(t *testing.T) {
+	body := `{"model":"m","padding":"` + strings.Repeat("x", maxSoraJSONBody) + `"}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/videos", strings.NewReader(body))
+	if _, _, _, err := parseSoraJSON(req); err == nil {
+		t.Fatal("expected oversized JSON body to be rejected")
 	}
 }
 
@@ -343,6 +377,35 @@ func TestParseSoraMultipart_FileUpload(t *testing.T) {
 	}
 	if string(body) != "raw png bytes" {
 		t.Errorf("upload bytes: got %q", string(body))
+	}
+}
+
+func TestParseSoraMultipart_DataURIKeepsAllFields(t *testing.T) {
+	var buf bytes.Buffer
+	mw := multipart.NewWriter(&buf)
+	png := []byte("raw png bytes")
+	dataURI := "data:image/png;base64," + base64.StdEncoding.EncodeToString(png)
+	_ = mw.WriteField("input_reference", dataURI)
+	_ = mw.WriteField("model", "kling-3-turbo")
+	_ = mw.WriteField("prompt", "a cat")
+	_ = mw.WriteField("seconds", "5")
+	_ = mw.WriteField("extra_body", `{"model":"kling-v3","quality":"high"}`)
+	_ = mw.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/v1/videos", &buf)
+	req.Header.Set("Content-Type", mw.FormDataContentType())
+	sr, ct, body, err := parseSoraMultipart(req)
+	if err != nil {
+		t.Fatalf("parseSoraMultipart: %v", err)
+	}
+	if sr.Model != "kling-3-turbo" || sr.Prompt != "a cat" || sr.Seconds != 5 {
+		t.Fatalf("fields lost after data URI: %+v", sr)
+	}
+	if sr.Extra["model"] != "kling-v3" || sr.Extra["quality"] != "high" {
+		t.Fatalf("extra_body not flattened: %+v", sr.Extra)
+	}
+	if ct != "image/png" || !bytes.Equal(body, png) {
+		t.Fatalf("upload = (%q, %q), want image/png payload", ct, body)
 	}
 }
 

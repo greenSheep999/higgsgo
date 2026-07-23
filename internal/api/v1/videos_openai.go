@@ -95,12 +95,6 @@ func (h *Handler) HandleSoraVideoCreate(w http.ResponseWriter, r *http.Request) 
 		userParams["height"] = sr.Height
 		userParams["resolution"] = resolutionTierFor(sr.Width, sr.Height)
 	}
-	// HTTP(S) URL variant of input_reference: forward to higgsfield as
-	// image_url so upstream fetches the URL itself, matching the
-	// legacy /v1/video/generations path.
-	if sr.ImageURL != "" {
-		userParams["image_url"] = sr.ImageURL
-	}
 	// extra_body / passthrough keys applied last so caller-supplied
 	// values shadow anything the conversion layer wrote — but we
 	// deliberately skip re-writing size/seconds/input_reference/media_id
@@ -139,8 +133,8 @@ func (h *Handler) HandleSoraVideoCreate(w http.ResponseWriter, r *http.Request) 
 		greq.APIKeyMonthlyQuota = apiKey.MonthlyQuota
 		greq.APIKeyMonthlyUsed = apiKey.MonthlyUsed
 	}
-	if sr.MediaID != "" {
-		greq.Media = &proxy.MediaInput{PreUploadedID: sr.MediaID, Type: "image"}
+	if sr.MediaID != "" || sr.ImageURL != "" {
+		greq.Media = &proxy.MediaInput{PreUploadedID: sr.MediaID, Type: "image", URL: sr.ImageURL}
 	}
 
 	resp, err := h.Service.Generate(r.Context(), greq)
@@ -296,11 +290,14 @@ func (h *Handler) parseSoraRequest(r *http.Request) (soraRequest, error) {
 // come back as raw bytes for the caller to upload; HTTP URLs stay in
 // sr.ImageURL for higgsfield to fetch itself.
 func parseSoraJSON(r *http.Request) (soraRequest, string, []byte, error) {
-	raw, err := io.ReadAll(io.LimitReader(r.Body, maxSoraJSONBody))
+	raw, err := io.ReadAll(io.LimitReader(r.Body, maxSoraJSONBody+1))
 	if err != nil {
 		return soraRequest{}, "", nil, err
 	}
 	_ = r.Body.Close()
+	if len(raw) > maxSoraJSONBody {
+		return soraRequest{}, "", nil, fmt.Errorf("request body exceeds %d bytes", maxSoraJSONBody)
+	}
 	var top map[string]json.RawMessage
 	if err := json.Unmarshal(raw, &top); err != nil {
 		return soraRequest{}, "", nil, err
@@ -342,10 +339,14 @@ func parseSoraJSON(r *http.Request) (soraRequest, string, []byte, error) {
 // field maps 1:1 to the JSON body; a file part named input_reference
 // yields raw bytes that the caller uploads via SoraUploader.
 func parseSoraMultipart(r *http.Request) (soraRequest, string, []byte, error) {
+	r.Body = http.MaxBytesReader(nil, r.Body, maxSoraMultipart)
 	if err := r.ParseMultipartForm(maxSoraMultipart); err != nil {
 		return soraRequest{}, "", nil, err
 	}
+	defer r.MultipartForm.RemoveAll()
 	sr := soraRequest{Extra: make(map[string]any)}
+	var uploadCT string
+	var uploadBytes []byte
 	for k, vs := range r.MultipartForm.Value {
 		if len(vs) == 0 {
 			continue
@@ -378,9 +379,17 @@ func parseSoraMultipart(r *http.Request) (soraRequest, string, []byte, error) {
 				if err != nil {
 					return soraRequest{}, "", nil, fmt.Errorf("input_reference: %w", err)
 				}
-				return sr, ct, body, nil
+				uploadCT, uploadBytes = ct, body
 			default:
 				return soraRequest{}, "", nil, fmt.Errorf("input_reference: must be http(s):// URL or data: URI")
+			}
+		case "extra_body":
+			var extra map[string]any
+			if err := json.Unmarshal([]byte(v), &extra); err != nil {
+				return soraRequest{}, "", nil, fmt.Errorf("extra_body: %w", err)
+			}
+			for extraKey, extraValue := range extra {
+				sr.Extra[extraKey] = extraValue
 			}
 		case "group_id":
 			sr.GroupID = v
@@ -410,12 +419,22 @@ func parseSoraMultipart(r *http.Request) (soraRequest, string, []byte, error) {
 		}
 		return sr, ct, buf, nil
 	}
-	return sr, "", nil, nil
+	return sr, uploadCT, uploadBytes, nil
 }
 
 // extractSoraKnownFields fills sr's typed slots from the top-level JSON
 // map, deleting each consumed key so the remainder is extra_body.
 func extractSoraKnownFields(top map[string]json.RawMessage, sr *soraRequest) error {
+	if v, ok := top["extra_body"]; ok {
+		var extra map[string]any
+		if err := json.Unmarshal(v, &extra); err != nil {
+			return fmt.Errorf("extra_body: %w", err)
+		}
+		for k, value := range extra {
+			sr.Extra[k] = value
+		}
+		delete(top, "extra_body")
+	}
 	if v, ok := top["model"]; ok {
 		if err := json.Unmarshal(v, &sr.Model); err != nil {
 			return fmt.Errorf("model: %w", err)
@@ -656,7 +675,7 @@ func soraStatus(s string) string {
 		return "in_progress"
 	case domain.JobCompleted:
 		return "completed"
-	case domain.JobFailed, domain.JobRefunded, domain.JobTimeout:
+	case domain.JobFailed, domain.JobRefunded, domain.JobTimeout, "nsfw", "terminated", "cancelled":
 		return "failed"
 	}
 	// Also handle raw proxy strings without the domain-typed wrapper.
