@@ -82,12 +82,20 @@ func (h *Handler) HandleDownstreamPricing(w http.ResponseWriter, r *http.Request
 	filter := strings.TrimSpace(r.URL.Query().Get("model"))
 	byAlias := mergeObservationsAndOverrides(observations, overrides, filter)
 
+	// item is the downstream wire shape (per model_name).
+	// official_price_micros carries the model-level fallback official
+	// price for consumers that render a single "N% off vs official"
+	// badge on the model card. For tiered models, each tier() call
+	// in billing_expr additionally carries `official_micros=NNNN` in
+	// its note so per-tier discount computations work too.
 	type item struct {
-		ModelName   string         `json:"model_name"`
-		QuotaType   int            `json:"quota_type"`
-		BillingMode string         `json:"billing_mode"`
-		BillingExpr string         `json:"billing_expr"`
-		Lifecycle   map[string]any `json:"lifecycle,omitempty"`
+		ModelName           string         `json:"model_name"`
+		QuotaType           int            `json:"quota_type"`
+		BillingMode         string         `json:"billing_mode"`
+		BillingExpr         string         `json:"billing_expr"`
+		ModelPrice          float64        `json:"model_price,omitempty"`
+		OfficialPriceMicros int64          `json:"official_price_micros,omitempty"`
+		Lifecycle           map[string]any `json:"lifecycle,omitempty"`
 	}
 	data := make([]item, 0, len(byAlias))
 	// Deterministic order so downstream diffs are stable across calls.
@@ -97,17 +105,37 @@ func (h *Handler) HandleDownstreamPricing(w http.ResponseWriter, r *http.Request
 	}
 	sort.Strings(aliases)
 	for _, alias := range aliases {
-		aliasDecisions := byAlias[alias]
-		expr := buildBillingExpr(aliasDecisions)
+		rows := byAlias[alias]
+		expr := buildBillingExpr(rows)
 		if expr == "" {
 			continue
 		}
+		// Model-level official price: the cheapest tier's official
+		// value. Rationale: the "N% off" badge on a model card is
+		// almost always "starts from N% off vs official cheapest",
+		// which matches new-api's computeModelBestDiscount intent.
+		var modelOfficial int64
+		for _, r := range rows {
+			if r.OfficialPriceMicros <= 0 {
+				continue
+			}
+			// Fold per-second official price × duration to align
+			// with tier fixed_micros (both are full-call totals).
+			off := r.OfficialPriceMicros
+			if r.Unit == "per_second" && r.DurationSeconds > 0 {
+				off = off * int64(r.DurationSeconds)
+			}
+			if modelOfficial == 0 || off < modelOfficial {
+				modelOfficial = off
+			}
+		}
 		data = append(data, item{
-			ModelName:   alias,
-			QuotaType:   2,
-			BillingMode: "tiered_expr",
-			BillingExpr: expr,
-			Lifecycle:   map[string]any{"status": "active"},
+			ModelName:           alias,
+			QuotaType:           2,
+			BillingMode:         "tiered_expr",
+			BillingExpr:         expr,
+			OfficialPriceMicros: modelOfficial,
+			Lifecycle:           map[string]any{"status": "active"},
 		})
 	}
 
@@ -123,43 +151,44 @@ func (h *Handler) HandleDownstreamPricing(w http.ResponseWriter, r *http.Request
 	})
 }
 
+// pricingRow is the internal wire-building row: an emitted decision
+// (either raw observation OR operator override) paired with the
+// official-page price for the same tuple. When an override exists,
+// PriceMicros is the operator's back-solved value and
+// OfficialPriceMicros is the *raw* provider page price for the same
+// tuple; the ratio between the two is what drives the "N% off" badge
+// downstream. When no override exists, both are the same number
+// (ratio = 1.0, no discount).
+type pricingRow struct {
+	ModelAlias          string
+	Unit                string
+	PriceMicros         int64
+	OfficialPriceMicros int64
+	Resolution          string
+	DurationSeconds     int
+	Mode                string
+	Audio               string
+}
+
 // mergeObservationsAndOverrides builds one bucket per alias, keyed by
-// model_alias. For every (resolution, audio, mode) variant the merge
-// prefers a model_price_decisions row over the raw observation for the
-// same tuple (see HandleDownstreamPricing doc for why). Observations
-// with estimated=true (from raw-pricing/*-cn.md derived rows) are
-// dropped here — the downstream feed only publishes prices we captured
-// from an authoritative page.
+// model_alias. For every (resolution, audio, mode, unit) variant the
+// merge prefers a model_price_decisions row over the raw observation
+// for the same tuple. Every emitted row also carries the *raw* official
+// price for its tuple (OfficialPriceMicros) so the DSL builder can
+// annotate each tier with `official_micros=NNNN` — that's how new-api
+// front-end computes the per-tier discount.
 //
-// The output shape is the same []domain.ModelPriceDecision the DSL
-// builder already consumes; observation → decision projection lets the
-// existing builder work unchanged whether the row came from a raw scrape
-// or an operator override.
+// Observations with estimated=true (raw-pricing/*-cn.md derived rows)
+// are dropped: downstream only publishes prices we captured from an
+// authoritative page.
 func mergeObservationsAndOverrides(
 	observations []domain.OfficialPriceObservation,
 	overrides []domain.ModelPriceDecision,
 	filter string,
-) map[string][]domain.ModelPriceDecision {
-	// Index overrides by (alias, resolution, audio, mode, unit) so the
-	// merge in the observations pass can look them up.
-	type overrideKey struct{ alias, res, audio, mode, unit string }
-	overrideByKey := make(map[overrideKey]domain.ModelPriceDecision, len(overrides))
-	overrideSeen := make(map[string]bool, 8) // alias → any override present
-	for _, o := range overrides {
-		if o.ModelAlias == "" || o.PriceMicros <= 0 {
-			continue
-		}
-		if filter != "" && !strings.EqualFold(o.ModelAlias, filter) {
-			continue
-		}
-		overrideByKey[overrideKey{o.ModelAlias, o.Resolution, o.Audio, o.Mode, o.Unit}] = o
-		overrideSeen[o.ModelAlias] = true
-	}
-
-	// Pass 1: emit observations (converted to decisions) unless an
-	// override for the same tuple exists.
-	out := make(map[string][]domain.ModelPriceDecision, 8)
-	tupleTaken := make(map[overrideKey]bool, 8)
+) map[string][]pricingRow {
+	// Index overrides + observations by (alias, resolution, audio, mode, unit).
+	type key struct{ alias, res, audio, mode, unit string }
+	observationByKey := make(map[key]domain.OfficialPriceObservation, len(observations))
 	for _, p := range observations {
 		if p.ModelAlias == "" || p.PriceMicros <= 0 || p.Estimated {
 			continue
@@ -167,27 +196,14 @@ func mergeObservationsAndOverrides(
 		if filter != "" && !strings.EqualFold(p.ModelAlias, filter) {
 			continue
 		}
-		k := overrideKey{p.ModelAlias, p.Resolution, p.Audio, p.Mode, p.Unit}
-		if _, ok := overrideByKey[k]; ok {
-			// Override wins — skip this observation, we'll fold in
-			// all overrides for this alias in pass 2.
-			continue
+		k := key{p.ModelAlias, p.Resolution, p.Audio, p.Mode, p.Unit}
+		// Keep the first observation per tuple — the store already
+		// sorts by observed_at DESC so the newest scrape wins.
+		if _, exists := observationByKey[k]; !exists {
+			observationByKey[k] = p
 		}
-		out[p.ModelAlias] = append(out[p.ModelAlias], domain.ModelPriceDecision{
-			ModelAlias:      p.ModelAlias,
-			Unit:            p.Unit,
-			PriceMicros:     p.PriceMicros,
-			Resolution:      p.Resolution,
-			DurationSeconds: p.DurationSeconds,
-			Mode:            p.Mode,
-			Audio:           p.Audio,
-		})
-		tupleTaken[k] = true
 	}
-
-	// Pass 2: fold in every override for aliases that either had no
-	// observations (override-only) or where at least one tuple was
-	// replaced. Overrides always win for their tuple.
+	overrideByKey := make(map[key]domain.ModelPriceDecision, len(overrides))
 	for _, o := range overrides {
 		if o.ModelAlias == "" || o.PriceMicros <= 0 {
 			continue
@@ -195,16 +211,56 @@ func mergeObservationsAndOverrides(
 		if filter != "" && !strings.EqualFold(o.ModelAlias, filter) {
 			continue
 		}
-		k := overrideKey{o.ModelAlias, o.Resolution, o.Audio, o.Mode, o.Unit}
-		if tupleTaken[k] {
-			// Already emitted via observation? Shouldn't happen given
-			// the pass-1 skip logic, but be defensive.
+		overrideByKey[key{o.ModelAlias, o.Resolution, o.Audio, o.Mode, o.Unit}] = o
+	}
+
+	out := make(map[string][]pricingRow, 8)
+	emitted := make(map[key]bool, 8)
+
+	// Pass 1: every observation flows through, unless an override for
+	// the same tuple exists (in which case pass 2 emits the override
+	// paired with this observation's official price).
+	for k, p := range observationByKey {
+		if _, hasOverride := overrideByKey[k]; hasOverride {
 			continue
 		}
-		out[o.ModelAlias] = append(out[o.ModelAlias], o)
-		tupleTaken[k] = true
+		out[p.ModelAlias] = append(out[p.ModelAlias], pricingRow{
+			ModelAlias:          p.ModelAlias,
+			Unit:                p.Unit,
+			PriceMicros:         p.PriceMicros,
+			OfficialPriceMicros: p.PriceMicros, // raw = official
+			Resolution:          p.Resolution,
+			DurationSeconds:     p.DurationSeconds,
+			Mode:                p.Mode,
+			Audio:               p.Audio,
+		})
+		emitted[k] = true
 	}
-	_ = overrideSeen // reserved for future "override-only alias" telemetry
+
+	// Pass 2: emit overrides. For each override, if there's a matching
+	// observation, use that observation's PriceMicros as the official
+	// price; else fall back to the override's own PriceMicros (edge
+	// case — override-only variant with no scraped baseline).
+	for k, o := range overrideByKey {
+		if emitted[k] {
+			continue
+		}
+		official := o.PriceMicros
+		if obs, ok := observationByKey[k]; ok {
+			official = obs.PriceMicros
+		}
+		out[o.ModelAlias] = append(out[o.ModelAlias], pricingRow{
+			ModelAlias:          o.ModelAlias,
+			Unit:                o.Unit,
+			PriceMicros:         o.PriceMicros,
+			OfficialPriceMicros: official,
+			Resolution:          o.Resolution,
+			DurationSeconds:     o.DurationSeconds,
+			Mode:                o.Mode,
+			Audio:               o.Audio,
+		})
+		emitted[k] = true
+	}
 	return out
 }
 
@@ -228,29 +284,41 @@ func mergeObservationsAndOverrides(
 // The output is one line, no whitespace beyond DSL-required spaces
 // around `&&` / `?` / `:` — new-api's parser is whitespace-tolerant but
 // deterministic single-line output diffs cleanly.
-func buildBillingExpr(decisions []domain.ModelPriceDecision) string {
-	if len(decisions) == 0 {
+func buildBillingExpr(rows []pricingRow) string {
+	if len(rows) == 0 {
 		return ""
 	}
 
-	// Pass 1: classify each decision → tier{guards, label, fixedMicros, note}.
-	tiers := make([]dslTier, 0, len(decisions))
-	for _, d := range decisions {
+	// Pass 1: classify each row → tier{guards, label, fixedMicros, note}.
+	// The note carries: unit · duration_seconds · official_micros. new-api
+	// front-end parses these into ParsedTier.params so both per-tier and
+	// per-model discount computations can find the official value.
+	tiers := make([]dslTier, 0, len(rows))
+	for _, d := range rows {
 		fixed := d.PriceMicros
-		note := d.Unit
+		official := d.OfficialPriceMicros
+		noteParts := []string{d.Unit}
 		if d.Unit == "per_second" && d.DurationSeconds > 0 {
 			fixed = d.PriceMicros * int64(d.DurationSeconds)
-			note = fmt.Sprintf("per_second · duration_seconds=%d", d.DurationSeconds)
+			official = official * int64(d.DurationSeconds)
+			noteParts = append(noteParts, fmt.Sprintf("duration_seconds=%d", d.DurationSeconds))
 		} else if d.DurationSeconds > 0 {
-			note = fmt.Sprintf("%s · duration_seconds=%d", d.Unit, d.DurationSeconds)
+			noteParts = append(noteParts, fmt.Sprintf("duration_seconds=%d", d.DurationSeconds))
+		}
+		if official > 0 && official != fixed {
+			// Emit official_micros only when it differs from fixed —
+			// otherwise the tier is at the raw official price
+			// (discount ratio = 1.0, no badge to render). Saves wire
+			// bytes and avoids downstream computing a no-op discount.
+			noteParts = append(noteParts, fmt.Sprintf("official_micros=%d", official))
 		}
 		tiers = append(tiers, dslTier{
 			resolution: d.Resolution,
 			audio:      d.Audio,
 			mode:       d.Mode,
-			label:      tierLabel(d),
+			label:      tierLabelFor(d),
 			fixed:      fixed,
-			note:       note,
+			note:       strings.Join(noteParts, " · "),
 		})
 	}
 
@@ -318,15 +386,23 @@ func buildBillingExpr(decisions []domain.ModelPriceDecision) string {
 // first `resolution=...` fragment as the group; anything else in the
 // label is decoration.
 func tierLabel(d domain.ModelPriceDecision) string {
+	return tierLabelFrom(d.Resolution, d.Audio, d.Mode)
+}
+
+func tierLabelFor(r pricingRow) string {
+	return tierLabelFrom(r.Resolution, r.Audio, r.Mode)
+}
+
+func tierLabelFrom(resolution, audio, mode string) string {
 	parts := make([]string, 0, 3)
-	if d.Resolution != "" {
-		parts = append(parts, d.Resolution)
+	if resolution != "" {
+		parts = append(parts, resolution)
 	}
-	if d.Audio != "" {
-		parts = append(parts, "audio="+d.Audio)
+	if audio != "" {
+		parts = append(parts, "audio="+audio)
 	}
-	if d.Mode != "" {
-		parts = append(parts, "mode="+d.Mode)
+	if mode != "" {
+		parts = append(parts, "mode="+mode)
 	}
 	if len(parts) == 0 {
 		return "default"

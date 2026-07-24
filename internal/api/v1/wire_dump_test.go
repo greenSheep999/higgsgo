@@ -24,9 +24,10 @@ func TestDumpWireResponse(t *testing.T) {
 		t.Skip("set HIGGSGO_DUMP_WIRE=1 to write /tmp/higgsgo-wire-*.json")
 	}
 
-	// No overrides in the baseline fixture: observations flow through
-	// unchanged. Populate `decisions` when we want to show an operator
-	// back-solve replacing a specific tuple.
+	// Baseline: no overrides. Observations flow through unchanged and
+	// each tier's fixed_micros equals its official price, so tier notes
+	// omit the `official_micros=` suffix. new-api front-end sees no
+	// discount vs official → no badge rendered.
 	decisions := []domain.ModelPriceDecision{}
 	// Fixed observed_at so the emitted /tmp fixture is diff-stable and
 	// matches what migration 029 seeds. Real production data comes from
@@ -61,6 +62,30 @@ func TestDumpWireResponse(t *testing.T) {
 	rec = httptest.NewRecorder()
 	h.HandleDownstreamPricing(rec, httptest.NewRequest(http.MethodGet, "/api/pricing?model=kling-3", nil))
 	writeWireFixture(t, "/tmp/higgsgo-wire-api-pricing-kling3.json", rec)
+
+	// Extra fixture demonstrating operator overrides: two tuples get
+	// back-solved above the official price. new-api front-end should
+	// render "40% off" or similar badges keyed off official_micros
+	// in the tier notes.
+	overrideStore := &wireStubStore{
+		obs: obs,
+		decisions: []domain.ModelPriceDecision{
+			// 720p / off: raw $0.084/s → operator overrides to $0.05/s
+			// (a promotional loss-leader that undercuts even the raw
+			// provider price). Discount = 50000/84000 ≈ 0.60 (40% off).
+			{ModelAlias: "kling-3", Unit: "per_second", PriceMicros: 50000,
+				Resolution: "720p", Audio: "off", DurationSeconds: 5},
+			// 1080p / on: raw $0.168/s → operator overrides to $0.20/s
+			// to preserve retail floor after downstream's 0.7× group
+			// ratio. Ratio = 200000/168000 ≈ 1.19 (19% premium).
+			{ModelAlias: "kling-3", Unit: "per_second", PriceMicros: 200000,
+				Resolution: "1080p", Audio: "on", DurationSeconds: 5},
+		},
+	}
+	rec = httptest.NewRecorder()
+	overrideH := &Handler{Pricing: overrideStore}
+	overrideH.HandleDownstreamPricing(rec, httptest.NewRequest(http.MethodGet, "/api/pricing", nil))
+	writeWireFixture(t, "/tmp/higgsgo-wire-api-pricing-with-overrides.json", rec)
 }
 
 func writeWireFixture(t *testing.T, path string, rec *httptest.ResponseRecorder) {

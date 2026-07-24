@@ -397,17 +397,58 @@ func TestDownstreamPricing_OverrideBeatsObservation(t *testing.T) {
 		t.Fatalf("expected 1 row, got %d", len(body.Data))
 	}
 	expr := body.Data[0].BillingExpr
-	// 720p override: 100000 × 5 = 500_000
+	// 720p override: 100000 × 5 = 500_000 is the fixed_micros.
 	if !strings.Contains(expr, "500000") {
-		t.Fatalf("expected override 500000 in expr: %s", expr)
+		t.Fatalf("expected override fixed 500000 in expr: %s", expr)
 	}
-	// 1080p untouched observation: 112000 × 5 = 560_000
+	// 1080p untouched observation: 112000 × 5 = 560_000 as fixed.
 	if !strings.Contains(expr, "560000") {
 		t.Fatalf("expected untouched observation 560000 in expr: %s", expr)
 	}
-	// Old raw 720p (84000×5=420000) MUST NOT appear — override wins.
-	if strings.Contains(expr, "420000") {
-		t.Fatalf("raw 720p 420000 leaked into expr despite override: %s", expr)
+	// The 720p override's tier note MUST carry official_micros=420000
+	// (raw × duration), so new-api front-end can compute the discount:
+	// 500000 / 420000 = 1.19× (i.e. a premium, not a discount).
+	if !strings.Contains(expr, "official_micros=420000") {
+		t.Fatalf("expected official_micros=420000 in override tier note: %s", expr)
+	}
+	// The 1080p tier has NO override so its note must NOT carry an
+	// official_micros suffix (raw = fixed, no discount to render).
+	if strings.Contains(expr, "official_micros=560000") {
+		t.Fatalf("unmodified tier should skip official_micros; got: %s", expr)
+	}
+}
+
+// TestDownstreamPricing_ModelLevelOfficialPrice asserts each model in
+// the feed carries an `official_price_micros` at the top level, set to
+// the cheapest tier's official (duration-folded) price. This is the
+// fallback new-api front-end uses when rendering a single "starts
+// from N% off" badge on the model card (see computeModelBestDiscount).
+func TestDownstreamPricing_ModelLevelOfficialPrice(t *testing.T) {
+	store := &fakeDownstreamPricingStore{
+		observations: []domain.OfficialPriceObservation{
+			{ModelAlias: "kling-3", Provider: "Kuaishou Kling (Intl)", Unit: "per_second",
+				PriceMicros: 84000, Resolution: "720p", Audio: "off", DurationSeconds: 5},
+			{ModelAlias: "kling-3", Provider: "Kuaishou Kling (Intl)", Unit: "per_second",
+				PriceMicros: 168000, Resolution: "1080p", Audio: "on", DurationSeconds: 5},
+		},
+	}
+	h := &Handler{Pricing: store}
+	rec := httptest.NewRecorder()
+	h.HandleDownstreamPricing(rec, httptest.NewRequest(http.MethodGet, "/api/pricing", nil))
+	var body struct {
+		Data []struct {
+			ModelName           string `json:"model_name"`
+			OfficialPriceMicros int64  `json:"official_price_micros"`
+		} `json:"data"`
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &body)
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 row, got %d", len(body.Data))
+	}
+	// cheapest tier = 720p × 5 = 420_000 micros = $0.42/call.
+	if body.Data[0].OfficialPriceMicros != 420000 {
+		t.Fatalf("model-level official = %d, want 420000 (cheapest tier duration-folded)",
+			body.Data[0].OfficialPriceMicros)
 	}
 }
 
