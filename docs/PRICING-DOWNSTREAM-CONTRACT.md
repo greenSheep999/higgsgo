@@ -405,12 +405,30 @@ flagged `estimated=true` (typically `-cn.md` rows derived by currency
 conversion from the `-intl.md` page) never appear in this feed.
 Downstream sees them only through the internal admin UI.
 
-Discount % / savings % / retail-anchor comparisons are **derived
-values**, not wire fields. If downstream wants to render "N% off"
-anywhere, it computes it locally against whatever baseline it prefers
-(basellm preset, models.dev preset, or its own historical prices).
-higgsgo never emits `discount`, `savings`, `discount_percent`, or
-comparable derived fields. Adding one is explicitly out of scope (§9).
+**Discount signaling** (added 2026-07-24 with new-api discount-badge UI).
+When higgsgo publishes an override, downstream needs two numbers to
+compute the "N% off vs official" badge: the price we're publishing
+(`fixed_micros`, plain tier body) and the raw provider price for the
+same tuple. Two carriers, wire-compatible with new-api's existing
+`parseTiersFromExpr` regex:
+
+- **Model-level `official_price_micros`** (top-level int on every
+  data[] row): the cheapest tier's official (duration-folded)
+  price for that model. Front-end uses it as the fallback denominator
+  for the "starts from N% off" badge on the model card, and for any
+  tier whose note doesn't carry a per-tier override.
+- **Per-tier `official_micros=NNNN`** (kv fragment inside the third
+  `tier()` argument, joined with the existing `unit ·
+  duration_seconds=N` prefix by ` · `): the raw provider price for
+  that exact tier, in the same duration-folded USD × 1e6 unit as
+  `fixed_micros`. Emitted **only** when an operator override moves
+  `fixed_micros` away from the raw price. Absent = the tier IS at
+  raw = no discount to render = badge hidden (natural degradation).
+
+Downstream computes `ratio = fixed / official`. Ratio < 1 renders a
+discount badge, ratio ≥ 1 hides it (premium). Discount %, savings %,
+strikethrough prices are all still derived downstream — the wire only
+publishes the two absolute values.
 
 DSL grammar (v1, implicit — no `v1:` prefix, because
 `PricingItem.BillingExpr` is a plain string and prefixing would break
