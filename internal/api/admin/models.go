@@ -22,7 +22,14 @@ var reloadTimeoutVar = 30 * time.Second
 // data/reference/verified-models.json without restarting the process.
 type ModelsHandler struct {
 	Registry ports.ModelRegistry
+	Pricing  ports.PricingStore
 	Logger   *slog.Logger
+
+	// FloorReferenceUnitCostMicros and FloorMarkupMultiplier drive the
+	// retail_below_floor warning attached to POST decisions. Zero values
+	// disable the warning entirely (row still writes). See config.PricingConfig.
+	FloorReferenceUnitCostMicros int64
+	FloorMarkupMultiplier        float64
 }
 
 // NewModelsHandler builds a handler over the given registry. Registry must be
@@ -32,9 +39,19 @@ func NewModelsHandler(r ports.ModelRegistry, logger *slog.Logger) *ModelsHandler
 	return &ModelsHandler{Registry: r, Logger: logger}
 }
 
-// Register mounts the routes under /models.
+// Register mounts the routes under /models plus the sibling
+// /pricing/* catalog endpoints (floor-suggestions spans every alias
+// and purchase-batches has no alias affinity at all, so they live
+// under /pricing/ rather than /models/{alias}/*).
 func (h *ModelsHandler) Register(r chi.Router) {
 	r.Post("/models/reload", h.Reload)
+	r.Get("/models/{alias}/pricing-matrix", h.PricingMatrix)
+	r.Post("/models/{alias}/pricing-decisions", h.CreatePricingDecision)
+	r.Get("/pricing/floor-suggestions", h.FloorSuggestions)
+	r.Get("/pricing/purchase-batches", h.ListPurchaseBatches)
+	r.Post("/pricing/purchase-batches", h.CreatePurchaseBatch)
+	r.Put("/pricing/purchase-batches/{id}", h.UpdatePurchaseBatch)
+	r.Delete("/pricing/purchase-batches/{id}", h.DeletePurchaseBatch)
 }
 
 // Reload re-reads the underlying registry source and swaps the in-memory

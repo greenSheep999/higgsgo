@@ -30,14 +30,21 @@ import (
 	"github.com/greensheep999/higgsgo/internal/config"
 	"github.com/greensheep999/higgsgo/internal/core/apikey"
 	"github.com/greensheep999/higgsgo/internal/core/bearer"
+	"github.com/greensheep999/higgsgo/internal/core/claimer"
+	"github.com/greensheep999/higgsgo/internal/core/costsync"
+	"github.com/greensheep999/higgsgo/internal/core/creditrecon"
 	"github.com/greensheep999/higgsgo/internal/core/failover"
+	"github.com/greensheep999/higgsgo/internal/core/invoicewatch"
 	"github.com/greensheep999/higgsgo/internal/core/jwt"
 	"github.com/greensheep999/higgsgo/internal/core/metering"
 	"github.com/greensheep999/higgsgo/internal/core/monthreset"
+	"github.com/greensheep999/higgsgo/internal/core/notifier"
 	"github.com/greensheep999/higgsgo/internal/core/pollworker"
+	"github.com/greensheep999/higgsgo/internal/core/promowatch"
 	"github.com/greensheep999/higgsgo/internal/core/proxy"
 	"github.com/greensheep999/higgsgo/internal/core/refresher"
 	"github.com/greensheep999/higgsgo/internal/core/regression"
+	"github.com/greensheep999/higgsgo/internal/core/replenish"
 	"github.com/greensheep999/higgsgo/internal/core/upstream"
 	"github.com/greensheep999/higgsgo/internal/core/webhook"
 	"github.com/greensheep999/higgsgo/internal/domain"
@@ -87,6 +94,7 @@ func run() error {
 		failoverEvents    ports.FailoverEventStore
 		failoverOverrs    ports.FailoverOverridesStore
 		modelOverrides    ports.ModelOverrideStore
+		pricingStore      ports.PricingStore
 		registrationStore ports.RegistrationStore
 	)
 	switch cfg.Storage.Driver {
@@ -108,6 +116,7 @@ func run() error {
 		failoverEvents = sqlite.NewFailoverEventStore(db)
 		failoverOverrs = sqlite.NewFailoverOverridesStore(db)
 		modelOverrides = sqlite.NewModelOverrideStore(db)
+		pricingStore = sqlite.NewPricingStore(db)
 		// Registration queue store — always constructed even in the
 		// default (slim) build so the admin queue table has consistent
 		// CRUD access. The registrar bridge (registrar_register.go)
@@ -155,12 +164,18 @@ func run() error {
 		slog.String("last4", bearer.Last4(bearerMgr.Current())),
 	)
 
+	// Notifier chain: implements ports.Notifier for failover (account
+	// disable / outage-guard alerts) and the replenish ticker. Empty
+	// [notifiers] config yields a stdout-only chain so both consumers
+	// always have a non-nil target.
+	notifierChain := notifier.New(cfg.Notifiers, logger)
+
 	// Failover controller: nil when cfg.Failover.Enabled is false so
 	// the proxy service / pollworker stay on their pre-013 fast path.
 	// FallbackFailLimit shadows the deprecated [pool].fail_streak_threshold
 	// so a config that never learned about [failover.consecutive] still
 	// gets the same MVP behaviour.
-	failoverCtl := failover.New(&cfg.Failover, accountStore, failoverEvents, failoverOverrs, nil, logger)
+	failoverCtl := failover.New(&cfg.Failover, accountStore, failoverEvents, failoverOverrs, notifierChain, logger)
 	if failoverCtl != nil {
 		failoverCtl.FallbackFailLimit = cfg.Pool.FailStreakThreshold
 		logger.Info("failover controller wired",
@@ -306,6 +321,7 @@ func run() error {
 	}
 	v1h := v1.New(svc, registry, jobStore, groupStore, apiKeyStore)
 	v1h.Logger = logger
+	v1h.Pricing = pricingStore
 	// Enable the pool-side unlim-override probe in /v1/playground/estimate
 	// so RequiresUnlim models correctly report will_charge=false when at
 	// least one unlim account is live in the pool.
@@ -343,6 +359,10 @@ func run() error {
 	}
 	rf := refresher.New(accountStore, upstreamClient, logger)
 	rf.Interval = refreshInterval
+	// GET /user/free-gens/v2 calibration of the free_quota columns. On by
+	// default; the flat /user *_credits fields report a stale 0 for the
+	// soul family, so the v2 counter is the authoritative source.
+	rf.FreeGensV2Enabled = cfg.Pool.FreeGensV2Enabled
 	// Wire the failover controller so refresher-observed 401s / 5xx
 	// count toward the consecutive-fail threshold and auto-throttle a
 	// stale session before the pool keeps picking it. Nil when
@@ -352,6 +372,124 @@ func run() error {
 	}
 	logger.Info("refresher started", slog.Duration("interval", refreshInterval))
 	go rf.Run(ctx)
+
+	// Background claimer: every 15m (default) auto-claims inbound gifts
+	// and platform-granted unlim bundles the account owns but hasn't
+	// activated. Off when [pool].claim_enabled=false. It only collects
+	// free entitlements — never spends or deletes — so it defaults on.
+	if cfg.Pool.ClaimEnabled {
+		claimInterval, cerr := time.ParseDuration(cfg.Pool.ClaimInterval)
+		if cerr != nil || claimInterval <= 0 {
+			logger.Warn("invalid pool.claim_interval, falling back to 15m",
+				slog.String("value", cfg.Pool.ClaimInterval))
+			claimInterval = 15 * time.Minute
+		}
+		cl := claimer.New(accountStore, upstreamClient, logger)
+		cl.Interval = claimInterval
+		logger.Info("claimer started", slog.Duration("interval", claimInterval))
+		go cl.Run(ctx)
+	}
+
+	// Background invoicewatch: every 15m (default) scans active accounts
+	// for pending invoices and auto-retries the failed auto-top-up charge
+	// (max 3 retries per account per 24h), alerting via the notifier chain
+	// once the budget is spent. Off when [pool].invoice_watch_enabled=false.
+	if cfg.Pool.InvoiceWatchEnabled {
+		iwInterval, ierr := time.ParseDuration(cfg.Pool.InvoiceWatchInterval)
+		if ierr != nil || iwInterval <= 0 {
+			logger.Warn("invalid pool.invoice_watch_interval, falling back to 15m",
+				slog.String("value", cfg.Pool.InvoiceWatchInterval))
+			iwInterval = 15 * time.Minute
+		}
+		iw := invoicewatch.New(accountStore, upstreamClient, notifierChain, logger)
+		iw.Interval = iwInterval
+		logger.Info("invoicewatch started", slog.Duration("interval", iwInterval))
+		go iw.Run(ctx)
+	}
+
+	// Background promowatch: every 30m (default) scans active accounts for
+	// time-sensitive promo/offer/cashback surfaces (near-expiry unviewed
+	// personal promo, cashback challenge ending mid-progress, showable
+	// two-day offer) and alerts via the notifier chain. Alert-only — MVP
+	// takes no automatic action. Off when [pool].promo_watch_enabled=false.
+	if cfg.Pool.PromoWatchEnabled {
+		pwInterval, perr := time.ParseDuration(cfg.Pool.PromoWatchInterval)
+		if perr != nil || pwInterval <= 0 {
+			logger.Warn("invalid pool.promo_watch_interval, falling back to 30m",
+				slog.String("value", cfg.Pool.PromoWatchInterval))
+			pwInterval = 30 * time.Minute
+		}
+		pw := promowatch.New(accountStore, upstreamClient, notifierChain, logger)
+		pw.Interval = pwInterval
+		logger.Info("promowatch started", slog.Duration("interval", pwInterval))
+		go pw.Run(ctx)
+	}
+
+	// Background credit-ledger reconciler: every 24h (default) compares
+	// higgsgo's locally-recorded usage_events.charged_credits_h sum for the
+	// target month against the upstream credit_ledger/statistics total for
+	// the same window; alerts Warn via the notifier chain when the two
+	// diverge beyond the configured absolute/relative threshold. Alert-only.
+	// Off when [credit_recon].enabled=false.
+	if cfg.CreditRecon.Enabled {
+		crInterval, crerr := time.ParseDuration(cfg.CreditRecon.Interval)
+		if crerr != nil || crInterval <= 0 {
+			logger.Warn("invalid credit_recon.interval, falling back to 24h",
+				slog.String("value", cfg.CreditRecon.Interval))
+			crInterval = 24 * time.Hour
+		}
+		cr := creditrecon.New(accountStore, usageStore, upstreamClient, notifierChain, logger)
+		cr.Interval = crInterval
+		if cfg.CreditRecon.AbsoluteFloorCredits > 0 {
+			cr.AbsoluteFloorCredits = cfg.CreditRecon.AbsoluteFloorCredits
+		}
+		if cfg.CreditRecon.RelativePct > 0 {
+			cr.RelativePct = cfg.CreditRecon.RelativePct
+		}
+		logger.Info("creditrecon started", slog.Duration("interval", crInterval))
+		go cr.Run(ctx)
+	}
+
+	// Background costsync: every 6h (default) refreshes the model registry's
+	// per-model cost estimates from GET /job-sets/costs, replacing the
+	// hand-copied static cost table. Off when [pool].cost_sync_enabled=false.
+	// Read-only pricing fetch — picks one active account to carry the call.
+	if cfg.Pool.CostSyncEnabled {
+		csInterval, cserr := time.ParseDuration(cfg.Pool.CostSyncInterval)
+		if cserr != nil || csInterval <= 0 {
+			logger.Warn("invalid pool.cost_sync_interval, falling back to 6h",
+				slog.String("value", cfg.Pool.CostSyncInterval))
+			csInterval = 6 * time.Hour
+		}
+		cs := costsync.New(accountStore, upstreamClient, registry, logger)
+		cs.Pricing = pricingStore
+		cs.Interval = csInterval
+		logger.Info("costsync started", slog.Duration("interval", csInterval))
+		go cs.Run(ctx)
+	}
+
+	// Background replenish ticker: scans the pool for depletion signals
+	// (unlim pool depth, credit exhaustion, plans ending) and alerts via
+	// the notifier chain. Off when [replenish].enabled=false. Read-only.
+	if cfg.Replenish.Enabled {
+		replInterval, rerr := time.ParseDuration(cfg.Replenish.Interval)
+		if rerr != nil || replInterval <= 0 {
+			logger.Warn("invalid replenish.interval, falling back to 1m",
+				slog.String("value", cfg.Replenish.Interval))
+			replInterval = time.Minute
+		}
+		rp := replenish.New(accountStore, notifierChain, logger, replenish.Thresholds{
+			CreditFloor:         int64(cfg.Replenish.CreditFloor),
+			CreditExhaustionPct: cfg.Replenish.CreditExhaustionPct,
+			PlanEndingDays:      cfg.Replenish.PlanEndingDays,
+			PlanEndingThreshold: cfg.Replenish.PlanEndingThreshold,
+			MinUnlimPoolSize:    cfg.Replenish.MinUnlimPoolSize,
+			WatchedJobSetTypes:  cfg.Replenish.WatchedJobSetTypes,
+		})
+		rp.Interval = replInterval
+		logger.Info("replenish ticker started", slog.Duration("interval", replInterval))
+		go rp.Run(ctx)
+	}
 
 	// Background regression ticker: samples a handful of image models
 	// once per Interval and records the outcome to model_health.
@@ -468,6 +606,7 @@ func run() error {
 	srv.FailoverOverrides = failoverOverrs
 	srv.FailoverConfig = &cfg.Failover
 	srv.ModelOverrides = modelOverrides
+	srv.Pricing = pricingStore
 	// POST /admin/accounts/{id}/probe (ROADMAP P2-6): active health
 	// check through the upstream client. Adapter converts
 	// upstream.Wallet → admin.ProbeWallet so the admin package stays

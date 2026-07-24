@@ -38,6 +38,16 @@ type Registry struct {
 	// overrides is the merged snapshot keyed by canonical alias.
 	// Rebuilt from overrideProvider.List() every Reload().
 	overrides map[string]domain.ModelOverride
+
+	// dynamicCosts is the live cost table pushed by the costsync ticker
+	// (internal/core/costsync), keyed by JST → credit-hundredths. It
+	// overrides EstCostHundredths at Resolve()/List() time for any spec
+	// whose JST matches, taking precedence over the static cost_credits_h
+	// baked into verified-models.json. Nil until the first SetDynamicCosts
+	// call — a deployment without costsync wired keeps the static costs.
+	// Survives Reload() (it is a separate field, not rebuilt from the file)
+	// so a catalog reload never drops the freshest upstream prices.
+	dynamicCosts map[string]int64
 }
 
 // extraSpec is the per-alias supplementary payload sourced from
@@ -153,6 +163,39 @@ func (r *Registry) SetOverrideProvider(p ports.ModelOverrideStore) {
 	r.mu.Lock()
 	r.overrideProvider = p
 	r.mu.Unlock()
+}
+
+// SetDynamicCosts atomically swaps the live JST→credit-hundredths cost
+// table used to override each spec's EstCostHundredths. Called by the
+// costsync ticker every few hours with the freshest GET /job-sets/costs
+// snapshot. An empty / nil map clears the overlay (specs revert to the
+// static cost_credits_h). Thread-safe against concurrent Resolve()/List().
+//
+// The input map is copied so the caller may reuse or mutate its own map
+// after the call without racing the registry's readers.
+func (r *Registry) SetDynamicCosts(costs map[string]int64) {
+	var copied map[string]int64
+	if len(costs) > 0 {
+		copied = make(map[string]int64, len(costs))
+		for jst, h := range costs {
+			copied[jst] = h
+		}
+	}
+	r.mu.Lock()
+	r.dynamicCosts = copied
+	r.mu.Unlock()
+}
+
+// applyDynamicCost patches c.EstCostHundredths from the live cost table
+// when the spec's JST has a positive entry. Called with r.mu already
+// held (read or write). No-op when the table is nil / has no match.
+func (r *Registry) applyDynamicCost(c *domain.ModelSpec) {
+	if len(r.dynamicCosts) == 0 || c.JST == "" {
+		return
+	}
+	if h, ok := r.dynamicCosts[c.JST]; ok && h > 0 {
+		c.EstCostHundredths = h
+	}
 }
 
 // Reload re-reads the JSON file and atomically swaps the in-memory maps.
@@ -454,6 +497,7 @@ func (r *Registry) Resolve(alias string) (*domain.ModelSpec, error) {
 				c.MinPlan = deriveMinPlan(&c)
 				c.Tags = deriveTags(&c)
 			}
+			r.applyDynamicCost(&c)
 			return &c, nil
 		}
 	}
@@ -465,7 +509,17 @@ func (r *Registry) Resolve(alias string) (*domain.ModelSpec, error) {
 		c := applyOverride(*spec, o)
 		c.MinPlan = deriveMinPlan(&c)
 		c.Tags = deriveTags(&c)
+		r.applyDynamicCost(&c)
 		return &c, nil
+	}
+	// A live cost overlay forces a copy even when no operator override
+	// applies — the shared *spec must never be mutated in place.
+	if len(r.dynamicCosts) > 0 {
+		if h, ok := r.dynamicCosts[spec.JST]; ok && h > 0 {
+			c := *spec
+			c.EstCostHundredths = h
+			return &c, nil
+		}
 	}
 	return spec, nil
 }
@@ -496,6 +550,7 @@ func (r *Registry) List(filter ports.ModelFilter) []*domain.ModelSpec {
 			c.MinPlan = deriveMinPlan(&c)
 			c.Tags = deriveTags(&c)
 		}
+		r.applyDynamicCost(&c)
 		out = append(out, &c)
 	}
 	return out

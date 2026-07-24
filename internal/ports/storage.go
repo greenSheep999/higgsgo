@@ -482,6 +482,13 @@ type UsageEventStore interface {
 	Insert(ctx context.Context, e *domain.UsageEvent) error
 	Query(ctx context.Context, q UsageQuery) ([]domain.UsageEvent, error)
 	Aggregate(ctx context.Context, q UsageAggQuery) ([]UsageAggRow, error)
+	// SumChargedCreditsHForAccount returns the sum of charged_credits_h
+	// across all usage_events rows for the given account whose created_at
+	// (ts) falls in the half-open interval [from, to). Used by
+	// core/creditrecon to compare against the upstream credit ledger's
+	// aggregated total for the same window. Empty result → 0 (never
+	// returns an error for "no rows").
+	SumChargedCreditsHForAccount(ctx context.Context, accountID string, from, to time.Time) (int64, error)
 }
 
 // UsageQuery selects usage_events rows.
@@ -787,4 +794,57 @@ type ModelOverrideStore interface {
 	// the admin surface to render the overrides table and by the
 	// registry to rebuild its merged map on Reload().
 	List(ctx context.Context) ([]domain.ModelOverride, error)
+}
+
+// PricingStore persists immutable upstream pricing snapshots together with
+// their normalized per-model cost rules.
+type PricingStore interface {
+	SaveSnapshot(ctx context.Context, snapshot *domain.PricingSnapshot, rules []domain.ModelCostRule) error
+	LatestSnapshot(ctx context.Context, source string) (*domain.PricingSnapshot, error)
+	ListLatestRules(ctx context.Context, source string) ([]domain.ModelCostRule, error)
+	ListPlanCreditRates(ctx context.Context) ([]domain.PlanCreditRate, error)
+	ListOfficialPrices(ctx context.Context, modelAlias string) ([]domain.OfficialPriceObservation, error)
+	// ListAllOfficialPrices returns every official price observation
+	// across all model aliases, ordered by (model_alias, resolution,
+	// duration_seconds, mode, audio, observed_at DESC). Used by the
+	// /api/pricing/official-api endpoint (contract §6.4) to group by
+	// model_alias without N per-alias round trips.
+	ListAllOfficialPrices(ctx context.Context) ([]domain.OfficialPriceObservation, error)
+	ListPriceDecisions(ctx context.Context, modelAlias string) ([]domain.ModelPriceDecision, error)
+	// ListLatestPriceDecisions returns the most-recent decision per
+	// (model_alias, resolution, duration_seconds, mode, audio, unit)
+	// variant across ALL aliases. Ordering: model_alias ASC, then
+	// resolution/duration/mode/audio for deterministic downstream
+	// consumption. Used by GET /api/pricing (contract §6.2) to build
+	// the downstream billing feed in a single round-trip.
+	ListLatestPriceDecisions(ctx context.Context) ([]domain.ModelPriceDecision, error)
+
+	// ListPurchaseBatches returns every purchase_batches row.
+	// Ordering: purchased_at DESC, id DESC — newest first, matching
+	// how the admin UI presents them. The weighted-average
+	// calculator (contract §10 phase-2) filters by Active +
+	// PricingClass in application code so the same query serves
+	// both the UI (all rows) and the calculator (subset).
+	ListPurchaseBatches(ctx context.Context) ([]domain.PurchaseBatch, error)
+	// GetPurchaseBatch loads one batch by ID. Returns (nil, nil)
+	// when not found so callers can 404 without inspecting error
+	// strings.
+	GetPurchaseBatch(ctx context.Context, id string) (*domain.PurchaseBatch, error)
+	// UpsertPurchaseBatch inserts a new batch or updates an existing
+	// one (matched by ID). CreatedAt is preserved on update;
+	// UpdatedAt is refreshed by the store.
+	UpsertPurchaseBatch(ctx context.Context, batch *domain.PurchaseBatch) error
+	// DeletePurchaseBatch removes a batch. Rarely used — prefer
+	// setting Active=false to preserve audit trail. Returns nil
+	// (no error) when the id doesn't exist so callers can be
+	// idempotent without a pre-check.
+	DeletePurchaseBatch(ctx context.Context, id string) error
+
+	// RecordPriceDecision appends a new operator-approved sell price for
+	// one (alias, resolution, duration, mode, audio, unit) variant. Never
+	// overwrites — history is preserved and ListPriceDecisions returns the
+	// most recent row first via ORDER BY decided_at DESC. Callers must set
+	// ModelAlias/Currency/Unit/PriceMicros; ID and DecidedAt are filled in
+	// by the store when zero.
+	RecordPriceDecision(ctx context.Context, decision domain.ModelPriceDecision) (domain.ModelPriceDecision, error)
 }

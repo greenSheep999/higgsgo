@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/greensheep999/higgsgo/internal/domain"
 	"github.com/greensheep999/higgsgo/internal/ports"
@@ -269,6 +270,26 @@ func (s *UsageEventStore) Aggregate(ctx context.Context, q ports.UsageAggQuery) 
 		out = append(out, row)
 	}
 	return out, rows.Err()
+}
+
+// SumChargedCreditsHForAccount returns the sum of charged_credits_h across
+// usage_events for one account within the half-open time window [from, to).
+// Powers the monthly credit-ledger reconciler (internal/core/creditrecon):
+// it compares this local sum against the upstream credit-ledger statistics
+// endpoint's total_credits_spent for the same window and alerts when they
+// diverge beyond threshold. COALESCE keeps the empty-result path returning
+// 0 rather than SQL NULL.
+func (s *UsageEventStore) SumChargedCreditsHForAccount(ctx context.Context, accountID string, from, to time.Time) (int64, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT COALESCE(SUM(charged_credits_h), 0)
+		FROM usage_events
+		WHERE account_id = ? AND ts >= ? AND ts < ?`,
+		accountID, fmtTime(from), fmtTime(to))
+	var sum int64
+	if err := row.Scan(&sum); err != nil {
+		return 0, fmt.Errorf("sum charged_credits_h for %s: %w", accountID, err)
+	}
+	return sum, nil
 }
 
 // buildUsageFilterClauses converts a UsageQuery into WHERE fragments and args.

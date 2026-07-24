@@ -6,6 +6,9 @@
 //	GET  /v1/models/{alias}             single-model detail
 //	POST /v1/video/generations          create a video job (new-api compatible; preferred)
 //	POST /v1/videos/generations         create a video job (higgsgo legacy alias)
+//	POST /v1/videos                     create a video job (OpenAI/Sora shape)
+//	GET  /v1/videos/{id}                poll an OpenAI/Sora video job
+//	GET  /v1/videos/{id}/content        stream completed video content
 //	POST /v1/images/generations         create an image job
 //	POST /v1/audio/generations          create an audio (TTS) job
 //	GET  /v1/jobs/{id}                  poll an async job
@@ -43,6 +46,7 @@ type Handler struct {
 	Groups   ports.GroupStore   // optional; when non-nil, missing group_id is auto-resolved from the api key's bindings
 	APIKeys  ports.APIKeyStore  // optional; enables the api_keys.group_id direct 1:1 binding shortcut in resolveGroup
 	Accounts ports.AccountStore // optional; enables the pool-side unlim override check for /v1/playground/estimate
+	Pricing  ports.PricingStore // optional; when nil, /v1/pricing returns 503
 	Logger   *slog.Logger       // optional; used for warnings during best-effort auto-resolution
 
 	// SoraUploader handles the media-upload side of POST /v1/videos when

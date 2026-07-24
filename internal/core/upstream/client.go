@@ -379,6 +379,14 @@ type UserSnapshot struct {
 	Wan25VideoCredits        float64 `json:"wan2_5_video_credits"`
 	Text2KeyframesCredits    float64 `json:"text2keyframes_credits"`
 	Veo3FastGenerationsCount float64 `json:"veo3_fast_generations_count"`
+	// Account-lifecycle signals. blocked_at / suspended_at are nullable
+	// upstream timestamps (empty string when unset). is_pause_scheduled
+	// covers "pause queued but not yet active". The refresher derives the
+	// accounts.{blocked_at,suspended_at,is_paused} columns from these.
+	BlockedAt        string `json:"blocked_at"`
+	SuspendedAt      string `json:"suspended_at"`
+	IsPaused         bool   `json:"is_paused"`
+	IsPauseScheduled bool   `json:"is_pause_scheduled"`
 }
 
 // FetchUser calls GET /user and returns the per-account entitlement snapshot.
@@ -413,6 +421,78 @@ func (c *Client) FetchUser(ctx context.Context, account *domain.Account) (*UserS
 	return &u, nil
 }
 
+// freeGensV2Response mirrors GET /user/free-gens/v2. The endpoint carries
+// the authoritative per-family free-generation counters keyed by
+// job_set_type — a strictly more precise surface than the seven flat
+// `*_credits` fields on GET /user, which report a stale 0 for the soul
+// family in every captured tier snapshot (starter/pro/plus) even though
+// the account actually holds 298 / 3000 / 300 soul generations.
+//
+// Field names job_set_type / counter / config are sample-confirmed against
+// server/data/user-entitlements.json (starter/pro/plus). counter is a plain
+// number; config is null in every captured snapshot and is ignored here.
+type freeGensV2Response struct {
+	Items []struct {
+		JobSetType string  `json:"job_set_type"`
+		Counter    float64 `json:"counter"`
+	} `json:"items"`
+}
+
+// FetchFreeGensV2 calls GET /user/free-gens/v2 and returns a map of
+// job_set_type → counter (the number of free generations remaining for
+// that family). Mirrors the FetchWallet GET template. An empty items array
+// is a non-error nil-map result; a 404 (endpoint absent for this account)
+// is likewise treated as "no free-gens surface" — a benign nil-map —
+// matching the SPA's 404→null handling.
+//
+// The refresher uses this to calibrate the accounts free_quota columns: the
+// three soul job_set_types (text2image_soul_v2 / soul_cinematic /
+// soul_location) all map to the soul_credits column, so their counters
+// override the stale /user value on every tick.
+func (c *Client) FetchFreeGensV2(ctx context.Context, account *domain.Account) (map[string]float64, error) {
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodGet, c.baseURL+"/user/free-gens/v2", nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
+	}
+	resp, err := c.doWithRetry(ctx, "fetch_free_gens_v2", account, build)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil // no free-gens surface for this account — benign
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("free-gens/v2: HTTP %d: %s", resp.StatusCode, snip(raw))
+	}
+	var envelope freeGensV2Response
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return nil, err
+	}
+	if len(envelope.Items) == 0 {
+		return nil, nil
+	}
+	out := make(map[string]float64, len(envelope.Items))
+	for _, it := range envelope.Items {
+		if it.JobSetType == "" {
+			continue
+		}
+		out[it.JobSetType] = it.Counter
+	}
+	if len(out) == 0 {
+		return nil, nil
+	}
+	return out, nil
+}
+
 // UnlimActivationsResponse mirrors GET /workspaces/unlim-activations.
 // The response wraps a flat "activations" array whose items each carry
 // the operator-activated bundle plus a nested `models` list — one entry
@@ -428,9 +508,10 @@ type UnlimActivationsResponse struct {
 }
 
 // UnlimActivationRaw mirrors one item inside the response envelope.
-// Only fields the refresher needs are decoded — the SPA also uses
-// `is_claimed` and pricing / seat data for its own modal, which the
-// server doesn't care about.
+// `is_claimed` distinguishes bundles the platform granted but the user
+// has not yet activated — the claimer (internal/core/claimer) picks
+// these up and POSTs the claim so the window starts counting. Pricing /
+// seat data the SPA modal uses is still ignored.
 type UnlimActivationRaw struct {
 	ID          string                 `json:"id"`
 	BundleType  string                 `json:"bundle_type"`
@@ -438,6 +519,7 @@ type UnlimActivationRaw struct {
 	ExpiresAt   string                 `json:"expires_at"`
 	StartedAt   string                 `json:"started_at"`
 	ActivatedAt string                 `json:"activated_at"`
+	IsClaimed   bool                   `json:"is_claimed"`
 }
 
 // UnlimActivationModel is one row of the nested `models` array. The
@@ -525,11 +607,13 @@ func (c *Client) FetchUnlimActivations(ctx context.Context, account *domain.Acco
 				bundle = a.BundleType + "@" + m.JobSetType
 			}
 			out = append(out, domain.UnlimActivation{
+				ID:          a.ID,
 				BundleType:  bundle,
 				JobSetType:  m.JobSetType,
 				Resolutions: append([]string(nil), m.Resolutions...),
 				ExpiresAt:   expires,
 				ActivatedAt: activated,
+				IsClaimed:   a.IsClaimed,
 			})
 		}
 	}
@@ -936,4 +1020,856 @@ func parseCreateCost(n json.Number) (int64, error) {
 		return 0, fmt.Errorf("parse create response cost %q: expected whole number", n.String())
 	}
 	return int64(f), nil
+}
+
+// Gift is one inbound gift item from GET /gifts. Only the fields the
+// claimer needs are decoded; the SPA modal reads sender / background /
+// invoice data we don't care about.
+type Gift struct {
+	ID       string `json:"id"`
+	Plan     string `json:"plan"`
+	Duration string `json:"duration"`
+	Claimed  bool   `json:"claimed"`
+	Status   string `json:"status"`
+}
+
+type giftsResponse struct {
+	Items []Gift `json:"items"`
+	Total int    `json:"total"`
+}
+
+// Sentinel errors for ClaimGift. Both are benign: the claimer skips them
+// rather than treating them as account-health failures.
+var (
+	// ErrGiftAlreadyClaimed maps HTTP 400 — the gift was already claimed
+	// (a prior tick, or another operator). Idempotent no-op.
+	ErrGiftAlreadyClaimed = errors.New("gift already claimed")
+	// ErrGiftActiveSubscription maps HTTP 409 — the account already holds
+	// an active subscription, so the gift cannot stack right now.
+	ErrGiftActiveSubscription = errors.New("gift claim blocked by active subscription")
+)
+
+// FetchGifts calls GET /gifts?type=inbound&activated=false and returns
+// the account's unclaimed inbound gifts. Mirrors the FetchWallet GET
+// template. An empty items array is a non-error nil-slice result.
+func (c *Client) FetchGifts(ctx context.Context, account *domain.Account) ([]Gift, error) {
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodGet, c.baseURL+"/gifts?size=20&type=inbound&activated=false", nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
+	}
+	resp, err := c.doWithRetry(ctx, "fetch_gifts", account, build)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("gifts: HTTP %d: %s", resp.StatusCode, snip(raw))
+	}
+	var envelope giftsResponse
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return nil, err
+	}
+	if len(envelope.Items) == 0 {
+		return nil, nil
+	}
+	return envelope.Items, nil
+}
+
+// ClaimGift POSTs /gifts/{giftID}/claim. Fire-and-forget: the response
+// body is ignored, only the status code matters. Returns nil on 2xx,
+// ErrGiftAlreadyClaimed on 400, ErrGiftActiveSubscription on 409, and a
+// generic error otherwise. No request body (matches the SPA).
+func (c *Client) ClaimGift(ctx context.Context, account *domain.Account, giftID string) error {
+	if giftID == "" {
+		return fmt.Errorf("claim gift: empty gift id")
+	}
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodPost, c.baseURL+"/gifts/"+giftID+"/claim", nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
+	}
+	resp, err := c.doWithRetry(ctx, "claim_gift", account, build)
+	if err != nil {
+		return err
+	}
+	raw, _ := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	switch {
+	case resp.StatusCode >= 200 && resp.StatusCode < 300:
+		return nil
+	case resp.StatusCode == http.StatusBadRequest:
+		return ErrGiftAlreadyClaimed
+	case resp.StatusCode == http.StatusConflict:
+		return ErrGiftActiveSubscription
+	case resp.StatusCode == http.StatusUnauthorized:
+		return fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	default:
+		return fmt.Errorf("claim gift %s: HTTP %d: %s", giftID, resp.StatusCode, snip(raw))
+	}
+}
+
+// ClaimUnlimActivation POSTs /workspaces/unlim-activations/{id} with body
+// {"job_set_type": jobSetType} to activate a platform-granted unlim
+// bundle. Returns nil on 2xx, an error otherwise. Once claimed, the next
+// refresher tick stores the (now is_claimed) activation so the proxy's
+// _unlimited routing (P0-1) can match it.
+func (c *Client) ClaimUnlimActivation(ctx context.Context, account *domain.Account, activationID, jobSetType string) error {
+	if activationID == "" || jobSetType == "" {
+		return fmt.Errorf("claim unlim: empty activation id or job_set_type")
+	}
+	body, err := json.Marshal(map[string]string{"job_set_type": jobSetType})
+	if err != nil {
+		return fmt.Errorf("claim unlim: marshal body: %w", err)
+	}
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodPost, c.baseURL+"/workspaces/unlim-activations/"+activationID, bytes.NewReader(body))
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, true)
+		return req, nil
+	}
+	resp, err := c.doWithRetry(ctx, "claim_unlim", account, build)
+	if err != nil {
+		return err
+	}
+	raw, _ := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	if resp.StatusCode == http.StatusUnauthorized {
+		return fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("claim unlim %s: HTTP %d: %s", activationID, resp.StatusCode, snip(raw))
+	}
+	return nil
+}
+
+// noticeResponse decodes only the status field of GET /workspaces/notice;
+// the rest of the envelope (modal_data, subscription, discount…) is for
+// the SPA modal and irrelevant to the refresher's grace derivation.
+type noticeResponse struct {
+	Status string `json:"status"`
+}
+
+// FetchWorkspaceNotice returns the raw status of GET /workspaces/notice
+// (e.g. "hide-notice", "add_card_grace_notice", "enforcement-notice").
+// A 404 or empty body yields "" (no active notice) rather than an error —
+// most accounts have no notice most of the time. Pass the raw result to
+// NormalizeNoticeStatus to get the grace_status token.
+func (c *Client) FetchWorkspaceNotice(ctx context.Context, account *domain.Account) (string, error) {
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodGet, c.baseURL+"/workspaces/notice", nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
+	}
+	resp, err := c.doWithRetry(ctx, "fetch_notice", account, build)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusNotFound {
+		return "", nil
+	}
+	if resp.StatusCode == http.StatusUnauthorized {
+		return "", fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	}
+	if resp.StatusCode != 200 {
+		return "", fmt.Errorf("notice: HTTP %d: %s", resp.StatusCode, snip(raw))
+	}
+	if len(raw) == 0 {
+		return "", nil
+	}
+	var n noticeResponse
+	if err := json.Unmarshal(raw, &n); err != nil {
+		return "", err
+	}
+	return n.Status, nil
+}
+
+// NormalizeNoticeStatus maps the raw /workspaces/notice.status enum to a
+// small grace_status token. Payment-risk notices become a stable
+// non-empty token (the replenish S3 signal fires on any non-empty
+// PendingInvoice is one unpaid invoice returned by GET
+// /workspaces/pending-invoices. Only id + status are load-bearing for the
+// invoicewatch ticker (non-empty list → attempt a retry); the remaining
+// fields are decoded opportunistically for logging. Field shape is
+// bundle-inferred (no live JSON sample of a real pending-invoices response
+// exists in the repo — only the SPA bundle mapper reveals it), so amount
+// is a plain STRING (dollars ×100 encoded upstream, client would divide by
+// 100) and there is NO amount_cents / error_code field. TODO: confirm
+// against a real captured response.
+type PendingInvoice struct {
+	ID       string `json:"id"`
+	Status   string `json:"status"`
+	Amount   string `json:"amount"`   // string dollars (bundle-inferred; 待真实样本确认)
+	Currency string `json:"currency"` // 待真实样本确认
+}
+
+// pendingInvoicesResponse is the server envelope. hasMore/total are
+// client-derived in the SPA (total = items.length, hasMore = cursor!=null),
+// so the server returns just {items, cursor}. Empty state = {items:[],
+// cursor:null} (inferred).
+type pendingInvoicesResponse struct {
+	Items  []PendingInvoice `json:"items"`
+	Cursor *string          `json:"cursor"`
+}
+
+// FetchPendingInvoices calls GET /workspaces/pending-invoices and returns
+// the account's unpaid invoices. Mirrors the FetchGifts GET template. An
+// empty items array is a non-error nil-slice result. A 404 (endpoint not
+// present for this account) is treated as "no pending invoices" — a benign
+// nil-slice — rather than an error, matching the SPA's 404→null handling.
+func (c *Client) FetchPendingInvoices(ctx context.Context, account *domain.Account) ([]PendingInvoice, error) {
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodGet, c.baseURL+"/workspaces/pending-invoices", nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
+	}
+	resp, err := c.doWithRetry(ctx, "fetch_pending_invoices", account, build)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil // no pending-invoices surface for this account — benign
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("pending-invoices: HTTP %d: %s", resp.StatusCode, snip(raw))
+	}
+	var envelope pendingInvoicesResponse
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return nil, err
+	}
+	if len(envelope.Items) == 0 {
+		return nil, nil
+	}
+	return envelope.Items, nil
+}
+
+// RetryAutoTopUp POSTs /v2/auto-top-ups/retry-payment to re-attempt the
+// account's failed auto-top-up charge. Fire-and-forget: no request body,
+// the response body is ignored, only the status code matters (matches the
+// SPA, which passes the raw json through with no transform). Returns nil on
+// 2xx. A 404 (retry surface absent / nothing outstanding) is treated as a
+// benign no-op (nil) rather than an error. Any other non-2xx is an error.
+func (c *Client) RetryAutoTopUp(ctx context.Context, account *domain.Account) error {
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodPost, c.baseURL+"/v2/auto-top-ups/retry-payment", nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
+	}
+	resp, err := c.doWithRetry(ctx, "retry_auto_top_up", account, build)
+	if err != nil {
+		return err
+	}
+	raw, _ := io.ReadAll(resp.Body)
+	_ = resp.Body.Close()
+	switch {
+	case resp.StatusCode >= 200 && resp.StatusCode < 300:
+		return nil
+	case resp.StatusCode == http.StatusNotFound:
+		return nil // no outstanding auto-top-up to retry — benign
+	case resp.StatusCode == http.StatusUnauthorized:
+		return fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	default:
+		return fmt.Errorf("retry auto-top-up: HTTP %d: %s", resp.StatusCode, snip(raw))
+	}
+}
+
+// jobSetCostsResponse is the GET /job-sets/costs envelope. The SPA
+// unwraps it as ("data" in n ? n.data : n), so the server always nests the
+// per-model entries under a top-level "data" key. Each entry carries a
+// job_set_type and a `cost` array whose item shape VARIES by model (four
+// known variants — see reduceJobSetCost). Costs are quoted in CREDITS
+// (fractional allowed, e.g. 1.5), NOT credit-hundredths.
+type jobSetCostsResponse struct {
+	Data []JobSetCostEntry `json:"data"`
+}
+
+// JobSetCostEntry is one model entry from GET /job-sets/costs.
+type JobSetCostEntry struct {
+	JobSetType string            `json:"job_set_type"`
+	Cost       []json.RawMessage `json:"cost"`
+}
+
+// JobSetCostCatalog preserves the raw upstream payload and both derived
+// views: a minimum affordability floor and normalized priced rules.
+type JobSetCostCatalog struct {
+	RawJSON  string
+	MinCosts map[string]int64
+	Rules    []domain.ModelCostRule
+}
+
+// FetchJobSetCosts calls GET /job-sets/costs and returns a map of
+// job_set_type → representative cost in credit-hundredths (credits ×100,
+// matching the accounts/registry unit). The endpoint works unauthenticated
+// but we send the standard headers anyway so DataDome doesn't challenge.
+//
+// The raw `cost` array is a union of four shapes (per-resolution video with
+// cost_per_second, per-model wrapper with nested resolutions, mode+audio
+// with audio.on/off, and flat image `credits`). We collapse each model's
+// array to a single number by taking the MINIMUM strictly-positive cost
+// found across every variant field, then ×100 → hundredths. Minimum is the
+// conservative floor a credit-gate check needs ("can this account afford
+// the cheapest generation of this model"); it also matches the locally-
+// derived cost-map.json summary for the video models.
+//
+// 待真实样本确认: the reduction heuristic (min-positive ×100) is a working
+// choice, not a product-confirmed rule — if the registry later needs a
+// per-resolution / per-mode breakdown, extend reduceJobSetCost rather than
+// changing the map contract.
+func (c *Client) FetchJobSetCosts(ctx context.Context, account *domain.Account) (map[string]int64, error) {
+	catalog, err := c.FetchJobSetCostCatalog(ctx, account)
+	if err != nil || catalog == nil {
+		return nil, err
+	}
+	return catalog.MinCosts, nil
+}
+
+// FetchJobSetCostCatalog returns the lossless upstream payload together with
+// normalized pricing rules. Callers that only need the affordability floor
+// should use FetchJobSetCosts.
+func (c *Client) FetchJobSetCostCatalog(ctx context.Context, account *domain.Account) (*JobSetCostCatalog, error) {
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodGet, c.baseURL+"/job-sets/costs", nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
+	}
+	resp, err := c.doWithRetry(ctx, "fetch_job_set_costs", account, build)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("job-sets/costs: HTTP %d: %s", resp.StatusCode, snip(raw))
+	}
+	var envelope jobSetCostsResponse
+	if err := json.Unmarshal(raw, &envelope); err != nil {
+		return nil, err
+	}
+	if len(envelope.Data) == 0 {
+		return nil, nil
+	}
+	out := &JobSetCostCatalog{
+		RawJSON:  string(raw),
+		MinCosts: make(map[string]int64, len(envelope.Data)),
+	}
+	for _, e := range envelope.Data {
+		if e.JobSetType == "" {
+			continue
+		}
+		if h, ok := reduceJobSetCost(e.Cost); ok {
+			out.MinCosts[e.JobSetType] = h
+		}
+		out.Rules = append(out.Rules, normalizeJobSetCostRules(e.JobSetType, e.Cost)...)
+	}
+	if len(out.MinCosts) == 0 {
+		return nil, nil
+	}
+	return out, nil
+}
+
+func normalizeJobSetCostRules(jst string, items []json.RawMessage) []domain.ModelCostRule {
+	var out []domain.ModelCostRule
+	for _, item := range items {
+		var node map[string]any
+		if err := json.Unmarshal(item, &node); err != nil {
+			continue
+		}
+		out = append(out, normalizeCostNode(jst, node, nil)...)
+	}
+	return out
+}
+
+func normalizeCostNode(jst string, node, inherited map[string]any) []domain.ModelCostRule {
+	dimensions := make(map[string]any, len(inherited)+len(node))
+	for key, value := range inherited {
+		dimensions[key] = value
+	}
+	for key, value := range node {
+		switch key {
+		case "cost_per_second", "original_cost_per_second", "credits", "base_credits", "audio", "resolutions":
+			continue
+		default:
+			dimensions[key] = value
+		}
+	}
+
+	var out []domain.ModelCostRule
+	add := func(unit, component, audio string, credits, originalCredits float64) {
+		if credits <= 0 {
+			return
+		}
+		dims := make(map[string]any, len(dimensions)+1)
+		for key, value := range dimensions {
+			dims[key] = value
+		}
+		if audio != "" {
+			dims["audio"] = audio
+		}
+		dimensionsJSON, _ := json.Marshal(dims)
+		rule := domain.ModelCostRule{
+			JST:                       jst,
+			Unit:                      unit,
+			Component:                 component,
+			CreditsHundredths:         int64(math.Round(credits * 100)),
+			OriginalCreditsHundredths: int64(math.Round(originalCredits * 100)),
+			Resolution:                stringDimension(dims, "resolution"),
+			DurationSeconds:           intDimension(dims, "duration", "duration_seconds", "seconds"),
+			Mode:                      stringDimension(dims, "mode"),
+			Audio:                     audio,
+			DimensionsJSON:            string(dimensionsJSON),
+		}
+		out = append(out, rule)
+	}
+	if value, ok := node["cost_per_second"].(float64); ok {
+		original, _ := node["original_cost_per_second"].(float64)
+		add("per_second", "cost_per_second", "", value, original)
+	}
+	if value, ok := node["credits"].(float64); ok {
+		add("per_request", "credits", "", value, 0)
+	}
+	if value, ok := node["base_credits"].(float64); ok {
+		add("per_request", "base_credits", "", value, 0)
+	}
+	if audio, ok := node["audio"].(map[string]any); ok {
+		for _, state := range []string{"off", "on"} {
+			if value, ok := audio[state].(float64); ok {
+				add("upstream_unspecified", "audio_state", state, value, 0)
+			}
+		}
+	}
+	if resolutions, ok := node["resolutions"].([]any); ok {
+		for _, value := range resolutions {
+			if child, ok := value.(map[string]any); ok {
+				out = append(out, normalizeCostNode(jst, child, dimensions)...)
+			}
+		}
+	}
+	return out
+}
+
+func stringDimension(dimensions map[string]any, key string) string {
+	value, _ := dimensions[key].(string)
+	return value
+}
+
+func intDimension(dimensions map[string]any, keys ...string) int {
+	for _, key := range keys {
+		switch value := dimensions[key].(type) {
+		case float64:
+			return int(value)
+		case string:
+			if parsed, err := strconv.Atoi(value); err == nil {
+				return parsed
+			}
+		}
+	}
+	return 0
+}
+
+// reduceJobSetCost collapses one model's `cost` array to a single value in
+// credit-hundredths, returning ok=false when no positive cost field is
+// present. It walks every cost item as a generic tree and collects the
+// numeric fields known to carry a price — cost_per_second, credits,
+// base_credits, and audio.on/off — plus any nested `resolutions` array
+// (the per-model wrapper variant). The minimum strictly-positive value
+// across all of them ×100 is returned.
+func reduceJobSetCost(items []json.RawMessage) (int64, bool) {
+	best := math.Inf(1)
+	found := false
+	consider := func(v float64) {
+		if v > 0 && v < best {
+			best = v
+			found = true
+		}
+	}
+	var walk func(m map[string]any)
+	walk = func(m map[string]any) {
+		for _, key := range []string{"cost_per_second", "credits", "base_credits"} {
+			if f, ok := m[key].(float64); ok {
+				consider(f)
+			}
+		}
+		if audio, ok := m["audio"].(map[string]any); ok {
+			for _, key := range []string{"on", "off"} {
+				if f, ok := audio[key].(float64); ok {
+					consider(f)
+				}
+			}
+		}
+		if res, ok := m["resolutions"].([]any); ok {
+			for _, r := range res {
+				if rm, ok := r.(map[string]any); ok {
+					walk(rm)
+				}
+			}
+		}
+	}
+	for _, it := range items {
+		var m map[string]any
+		if err := json.Unmarshal(it, &m); err != nil {
+			continue
+		}
+		walk(m)
+	}
+	if !found {
+		return 0, false
+	}
+	// Round to the nearest hundredth to absorb float noise (e.g. 1.75 → 175).
+	return int64(math.Round(best * 100)), true
+}
+
+// grace_status); marketing / hide / unknown notices become "" so they
+// never trigger an alert. soft-notice / warning-notice are deliberately
+// mapped to "" — no real sample distinguishes payment dunning from
+// marketing there, so we stay conservative to avoid false alarms.
+func NormalizeNoticeStatus(raw string) string {
+	switch raw {
+	case "add_card_grace_notice":
+		return "grace"
+	case "enforcement-notice":
+		return "enforcement"
+	case "access-lose-notice":
+		return "access_lose"
+	case "card-decline-credit-offer":
+		return "card_declined"
+	case "add_backup_card_notice":
+		return "backup_card"
+	default:
+		return ""
+	}
+}
+
+// PersonalPromo is the account's active personal promo returned by GET
+// /user/personal-promo. Only ID / ExpiredAt / IsViewed are load-bearing for
+// the promowatch ticker (near-expiry + unviewed → alert); the remaining
+// fields are decoded for logging. Empty starter state is a literal `{}`
+// (no id) → FetchPersonalPromo returns nil.
+//
+// Field shape is bundle-inferred: the empty {} state is live-confirmed, but
+// the populated field NAMES come from the SPA mapper (raw uses expired_at /
+// max_display_percent_off / details.is_viewed; promoCode is camelCase in the
+// raw body). TODO 待真实样本确认: confirm against a captured populated response.
+type PersonalPromo struct {
+	ID           string    // top-level `id`; absent ⇒ no active promo
+	CampaignName string    // raw campaign_name (logging only)
+	PromoCode    string    // raw promoCode (camelCase in body)
+	Discount     float64   // raw max_display_percent_off
+	ExpiredAt    time.Time // raw expired_at (RFC3339); zero when absent/unparseable
+	IsViewed     bool      // raw details.is_viewed
+}
+
+// personalPromoRaw mirrors the raw /user/personal-promo body. Minimal field
+// set (待真实样本确认 for the rest of the object).
+type personalPromoRaw struct {
+	ID               string  `json:"id"`
+	CampaignName     string  `json:"campaign_name"`
+	PromoCode        string  `json:"promoCode"`
+	MaxDisplayPctOff float64 `json:"max_display_percent_off"`
+	ExpiredAt        string  `json:"expired_at"`
+	Details          struct {
+		IsViewed bool `json:"is_viewed"`
+	} `json:"details"`
+}
+
+// FetchPersonalPromo calls GET /user/personal-promo and returns the account's
+// active personal promo, or nil when none is active. Mirrors the FetchWallet
+// GET template. The empty starter state is a literal `{}` (no id) → nil; a
+// 404 is likewise treated as "no promo" (benign nil), matching the SPA's
+// 404→null handling.
+func (c *Client) FetchPersonalPromo(ctx context.Context, account *domain.Account) (*PersonalPromo, error) {
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodGet, c.baseURL+"/user/personal-promo", nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
+	}
+	resp, err := c.doWithRetry(ctx, "fetch_personal_promo", account, build)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil // no personal-promo surface for this account — benign
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("personal-promo: HTTP %d: %s", resp.StatusCode, snip(raw))
+	}
+	var r personalPromoRaw
+	if err := json.Unmarshal(raw, &r); err != nil {
+		return nil, err
+	}
+	if r.ID == "" {
+		return nil, nil // empty {} starter state — no active promo
+	}
+	return &PersonalPromo{
+		ID:           r.ID,
+		CampaignName: r.CampaignName,
+		PromoCode:    r.PromoCode,
+		Discount:     r.MaxDisplayPctOff,
+		ExpiredAt:    parseUnlimTime(r.ExpiredAt),
+		IsViewed:     r.Details.IsViewed,
+	}, nil
+}
+
+// CashbackChallenge is the account's cashback challenge returned by GET
+// /cashback-challenge. Status / ChallengeEndsAt are load-bearing for the
+// promowatch ticker (status=progress + ends<24h → alert). The status enum
+// {hide|progress|summary} is bundle-inferred from the SPA UI switch; only
+// "hide" is live-confirmed. Field names credits_spent / credits_cashback /
+// challenge_ends_at are confirmed as raw names in the JS mapper.
+type CashbackChallenge struct {
+	Status          string    // hide | progress | summary (bundle-inferred enum)
+	CreditsSpent    float64   // raw credits_spent (logging)
+	CreditsCashback float64   // raw credits_cashback (logging)
+	ChallengeEndsAt time.Time // raw challenge_ends_at (RFC3339); zero when absent
+}
+
+// cashbackChallengeRaw mirrors the raw /cashback-challenge body.
+type cashbackChallengeRaw struct {
+	Status          string  `json:"status"`
+	CreditsSpent    float64 `json:"credits_spent"`
+	CreditsCashback float64 `json:"credits_cashback"`
+	ChallengeEndsAt string  `json:"challenge_ends_at"`
+}
+
+// FetchCashbackChallenge calls GET /cashback-challenge and returns the
+// account's cashback challenge, or nil when the surface is absent. The
+// live-confirmed idle state is {"status":"hide"} (returned as a real
+// value, not nil, so callers can inspect the status). A 404 is treated as
+// benign nil.
+func (c *Client) FetchCashbackChallenge(ctx context.Context, account *domain.Account) (*CashbackChallenge, error) {
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodGet, c.baseURL+"/cashback-challenge", nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
+	}
+	resp, err := c.doWithRetry(ctx, "fetch_cashback_challenge", account, build)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	}
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, nil // no cashback surface — benign
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("cashback-challenge: HTTP %d: %s", resp.StatusCode, snip(raw))
+	}
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var r cashbackChallengeRaw
+	if err := json.Unmarshal(raw, &r); err != nil {
+		return nil, err
+	}
+	if r.Status == "" {
+		return nil, nil
+	}
+	return &CashbackChallenge{
+		Status:          r.Status,
+		CreditsSpent:    r.CreditsSpent,
+		CreditsCashback: r.CreditsCashback,
+		ChallengeEndsAt: parseUnlimTime(r.ChallengeEndsAt),
+	}, nil
+}
+
+// TwoDayOffer is the account's two-day offer returned by GET /two-day-offer.
+// Status / ExpiresAt / ModalData / AllowedJobSetTypes are load-bearing for
+// the promowatch ticker: a value-gated alert compares the offer's discount
+// (final vs original price) and the models it unlocks against the account's
+// interests. The full body shape is live-confirmed (idle sample: status="hide"
+// with null modalData / empty allowed_job_set_types). Non-hide statuses
+// observed in bundle enums: tier_1, tier_2, tier_3, tier_{1..3}_active,
+// upgrade_premium.
+type TwoDayOffer struct {
+	Status             string                  // "hide" (idle) | tier_* (showable)
+	ExpiresAt          time.Time               // raw expires_at (RFC3339|null → zero)
+	ModalData          *TwoDayOfferModal       // nil when status=hide or modalData=null
+	AllowedJobSetTypes []TwoDayOfferAllowedJST // JSTs unlocked by the offer; empty on idle
+}
+
+// TwoDayOfferModal is the modalData block of a showable two-day offer. Prices
+// are in cents (bundle-confirmed hardcoded tiers: 1-day 900→500, 7-day
+// 4900→2900, 14-day 8900→4900). Currency defaults to USD upstream. Features
+// is a human-readable bullet list the SPA renders.
+type TwoDayOfferModal struct {
+	FinalPrice    int64    `json:"final_price"`
+	OriginalPrice int64    `json:"original_price"`
+	Currency      string   `json:"currency"`
+	Features      []string `json:"features"`
+}
+
+// TwoDayOfferAllowedJST is one entry of allowed_job_set_types — a job-set-type
+// the offer would unlock. Resolutions/MaxDuration are informational; the
+// value-gate only inspects JobSetType.
+type TwoDayOfferAllowedJST struct {
+	JobSetType  string   `json:"job_set_type"`
+	Resolution  string   `json:"resolution"`
+	Resolutions []string `json:"resolutions"`
+	MaxDuration int64    `json:"max_duration"`
+}
+
+// twoDayOfferRaw mirrors the live-confirmed raw /two-day-offer body. The
+// SPA-only fields (quiz_type, is_card_visible, is_plan_visible,
+// purchase_expires_at) are intentionally omitted — promowatch has no use for
+// them.
+type twoDayOfferRaw struct {
+	Status             string                  `json:"status"`
+	ExpiresAt          string                  `json:"expires_at"`
+	ModalData          *TwoDayOfferModal       `json:"modalData"`
+	AllowedJobSetTypes []TwoDayOfferAllowedJST `json:"allowed_job_set_types"`
+}
+
+// FetchTwoDayOffer calls GET /two-day-offer and returns the account's
+// two-day offer, or nil when the surface is absent (404/204). The idle state
+// {"status":"hide",...} is returned as a real value so callers can inspect
+// the status rather than mistaking it for "no offer".
+func (c *Client) FetchTwoDayOffer(ctx context.Context, account *domain.Account) (*TwoDayOffer, error) {
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodGet, c.baseURL+"/two-day-offer", nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
+	}
+	resp, err := c.doWithRetry(ctx, "fetch_two_day_offer", account, build)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	}
+	if resp.StatusCode == http.StatusNotFound || resp.StatusCode == http.StatusNoContent {
+		return nil, nil // no two-day-offer surface — benign
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("two-day-offer: HTTP %d: %s", resp.StatusCode, snip(raw))
+	}
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var r twoDayOfferRaw
+	if err := json.Unmarshal(raw, &r); err != nil {
+		return nil, err
+	}
+	if r.Status == "" {
+		return nil, nil
+	}
+	return &TwoDayOffer{
+		Status:             r.Status,
+		ExpiresAt:          parseUnlimTime(r.ExpiresAt),
+		ModalData:          r.ModalData,
+		AllowedJobSetTypes: r.AllowedJobSetTypes,
+	}, nil
+}
+
+// CreditLedgerStatistics mirrors GET /workspaces/credit-ledger/statistics.
+// The upstream endpoint returns an aggregate over a [start_date, end_date]
+// window (inclusive on both ends per higgsfield convention). It is the
+// canonical "how much did this account actually spend upstream" source and
+// is what the monthly reconciler (core/creditrecon) compares against the
+// locally-recorded usage_events.charged_credits_h sum.
+//
+// Units are "credits" (integer), same as /workspaces/wallet.credits_balance;
+// higgsgo's internal charged_credits_h column stores hundredths (×100) —
+// callers must multiply the upstream credit count by 100 before comparing.
+//
+// Extra fields (spending_by_model, ...) exposed by upstream are ignored:
+// the reconciler only needs the aggregate totals.
+type CreditLedgerStatistics struct {
+	TotalCreditsSpent    int64  `json:"total_credits_spent"`
+	TotalCreditsRefunded int64  `json:"total_credits_refunded"`
+	JobsCreated          int64  `json:"jobs_created"`
+	Currency             string `json:"currency"`
+}
+
+// FetchCreditLedgerStatistics calls GET /workspaces/credit-ledger/statistics
+// with the given [start_date, end_date] window (each ISO YYYY-MM-DD). An
+// empty 200 body ("{}") returns a zero-valued struct (not nil) so the
+// reconciler can compare against a well-defined "no upstream spend" number
+// without extra nil-guards on the caller side.
+func (c *Client) FetchCreditLedgerStatistics(ctx context.Context, account *domain.Account, startDate, endDate string) (*CreditLedgerStatistics, error) {
+	// Query string is trivial (YYYY-MM-DD) so string concatenation matches
+	// the rest of the file's style; no url.Values allocation needed.
+	path := c.baseURL + "/workspaces/credit-ledger/statistics?start_date=" + startDate + "&end_date=" + endDate
+	build := func(token string) (*http.Request, error) {
+		req, err := http.NewRequest(http.MethodGet, path, nil)
+		if err != nil {
+			return nil, err
+		}
+		c.setStdHeaders(req, account, token, false)
+		return req, nil
+	}
+	resp, err := c.doWithRetry(ctx, "fetch_credit_ledger_statistics", account, build)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	raw, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode == http.StatusUnauthorized {
+		return nil, fmt.Errorf("%w: %s", domain.ErrUpstreamUnauthorized, snip(raw))
+	}
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("credit_ledger_statistics: HTTP %d: %s", resp.StatusCode, snip(raw))
+	}
+	// Empty body or {} — return a zero-valued struct so callers can proceed
+	// without a nil-check (the reconciler needs a real "upstream says 0 credits
+	// spent" answer, which is meaningfully different from "no data").
+	if len(raw) == 0 {
+		return &CreditLedgerStatistics{}, nil
+	}
+	var s CreditLedgerStatistics
+	if err := json.Unmarshal(raw, &s); err != nil {
+		return nil, err
+	}
+	return &s, nil
 }

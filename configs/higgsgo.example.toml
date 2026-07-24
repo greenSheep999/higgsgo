@@ -97,6 +97,60 @@ fail_streak_threshold      = 3
 balance_refresh_interval   = "10m"
 jwt_refresh_interval       = "40s"
 
+# Background claimer (internal/core/claimer). Every claim_interval it walks
+# active accounts and posts /gifts/{id}/claim + the unlim-activation claim
+# endpoint for anything left unclaimed. Read-only entitlement grab — never
+# spends money and never feeds failover.
+claim_enabled  = true
+claim_interval = "15m"
+
+# Background invoicewatch (internal/core/invoicewatch). Retries the failed
+# auto-top-up charge for accounts with pending invoices, budgeted at 3
+# attempts per account per 24h. Alerts Warn on the notifier chain once
+# budget is spent.
+invoice_watch_enabled  = true
+invoice_watch_interval = "15m"
+
+# Background costsync (internal/core/costsync). Every cost_sync_interval it
+# pulls GET /job-sets/costs from one active account and pushes the JST →
+# credit-hundredths overlay into the registry (SetDynamicCosts). Reload()
+# does not clobber the overlay.
+cost_sync_enabled  = true
+cost_sync_interval = "6h"
+
+# Background promowatch (internal/core/promowatch). Scans active accounts
+# for near-expiry unviewed personal promos, cashback challenges ending
+# mid-progress, and value-gated two-day offers; alert-only.
+promo_watch_enabled  = true
+promo_watch_interval = "30m"
+
+# Refresher enhancement: also pulls GET /user/free-gens/v2 to calibrate the
+# seven accounts.*_credits columns (the flat /user *_credits fields report
+# a stale 0 for the soul family). Fetch failure is non-fatal.
+free_gens_v2_enabled = true
+
+# Replenish alerter (internal/core/replenish). 5-signal pool-depletion
+# watchdog. Each signal is muted for 24h after firing (in-memory).
+[replenish]
+enabled                = true
+interval               = "1m"
+credit_floor           = 50        # S2: credits below this = exhausted
+credit_exhaustion_pct  = 0.3       # S2: fire when exhausted fraction > this
+plan_ending_days       = 3         # S5: window before plan_ends_at
+plan_ending_threshold  = 1         # S5: minimum count in the window
+min_unlim_pool_size    = 3         # S1: fire when active unlim holders < this
+watched_job_set_types  = []        # S1: empty = skip S1
+
+# Credit-ledger reconciliation (internal/core/creditrecon). Compares
+# upstream /workspaces/credit-ledger/statistics against
+# usage_events.charged_credits_h. Alert-only. Effective threshold =
+# max(absolute_floor_credits × 100, upstream_h × relative_pct).
+[credit_recon]
+enabled                = true
+interval               = "24h"
+absolute_floor_credits = 100
+relative_pct           = 0.05
+
 [register]
 auto_topup                     = false
 min_starter_accounts           = 5
@@ -129,9 +183,23 @@ enabled = false
 enabled  = true
 interval = ""
 
+# Notifier chain (internal/core/notifier). Each [[notifiers]] entry becomes
+# a concrete notifier fanned out by the chain. The first entry that sets
+# min_level wins for the whole chain (levels: info < warn < error <
+# critical). An empty [[notifiers]] list still yields a stdout-only chain
+# so downstream consumers (failover, replenish, invoicewatch, promowatch,
+# creditrecon) always have a non-nil target.
 [[notifiers]]
 type      = "stdout"
 min_level = "info"
+
+# Slack destination. type="slack" with an empty webhook logs a warn on boot
+# and is elided from the chain — safe to leave commented until real webhook
+# is available.
+# [[notifiers]]
+# type = "slack"
+# [notifiers.slack]
+# webhook = "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
 
 [observability]
 log_level    = "info"

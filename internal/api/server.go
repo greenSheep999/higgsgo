@@ -45,6 +45,7 @@ type Server struct {
 	Regression *regression.Ticker     // optional; enables /admin/tickers/regression
 	Audit      ports.AuditStore       // optional; enables admin write auditing + /admin/audit
 	Registry   ports.ModelRegistry    // optional; enables /admin/models/reload
+	Pricing    ports.PricingStore     // optional; enables model pricing matrices
 	Registrar  ports.Registrar        // optional; enables /admin/registrations (stub answers 503 disabled)
 	Settings   ports.SettingsStore    // optional; enables /admin/settings/* runtime-editable knobs
 	// ModelOverrides is optional; enables /admin/models/overrides and
@@ -217,16 +218,18 @@ func (s *Server) publicRouter() http.Handler {
 					Logger: s.Logger,
 				}
 				r.Use(rl.Middleware)
+				// Upstream cost rules are commercially sensitive and are
+				// intended for authenticated downstream pricing sync.
+				r.Get("/pricing", s.V1.HandlePricingCatalog)
 				// Video generation is reachable on two paths that share a
 				// handler:
 				//   * /videos/generations — original higgsgo path (kept as
 				//     legacy alias for any client already integrated).
 				//   * /video/generations  — new-api / OneAPI compatibility
 				//     shape, singular "video". Preferred going forward.
-				// OpenAI's own canonical endpoint is POST /v1/videos (no
-				// /generations suffix, different body shape); we don't
-				// mount that yet — no caller has asked for it and its body
-				// contract diverges from images/generations.
+				// OpenAI's canonical POST /v1/videos surface is mounted
+				// below with its own request/response adapter. These two
+				// generation routes keep the higgsgo-native contract.
 				r.Post("/videos/generations", s.V1.HandleVideoGeneration)
 				r.Post("/video/generations", s.V1.HandleVideoGeneration)
 				r.Post("/images/generations", s.V1.HandleImageGeneration)
@@ -275,6 +278,34 @@ func (s *Server) publicRouter() http.Handler {
 				r.Get("/models", s.V1.HandlePlaygroundModels)
 				r.Post("/estimate", s.V1.HandlePlaygroundEstimate)
 				r.Post("/execute", s.V1.HandlePlaygroundExecute)
+			})
+		})
+		// /api/pricing/official-api is the downstream "official
+		// provider prices" feed from PRICING-DOWNSTREAM-CONTRACT §6.4.
+		// Mounted on the public listener behind the same sk-hg-* API
+		// key check as /v1/*: new-api-side model-price-adapter is
+		// trusted infra, but the endpoint is not truly public.
+		// Kept outside the /v1 group intentionally — the contract
+		// nails the URL to /api/pricing/*, and mixing paths through a
+		// rewrite proxy would only hide the split.
+		r.Route("/api", func(r chi.Router) {
+			r.Group(func(r chi.Router) {
+				if s.APIKeys != nil {
+					r.Use(middleware.APIKeyAuth(s.APIKeys, false))
+				}
+				rl := &middleware.RateLimit{
+					RPS:    s.Config.Server.RateLimit.RPS,
+					Burst:  s.Config.Server.RateLimit.Burst,
+					Logger: s.Logger,
+				}
+				r.Use(rl.Middleware)
+				// GET /api/pricing serves the downstream billing feed
+				// (contract §6.2). new-api's controller/ratio_sync.go
+				// consumes this directly; DSL rows expand at request
+				// time. GET /api/pricing/official-api is the sibling
+				// market-data feed (§6.4). Both live under /api/pricing/*.
+				r.Get("/pricing", s.V1.HandleDownstreamPricing)
+				r.Get("/pricing/official-api", s.V1.HandleOfficialAPIPricing)
 			})
 		})
 	}
@@ -401,7 +432,11 @@ func (s *Server) adminRouter() http.Handler {
 			admin.NewAuditHandler(s.Audit).Register(r)
 		}
 		if s.Registry != nil {
-			admin.NewModelsHandler(s.Registry, s.Logger).Register(r)
+			mh := admin.NewModelsHandler(s.Registry, s.Logger)
+			mh.Pricing = s.Pricing
+			mh.FloorReferenceUnitCostMicros = s.Config.Pricing.FloorReferenceUnitCostMicros
+			mh.FloorMarkupMultiplier = s.Config.Pricing.FloorMarkupMultiplier
+			mh.Register(r)
 		}
 		// Settings surface: currently only /admin/settings/bearer,
 		// wired only when both a persistence store and a bearer.Manager

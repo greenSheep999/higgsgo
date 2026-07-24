@@ -32,6 +32,37 @@ type Config struct {
 	Observability ObservabilityConfig `toml:"observability"`
 	Updates       UpdatesConfig       `toml:"updates"`
 	Failover      FailoverConfig      `toml:"failover"`
+	Replenish     ReplenishConfig     `toml:"replenish"`
+	CreditRecon   CreditReconConfig   `toml:"credit_recon"`
+	Pricing       PricingConfig       `toml:"pricing"`
+}
+
+// PricingConfig holds the retail-floor reference numbers used by
+// POST /admin/models/{alias}/pricing-decisions. The floor is a soft
+// warning, never a block: values here shape what the WebUI flags as
+// "below cost basis × markup", nothing more.
+//
+// The reference unit cost is intentionally a config value rather than
+// a table lookup: channel-purchase prices drift per batch, and the
+// three cost bases (official list / official promo / channel purchase)
+// don't collapse into a single durable number. Phase 2 (task #72)
+// replaces this with a purchase-batch log when operators need the
+// effective cost to move on its own; the wire warning contract stays
+// the same either way.
+//
+// See docs/PRICING-DOWNSTREAM-CONTRACT.md §10 for the three cost bases
+// and the operator-supplied channel-purchase medians.
+type PricingConfig struct {
+	// FloorReferenceUnitCostMicros is USD-micros per Higgs credit used
+	// as the cost basis for retail_below_floor warnings. Default 27_500
+	// = operator's starter-channel median (most conservative). Set to
+	// 12_028 for the six-bucket median across starter+plus+ultra, or
+	// 8_644 for ultra-59000cr aggressive.
+	FloorReferenceUnitCostMicros int64 `toml:"floor_reference_unit_cost_micros"`
+	// FloorMarkupMultiplier is the markup floor the WebUI flags. 1.8 =
+	// 80% cost markup (matches contract §10). Values ≤ 0 disable the
+	// warning entirely (row still writes, no warning attached).
+	FloorMarkupMultiplier float64 `toml:"floor_markup_multiplier"`
 }
 
 // FailoverConfig configures the two automatic-isolation mechanisms
@@ -228,6 +259,48 @@ type PoolConfig struct {
 	FailStreakThreshold    int    `toml:"fail_streak_threshold"`
 	BalanceRefreshInterval string `toml:"balance_refresh_interval"`
 	JWTRefreshInterval     string `toml:"jwt_refresh_interval"`
+	// ClaimEnabled turns on the background claimer that auto-claims
+	// inbound gifts + platform-granted unlim bundles. Defaults to true:
+	// it only collects free entitlements the account already owns.
+	ClaimEnabled bool `toml:"claim_enabled"`
+	// ClaimInterval is the claimer tick cadence (Go duration string).
+	// Empty selects the 15m default.
+	ClaimInterval string `toml:"claim_interval"`
+	// InvoiceWatchEnabled turns on the background invoicewatch ticker that
+	// scans active accounts for pending invoices and auto-retries the
+	// failed auto-top-up charge (max 3 retries per account per 24h), then
+	// alerts via the notifier chain once the budget is spent. Defaults to
+	// true: retrying an already-owed charge only recovers a payment the
+	// account has already committed to.
+	InvoiceWatchEnabled bool `toml:"invoice_watch_enabled"`
+	// InvoiceWatchInterval is the invoicewatch tick cadence (Go duration
+	// string). Empty selects the 15m default.
+	InvoiceWatchInterval string `toml:"invoice_watch_interval"`
+	// CostSyncEnabled turns on the background costsync ticker that refreshes
+	// the model registry's per-model cost estimates from GET /job-sets/costs.
+	// Defaults to true: it's a read-only pricing fetch that replaces the
+	// hand-copied static cost table.
+	CostSyncEnabled bool `toml:"cost_sync_enabled"`
+	// CostSyncInterval is the costsync tick cadence (Go duration string).
+	// Empty selects the 6h default.
+	CostSyncInterval string `toml:"cost_sync_interval"`
+	// PromoWatchEnabled turns on the background promowatch ticker that scans
+	// active accounts for time-sensitive promo/offer/cashback surfaces and
+	// alerts via the notifier chain (near-expiry unviewed personal promo,
+	// cashback challenge ending mid-progress, showable two-day offer).
+	// Defaults to true: it's a read-only scan that only emits alerts (MVP
+	// takes no automatic action).
+	PromoWatchEnabled bool `toml:"promo_watch_enabled"`
+	// PromoWatchInterval is the promowatch tick cadence (Go duration string).
+	// Empty selects the 30m default.
+	PromoWatchInterval string `toml:"promo_watch_interval"`
+	// FreeGensV2Enabled turns on the extra GET /user/free-gens/v2 fetch in
+	// the balance refresher, which calibrates the free_quota columns from
+	// the authoritative per-job_set_type counters (the flat /user
+	// *_credits fields report a stale 0 for the soul family). Defaults to
+	// true: it's a read-only accuracy enhancement and any fetch failure is
+	// non-fatal (the /user values stand).
+	FreeGensV2Enabled bool `toml:"free_gens_v2_enabled"`
 }
 
 type RegisterConfig struct {
@@ -276,6 +349,50 @@ type NotifierConfig struct {
 
 type SlackNotifierConfig struct {
 	Webhook string `toml:"webhook"`
+}
+
+// ReplenishConfig controls the background replenish-alert ticker
+// (internal/core/replenish). It scans the pool for depletion signals and
+// fires notifications through the configured Notifiers. All thresholds
+// have safe defaults; Enabled defaults true (alerts are read-only).
+type ReplenishConfig struct {
+	Enabled  bool   `toml:"enabled"`
+	Interval string `toml:"interval"` // Go duration, default "1m"
+	// CreditFloor: an account with credits_balance + subscription_balance/100
+	// below this is counted "exhausted" for the S2 ratio signal.
+	CreditFloor int `toml:"credit_floor"`
+	// CreditExhaustionPct: fire S2 when the exhausted fraction of the
+	// active pool exceeds this (0..1).
+	CreditExhaustionPct float64 `toml:"credit_exhaustion_pct"`
+	// PlanEndingDays / PlanEndingThreshold: fire S5 when more than
+	// Threshold active accounts have plan_ends_at within Days from now.
+	PlanEndingDays      int `toml:"plan_ending_days"`
+	PlanEndingThreshold int `toml:"plan_ending_threshold"`
+	// MinUnlimPoolSize / WatchedJobSetTypes: fire S1 when the count of
+	// active accounts holding a live unlim bundle for a watched
+	// job_set_type drops below MinUnlimPoolSize. Empty watch list = skip S1.
+	MinUnlimPoolSize   int      `toml:"min_unlim_pool_size"`
+	WatchedJobSetTypes []string `toml:"watched_job_set_types"`
+}
+
+// CreditReconConfig controls the background credit-ledger reconciler
+// (internal/core/creditrecon). Once per Interval it compares upstream's
+// aggregated credit_ledger/statistics total against the locally-recorded
+// usage_events.charged_credits_h sum for the target month and fires a
+// Warn notification when the two diverge beyond the configured threshold.
+// Alert-only — no writes back to any store. Defaults are safe for
+// production: 24h cadence, 100-credit absolute floor, 5% relative.
+type CreditReconConfig struct {
+	Enabled  bool   `toml:"enabled"`
+	Interval string `toml:"interval"` // Go duration, default "24h"
+	// AbsoluteFloorCredits is the minimum diff (in credits, same unit as
+	// upstream.total_credits_spent) that will trigger an alert. Below this
+	// the mismatch is treated as noise.
+	AbsoluteFloorCredits int `toml:"absolute_floor_credits"`
+	// RelativePct is the fraction of the upstream total above which the
+	// diff is considered material. Effective threshold =
+	// max(AbsoluteFloorCredits×100, upstream_h × RelativePct).
+	RelativePct float64 `toml:"relative_pct"`
 }
 
 type ObservabilityConfig struct {
@@ -330,10 +447,23 @@ func defaults() *Config {
 			FailStreakThreshold:    3,
 			BalanceRefreshInterval: "10m",
 			JWTRefreshInterval:     "40s",
+			ClaimEnabled:           true,
+			ClaimInterval:          "15m",
+			InvoiceWatchEnabled:    true,
+			InvoiceWatchInterval:   "15m",
+			CostSyncEnabled:        true,
+			CostSyncInterval:       "6h",
+			PromoWatchEnabled:      true,
+			PromoWatchInterval:     "30m",
+			FreeGensV2Enabled:      true,
 		},
 		Modes: ModesConfig{
 			Standalone: true,
 			CPAPlugin:  false,
+		},
+		Pricing: PricingConfig{
+			FloorReferenceUnitCostMicros: 27_500, // starter channel-buy median
+			FloorMarkupMultiplier:        1.8,    // contract §10 hard floor
 		},
 		Observability: ObservabilityConfig{
 			LogLevel:    "info",
@@ -370,6 +500,22 @@ func defaults() *Config {
 				WindowSec:         30,
 				DisableCountLimit: 3,
 			},
+		},
+		Replenish: ReplenishConfig{
+			Enabled:             true,
+			Interval:            "1m",
+			CreditFloor:         50,
+			CreditExhaustionPct: 0.3,
+			PlanEndingDays:      3,
+			PlanEndingThreshold: 1,
+			MinUnlimPoolSize:    3,
+			WatchedJobSetTypes:  []string{},
+		},
+		CreditRecon: CreditReconConfig{
+			Enabled:              true,
+			Interval:             "24h",
+			AbsoluteFloorCredits: 100,
+			RelativePct:          0.05,
 		},
 	}
 }
