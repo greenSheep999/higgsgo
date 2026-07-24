@@ -3,6 +3,25 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 
+const adminProxyTarget = process.env.HIGGSGO_ADMIN_PROXY ?? "http://127.0.0.1:18081";
+
+// Vite's shorthand form (`"/admin": "http://..."`) leans on
+// http-proxy-middleware defaults that, in some versions, drop the
+// Authorization header on WebSocket-eligible routes. Spell the proxy
+// config out explicitly and force header forwarding so the SPA's
+// bearer survives the hop from :5373 → :18081. See webui README §Auth.
+const adminProxy = {
+  target: adminProxyTarget,
+  changeOrigin: true,
+  ws: false,
+  configure: (proxy: any) => {
+    proxy.on("proxyReq", (proxyReq: any, req: any) => {
+      const auth = req.headers?.authorization;
+      if (auth) proxyReq.setHeader("Authorization", auth);
+    });
+  },
+};
+
 // Dev server proxies /admin/* and /v1/playground/* to the higgsgo admin
 // listener so we can hit the API from the same origin the SPA is served on.
 // In prod the SPA is embedded via //go:embed and served by the same
@@ -42,15 +61,15 @@ export default defineConfig({
     port: 5373,
     strictPort: true,
     proxy: {
-      "/admin": "http://127.0.0.1:18081",
-      "/v1/playground": "http://127.0.0.1:18081",
+      "/admin": adminProxy,
+      "/v1/playground": adminProxy,
       // /v1/models is mirrored on the admin listener (behind admin
       // bearer) so the WebUI's group model picker can enumerate the
       // catalog through the same base URL as every other admin
       // request. Without this proxy line the request lands on the
       // vite dev server and gets the SPA's index.html handed back —
       // a 200 with HTML, which then explodes JSON parsing downstream.
-      "/v1/models": "http://127.0.0.1:18081",
+      "/v1/models": adminProxy,
     },
   },
 });

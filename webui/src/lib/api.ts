@@ -443,6 +443,208 @@ export interface PublicModelsResponse {
   total_before_pagination: number;
 }
 
+export interface PricingOfficialValue {
+  provider: string;
+  usd: number;
+  source_url: string;
+  region: "intl" | "cn" | string;
+  estimated?: boolean;
+  mode?: string;
+}
+
+export interface PricingSuggestedValue {
+  usd: number;
+  floor_usd: number;
+  markup_multiplier: number;
+  reference_cost_usd: number;
+  variant_credits: number;
+}
+
+export interface PricingMatrixRow {
+  dimensions: {
+    resolution: string;
+    duration_seconds: number;
+    mode: string;
+    audio: string;
+    unit: string;
+  };
+  higgs: {
+    credits: number;
+    original_credits?: number;
+    component: string;
+  }[];
+  plan_costs: { plan_type: string; plan_name: string; component: string; usd: number }[];
+  // official_api is now a list — one entry per (region, mode) so the UI
+  // can render 海外 API and 国内 API side by side. Empty when no observation.
+  official_api?: PricingOfficialValue[];
+  final_price?: { usd: number; rationale?: string };
+  // suggested_price is server-computed advisory (floor × markup).
+  suggested_price?: PricingSuggestedValue;
+}
+
+export interface PricingMatrixResponse {
+  object: "pricing.matrix";
+  model_alias: string;
+  jst: string;
+  min_plan: string;
+  rows: PricingMatrixRow[];
+}
+
+// CreatePricingDecisionRequest is the body for POST /admin/models/{alias}/pricing-decisions.
+// It maps 1:1 to the (resolution, mode, audio, duration_seconds, unit)
+// variant dimensions the pricing-matrix API already exposes on rows, plus
+// the operator-supplied USD price (transmitted as micros for exact
+// arithmetic) and free-form rationale.
+export interface CreatePricingDecisionRequest {
+  currency: "USD";
+  unit: string;
+  price_micros: number;
+  resolution: string;
+  duration_seconds: number;
+  mode: string;
+  audio: string;
+  rationale: string;
+}
+
+// PricingDecisionWarning is a non-blocking signal attached to a
+// successfully-written decision. `retail_below_floor` fires when the
+// operator's retail sits below `credits × reference_unit_cost × markup`
+// (contract §10); `cost_rule_missing` fires when the floor can't be
+// computed at all (no matching model_cost_rule for the variant). Both
+// leave the row durable — the UI shows the warning inline so the operator
+// can revise or accept, but the POST always returns 201.
+export interface PricingDecisionWarning {
+  code: "retail_below_floor" | "cost_rule_missing" | string;
+  message: string;
+  floor_micros?: number;
+  retail_micros?: number;
+  reference_unit_cost_micros?: number;
+  markup_multiplier?: string;
+  variant_credits?: string;
+}
+
+// PricingDecisionView is the 201 response echoed back after a successful
+// append. `usd` is `price_micros / 1e6` pre-computed server-side so the UI
+// can render without dividing. `warnings` is omitted (undefined) when
+// nothing tripped the retail_below_floor / cost_rule_missing checks.
+export interface PricingDecisionView {
+  id: string;
+  model_alias: string;
+  currency: string;
+  unit: string;
+  price_micros: number;
+  usd: number;
+  resolution: string;
+  duration_seconds: number;
+  mode: string;
+  audio: string;
+  rationale?: string;
+  decided_at: string;
+  warnings?: PricingDecisionWarning[];
+}
+
+// PricingFloorSuggestion is one (alias × variant) row in the operator
+// planning table served by GET /admin/pricing/floor-suggestions.
+// Every price-shaped field is nullable because the endpoint reports
+// partial data (missing floor / missing official grid / missing
+// decision) rather than dropping the row.
+export interface PricingFloorSuggestion {
+  model_alias: string;
+  jst: string;
+  resolution: string;
+  duration_seconds: number;
+  mode: string;
+  audio: string;
+  unit: string;
+  credits: number;
+  floor_micros: number | null;
+  floor_reason?: string;
+  official_low_micros: number | null;
+  official_mid_micros: number | null;
+  official_high_micros: number | null;
+  current_micros: number | null;
+  recommended_micros: number | null;
+  current_vs_floor: "above" | "at" | "below" | "unknown";
+  current_vs_official: "above" | "at" | "below" | "unknown";
+  providers: string[];
+}
+
+export interface PricingFloorSuggestionsResponse {
+  generated_at: string;
+  config: {
+    reference_unit_cost_micros: number;
+    markup_multiplier: number;
+    enabled: boolean;
+    dynamic?: boolean;
+    config_fallback_micros?: number;
+  };
+  rows: PricingFloorSuggestion[];
+}
+
+// PurchaseBatchView is the wire shape returned by
+// GET/POST/PUT /admin/pricing/purchase-batches. Every field the Go
+// handler emits is mirrored here so the UI can render the derived
+// unit_cost_micros column without recomputing.
+export interface PurchaseBatchView {
+  id: string;
+  purchased_at: string;
+  source_channel: string;
+  source_seller: string;
+  plan_type: string;
+  accounts_count: number;
+  credits_per_account_hundredths: number;
+  credits_per_account: number;
+  total_paid_micros: number;
+  total_paid_usd: number;
+  paid_currency: string;
+  paid_amount_original_micros: number;
+  exchange_rate_used: number;
+  pricing_class: "normal" | "activity" | "bug" | "promo";
+  promotion_type: "none" | "first_signup" | "unlim_1day" | "standard_credit_boost";
+  active: boolean;
+  linked_account_email: string;
+  rationale: string;
+  created_at: string;
+  updated_at: string;
+  unit_cost_micros: number;
+}
+
+// PurchaseBatchInput is the create/update request body. Every field is
+// optional so PUT can send partial patches; POST validation catches
+// missing required fields on the server.
+export interface PurchaseBatchInput {
+  id?: string;
+  purchased_at?: string;
+  source_channel?: string;
+  source_seller?: string;
+  plan_type?: string;
+  accounts_count?: number;
+  credits_per_account?: number;
+  credits_per_account_hundredths?: number;
+  total_paid_usd?: number;
+  total_paid_micros?: number;
+  paid_currency?: string;
+  paid_amount_original_micros?: number;
+  exchange_rate_used?: number;
+  pricing_class?: "normal" | "activity" | "bug" | "promo";
+  promotion_type?: "none" | "first_signup" | "unlim_1day" | "standard_credit_boost";
+  active?: boolean;
+  linked_account_email?: string;
+  rationale?: string;
+}
+
+export interface PurchaseBatchesResponse {
+  data: PurchaseBatchView[];
+  summary: {
+    effective_unit_cost_micros: number;
+    total_paid_micros: number;
+    total_credits: number;
+    eligible_batches: number;
+    fallback_applied: boolean;
+    config_fallback_micros: number;
+  };
+}
+
 export interface PlaygroundEstimate {
   model_alias: string;
   output: string;
@@ -763,6 +965,39 @@ export const admin = {
       current_count: number;
       reloaded_at: string;
     }>("/admin/models/reload", { method: "POST" }),
+  getModelPricingMatrix: (alias: string) =>
+    request<PricingMatrixResponse>(
+      `/admin/models/${encodeURIComponent(alias)}/pricing-matrix`,
+    ),
+  createPricingDecision: (
+    alias: string,
+    body: CreatePricingDecisionRequest,
+  ) =>
+    request<PricingDecisionView>(
+      `/admin/models/${encodeURIComponent(alias)}/pricing-decisions`,
+      { method: "POST", body: JSON.stringify(body) },
+    ),
+  getPricingFloorSuggestions: () =>
+    request<PricingFloorSuggestionsResponse>(
+      "/admin/pricing/floor-suggestions",
+    ),
+  listPurchaseBatches: () =>
+    request<PurchaseBatchesResponse>("/admin/pricing/purchase-batches"),
+  createPurchaseBatch: (body: PurchaseBatchInput) =>
+    request<PurchaseBatchView>("/admin/pricing/purchase-batches", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updatePurchaseBatch: (id: string, body: PurchaseBatchInput) =>
+    request<PurchaseBatchView>(
+      `/admin/pricing/purchase-batches/${encodeURIComponent(id)}`,
+      { method: "PUT", body: JSON.stringify(body) },
+    ),
+  deletePurchaseBatch: (id: string) =>
+    request<void>(
+      `/admin/pricing/purchase-batches/${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+    ),
 
   // Model-override admin surface (migration 015).
   listModelOverrides: () =>

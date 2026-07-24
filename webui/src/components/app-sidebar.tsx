@@ -14,6 +14,7 @@ import {
   IconChartBar,
   IconClipboardList,
   IconClockHour5,
+  IconCurrencyDollar,
   IconDashboard,
   IconKey,
   IconLogout,
@@ -68,6 +69,7 @@ const observability: NavEntry[] = [
   { titleKey: "nav.jobs", to: "/jobs", icon: IconClipboardList },
   { titleKey: "nav.usage", to: "/usage", icon: IconChartBar },
   { titleKey: "nav.models", to: "/models", icon: IconBox },
+  { titleKey: "nav.pricing", to: "/pricing", icon: IconCurrencyDollar },
   { titleKey: "nav.audit", to: "/audit", icon: IconClockHour5 },
 ];
 

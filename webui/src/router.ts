@@ -9,6 +9,9 @@ import { playgroundRoute } from "@/routes/playground";
 import { jobsRoute } from "@/routes/jobs";
 import { usageRoute } from "@/routes/usage";
 import { modelsRoute } from "@/routes/models";
+import { pricingRoute } from "@/routes/pricing";
+import { pricingFloorSuggestionsRoute } from "@/routes/pricing-floor-suggestions";
+import { pricingPurchaseBatchesRoute } from "@/routes/pricing-purchase-batches";
 import { auditRoute } from "@/routes/audit";
 import { registrationsRoute } from "@/routes/registrations";
 import { cpaPluginRoute } from "@/routes/cpaplugin";
@@ -26,6 +29,9 @@ const routeTree = rootRoute.addChildren([
   jobsRoute,
   usageRoute,
   modelsRoute,
+  pricingRoute,
+  pricingFloorSuggestionsRoute,
+  pricingPurchaseBatchesRoute,
   auditRoute,
   registrationsRoute,
   cpaPluginRoute,

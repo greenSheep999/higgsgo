@@ -17,8 +17,14 @@ import {
   IconReload,
 } from "@tabler/icons-react";
 
-import { admin, ApiError, type Group, type PublicModel } from "@/lib/api";
+import {
+  admin,
+  ApiError,
+  type Group,
+  type PublicModel,
+} from "@/lib/api";
 import { rootRoute } from "@/routes/root";
+import { PricingMatrixTable } from "@/components/pricing/matrix-table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
@@ -584,7 +590,10 @@ function Models() {
         open={detailRow !== null}
         onOpenChange={(open) => !open && setDetailAlias(null)}
       >
-        <SheetContent side="right" className="w-full sm:max-w-lg">
+        <SheetContent
+          side="right"
+          className="w-full sm:w-[min(92vw,64rem)] sm:max-w-5xl"
+        >
           {detailRow ? (
             <ModelDetail
               model={detailRow.model}
@@ -990,6 +999,13 @@ function ModelDetail({
   onTestInPlayground: () => void;
 }) {
   const { t } = useTranslation();
+
+  const pricingQuery = useQuery({
+    queryKey: ["admin", "model-pricing-matrix", model.id],
+    queryFn: () => admin.getModelPricingMatrix(model.id),
+    staleTime: 60_000,
+    retry: false,
+  });
   return (
     <>
       <SheetHeader>
@@ -1098,6 +1114,19 @@ function ModelDetail({
               })}
             </div>
           ) : null}
+        </div>
+
+        <Separator />
+
+        <div>
+          <h4 className="mb-3 text-xs font-bold uppercase tracking-wide text-muted-foreground">
+            {t("models.pricingMatrix.title", { defaultValue: "Price matrix" })}
+          </h4>
+          <PricingMatrixTable
+            rows={pricingQuery.data?.rows ?? []}
+            loading={pricingQuery.isLoading}
+            failed={pricingQuery.isError}
+          />
         </div>
 
         <Separator />
@@ -1251,6 +1280,10 @@ function ModelDetail({
   );
 }
 
+// PricingMatrixTable has moved to @/components/pricing/matrix-table so the
+// standalone Pricing page and this Sheet can share the same rendering
+// path. See imports at the top of this file.
+
 // formatExampleBody pretty-prints a JSON string. If the payload isn't
 // valid JSON we render it verbatim so a legacy string / mis-recorded
 // body still lands on the sheet instead of throwing.
@@ -1289,4 +1322,3 @@ export const modelsRoute = createRoute({
   staticData: { titleKey: "nav.models" },
   component: Models,
 });
-
