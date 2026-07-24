@@ -199,7 +199,7 @@ min_level = "info"
 # [[notifiers]]
 # type = "slack"
 # [notifiers.slack]
-# webhook = "https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+# webhook = "<paste your slack incoming-webhook URL>"
 
 [observability]
 log_level    = "info"
