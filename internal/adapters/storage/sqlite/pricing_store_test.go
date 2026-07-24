@@ -128,17 +128,23 @@ func TestPricingStore_PricingMatrixSources(t *testing.T) {
 	if err != nil {
 		t.Fatalf("ListOfficialPrices: %v", err)
 	}
-	if len(official) != 8 {
-		t.Fatalf("kling-3 official rows = %d, want 8", len(official))
+	// 12 rows = 8 INTL (from migration 029 verified Kling scrape) + 4 CN
+	// (from migration 030's provider price backfill, CNY-derived estimates).
+	// If either migration grows more variants, update this expectation.
+	if len(official) != 12 {
+		t.Fatalf("kling-3 official rows = %d, want 12", len(official))
 	}
-	var rowFound bool
+	// The canonical INTL 1080p × audio=on tuple ($0.168/s) MUST be
+	// present — that's the reference row downstream front-end pins its
+	// discount badge to.
+	var intlAnchor bool
 	for _, price := range official {
-		if price.Resolution == "1080p" && price.Audio == "on" {
-			rowFound = price.Unit == "per_second" && price.PriceMicros == 168000
+		if price.Region == "intl" && price.Resolution == "1080p" && price.Audio == "on" {
+			intlAnchor = price.Unit == "per_second" && price.PriceMicros == 168000
 		}
 	}
-	if !rowFound {
-		t.Fatalf("1080p audio-on official price missing: %+v", official)
+	if !intlAnchor {
+		t.Fatalf("INTL 1080p audio-on anchor missing: %+v", official)
 	}
 
 	decisions, err := store.ListPriceDecisions(ctx, "kling-3")
