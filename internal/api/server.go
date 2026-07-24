@@ -280,14 +280,20 @@ func (s *Server) publicRouter() http.Handler {
 				r.Post("/execute", s.V1.HandlePlaygroundExecute)
 			})
 		})
-		// /api/pricing/official-api is the downstream "official
-		// provider prices" feed from PRICING-DOWNSTREAM-CONTRACT §6.4.
-		// Mounted on the public listener behind the same sk-hg-* API
-		// key check as /v1/*: new-api-side model-price-adapter is
-		// trusted infra, but the endpoint is not truly public.
-		// Kept outside the /v1 group intentionally — the contract
-		// nails the URL to /api/pricing/*, and mixing paths through a
-		// rewrite proxy would only hide the split.
+		// /api/pricing is the downstream official-price aggregator
+		// (post-2026-07-24 semantics flip; see contract §6.2). new-api's
+		// controller/ratio_sync.go consumes this URL exactly like it
+		// consumes the built-in basellm.github.io / models.dev presets:
+		// the numbers land in the operator's `model_price` field, which
+		// then multiplies by group_ratio to derive the customer price.
+		//
+		// We are the source of truth for provider pages the public
+		// presets don't scrape (Kuaishou Kling / Higgs self / most
+		// audio+video providers).
+		//
+		// A prior /api/pricing/official-api endpoint existed on this
+		// listener — it has been retired. Internal Admin UI queries
+		// official_price_observations directly.
 		r.Route("/api", func(r chi.Router) {
 			r.Group(func(r chi.Router) {
 				if s.APIKeys != nil {
@@ -299,13 +305,7 @@ func (s *Server) publicRouter() http.Handler {
 					Logger: s.Logger,
 				}
 				r.Use(rl.Middleware)
-				// GET /api/pricing serves the downstream billing feed
-				// (contract §6.2). new-api's controller/ratio_sync.go
-				// consumes this directly; DSL rows expand at request
-				// time. GET /api/pricing/official-api is the sibling
-				// market-data feed (§6.4). Both live under /api/pricing/*.
 				r.Get("/pricing", s.V1.HandleDownstreamPricing)
-				r.Get("/pricing/official-api", s.V1.HandleOfficialAPIPricing)
 			})
 		})
 	}

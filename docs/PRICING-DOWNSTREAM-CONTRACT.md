@@ -1,9 +1,16 @@
 # Pricing Downstream Contract
 
-> Status: draft, revised 2026-07-23 after new-api review. Field spec
+> Status: revised 2026-07-24 after semantics-flip review. Field spec
 > that new-api (and any other downstream consumer) MUST follow when
 > reading pricing from higgsgo. Complements `PRICING-SOURCE-OF-TRUTH.md`,
 > which describes the internal storage and layer semantics.
+>
+> **2026-07-24 semantics flip**: `/api/pricing` is now an aggregator of
+> **provider-official prices** (analogous to new-api's built-in
+> `basellm.github.io` and `models.dev` presets). Prior drafts of this
+> contract had the endpoint publishing higgsgo's own retail prices;
+> that was wrong. See §6.2 for current semantics. `/api/pricing/official-api`
+> has been retired.
 
 ## 1. Scope
 
@@ -13,12 +20,13 @@ downstream**. It fixes:
 - the set of dimension fields that identify a priceable variant,
 - which field is the primary billing tier,
 - how empty dimensions are interpreted,
-- the JSON shape published to downstream (compact) and the richer shape
-  the operator UI consumes (admin-only),
+- the JSON shape published to downstream at `/api/pricing`,
 - the `billing_expr` DSL new-api uses to route requests to a tier,
-- the split between the billing feed (§6.2) and the official-provider
-  price feed (§6.4),
-- the retail-anchor pricing rule higgsgo enforces server-side (§10).
+- the operator-override mechanism (§6.3) that lets higgsgo publish a
+  price different from the raw provider page,
+- higgsgo's INTERNAL retail-target concept (§10), which is not part of
+  the wire contract — it is a decision-support tool that lives entirely
+  on our side and never crosses the wire.
 
 Downstream consumers key off the fields defined here. If higgsgo needs a
 new dimension (e.g. `style`, `voice_id`), it will be added to this
@@ -355,32 +363,54 @@ Current shape (unchanged). `pricing_scope=upstream_credits_only`.
 Downstream MUST NOT use this to derive a sell price — it is the raw
 input layer, not the published-price layer.
 
-### 6.2 `GET /api/pricing` (downstream feed, new-api compatible)
+### 6.2 `GET /api/pricing` (provider-official-price aggregator)
 
 Returns the shape from §3.1. Compatible with new-api's existing
 `controller/ratio_sync.go` `PricingItem` decoder — no schema changes on
 the new-api side required.
 
-**Semantics: retail anchor for downstream's list-price field.** The
-`fixed_micros` higgsgo emits here is the **retail price at the default
-1× ratio** — this is the value new-api (or any equivalent downstream)
-plugs directly into its `model_pricing` / list-price field. It carries
-our internally-decided margin over Higgs cost (see §10) and MUST NOT
-be interpreted as either a promotional price or a wholesale cost.
+**Semantics: provider-official-price aggregator.** The `fixed_micros`
+higgsgo emits here is the **provider's published API price** for that
+variant — same category of data as the built-in `basellm.github.io`
+preset (`OFFICIAL_CHANNEL_ENDPOINT`) and `models.dev` preset that
+new-api's `upstream-ratio-sync` UI already exposes. higgsgo exists as
+a third preset URL because those two sources don't cover most audio /
+video provider pages (Kuaishou Kling, Kuaishou Kolors, Higgs self,
+Runway, Luma, Pika, and everything else we hand-maintain in
+`higgsfield-register/docs/raw-pricing/`).
 
-Group / tier ratios on the downstream side are **out of higgsgo's
-scope**. Whatever the downstream operator configures — 0.3× loss-leader
-group, 1.5× premium group, anything in between — higgsgo does not see,
-validate, constrain, or care. The actual customer charge is
-`fixed_micros × group_ratio`, computed entirely downstream.
+Downstream consumes this exactly like the other presets: the numbers
+land in the operator's `model_price` field, and the operator's
+`group_ratio` multiplies over it to derive the customer charge:
 
-Discount % is a **derived value**, not a wire field. If downstream
-wants to render "N% off" anywhere in its UI, it computes it locally
-from the data it already has (`(fixed_micros × group_ratio) ÷
-official_api_price_micros`, or any other basis it chooses). higgsgo
-never emits a `discount`, `savings`, `discount_percent`, or comparable
-derived field, in this endpoint or in `/api/pricing/official-api`.
-Adding one is explicitly out of scope (§9).
+```
+customer_charge = fixed_micros × group_ratio
+```
+
+`group_ratio` (loss-leader / premium / anything in between) is
+configured entirely on the downstream side. higgsgo does not see it,
+validate it, or care.
+
+**Operator overrides**: a higgsgo operator MAY choose to publish a
+value different from the raw provider page when the raw × downstream's
+typical group_ratio would produce a customer price too low to sustain
+(§10). In that case a `model_price_decisions` row for the same
+`(alias, resolution, audio, mode, unit)` tuple wins over the raw
+observation. The overridden value is still shaped as
+`fixed_micros` — downstream cannot tell whether it came from the raw
+Kling page or a higgsgo back-solve, and does not need to.
+
+**Estimated (region-derived) prices excluded**: raw-pricing rows
+flagged `estimated=true` (typically `-cn.md` rows derived by currency
+conversion from the `-intl.md` page) never appear in this feed.
+Downstream sees them only through the internal admin UI.
+
+Discount % / savings % / retail-anchor comparisons are **derived
+values**, not wire fields. If downstream wants to render "N% off"
+anywhere, it computes it locally against whatever baseline it prefers
+(basellm preset, models.dev preset, or its own historical prices).
+higgsgo never emits `discount`, `savings`, `discount_percent`, or
+comparable derived fields. Adding one is explicitly out of scope (§9).
 
 DSL grammar (v1, implicit — no `v1:` prefix, because
 `PricingItem.BillingExpr` is a plain string and prefixing would break
@@ -424,118 +454,21 @@ part of the downstream contract; it is an operator tool. Field names
 overlap with §3.2 but the semantics differ (it exposes cost inputs and
 operator rationale, not sell prices).
 
-### 6.4 `GET /api/pricing/official-api` (official provider prices, informational)
+### 6.4 `GET /api/pricing/official-api` (RETIRED 2026-07-24)
 
-Separate endpoint that publishes third-party provider list prices —
-the raw official / public API price each model would cost if the
-customer went to the provider directly. Purely a data pipe: higgsgo
-records what it sees on providers' public pricing pages and forwards
-it unmodified.
+**Retired.** Prior versions of this contract exposed a separate
+endpoint that shipped raw provider references (a `data[].references[]`
+array). It was removed after the 2026-07-24 semantics review: the raw
+provider prices it published are now served directly by §6.2 in a
+shape new-api's existing `ratio_sync.go` already consumes, so a
+second endpoint just duplicates the pipe. Consumers that were
+polling `/api/pricing/official-api` should switch to `/api/pricing`.
 
-What downstream does with it is downstream's business. Concretely,
-new-api uses it as the source for its model-price-adapter (the
-"official reference" column of its model catalog); any UI, discount,
-or comparison rendering is derived downstream from this raw value and
-higgsgo takes no position on the framing.
+Internal admin views (comparison of raw observation vs operator
+override, retail-target back-solve) query `official_price_observations`
+directly on the admin listener — the data still exists, it just isn't
+shipped as a distinct public feed.
 
-Distinct from §6.2:
-
-- §6.2 (`/api/pricing`) is the **billing feed**. Downstream writes it
-  into its `model_pricing` list-price field. High frequency.
-- §6.4 (`/api/pricing/official-api`) is the **official-price feed**.
-  Raw provider prices, no derived fields. Low frequency.
-
-**Auth**: both endpoints today accept `Authorization: Bearer sk-hg-<key>`
-(user API keys, same middleware as `/v1/*`). This is a **provisional**
-choice for shipping the first integration; new-api's sync worker should
-use a **dedicated operator key** minted specifically for infra-to-infra
-calls, not a rotating user key. When higgsgo grows a distinct
-"operator-scope" API key type (tracked separately from consumer
-`sk-hg-*` keys), this endpoint will move to it and the user-key path
-will be deprecated with a coordinated deploy. Until then, consumers
-SHOULD provision one dedicated `sk-hg-*` key per downstream
-integration (never share with user traffic) so it can be rotated
-independently.
-
-Wired independently, the two syncs mirror new-api's existing
-`ratio_sync` vs. `model_list_sync` split: billing MUST stay simple and
-fast; the official-price feed is cacheable, independently failable, and
-never on the request path. If `/api/pricing/official-api` is stale or
-5xx, billing continues undisturbed — the downstream consumer just
-doesn't have the reference data for that window.
-
-Shape:
-
-```json
-{
-  "success": true,
-  "generated_at": "2026-07-23T10:00:00Z",
-  "data": [
-    {
-      "model_name": "kling-3",
-      "jst": "kling3_0",
-      "references": [
-        {
-          "provider": "Kling Official",
-          "resolution": "1080p",
-          "audio": "on",
-          "mode": "",
-          "unit": "per_second",
-          "duration_seconds": 0,
-          "amount_micros": 168000,
-          "currency": "USD",
-          "source_url": "https://docs.kling.com/pricing",
-          "observed_at": "2026-07-20T00:00:00Z"
-        },
-        {
-          "provider": "Kling Official",
-          "resolution": "720p",
-          "audio": "on",
-          "mode": "",
-          "unit": "per_second",
-          "duration_seconds": 0,
-          "amount_micros": 126000,
-          "currency": "USD",
-          "source_url": "https://docs.kling.com/pricing",
-          "observed_at": "2026-07-20T00:00:00Z"
-        }
-      ]
-    }
-  ]
-}
-```
-
-Rules:
-
-- Each entry is keyed by the same `(resolution, audio, mode, unit,
-  duration_seconds)` tuple as §3.2 so downstream can join it against
-  `/api/pricing` tiers with a straight tuple compare.
-- `amount_micros` is USD × 1e6, integer — same convention as §3.
-- Multiple `provider` entries per model are allowed (Kling official +
-  Kuaishou reseller + our internal Higgs estimate, if we ever want to
-  publish it). Downstream is expected to pick which to display.
-- `observed_at` is the timestamp we captured the provider's public
-  price. Downstream SHOULD show a "last verified {n} days ago" note
-  and treat entries older than 90 days as stale.
-- Models with zero references are omitted from `data`. This applies
-  both to the initial case (a model that has never had a reference) AND
-  the transition case (a model that used to have references and now has
-  none, e.g. after purging fabricated seed rows). Higgs never emits
-  `references: []` — the entire model entry drops out of `data`.
-  Downstream is expected to fully replace its in-memory reference map
-  on every sync (not merge-append), so a model that disappears from
-  `data` naturally clears from the consumer without an explicit
-  delete-tombstone signal. This mirrors the ratio_sync semantics on
-  `/api/pricing`.
-- `observed_at` is RFC 3339 in UTC and MUST be a real timestamp — the
-  moment the operator captured the provider's page (scrape time),
-  imported the batch, or hand-entered the value. Higgs never emits a
-  Go zero value (`0001-01-01T00:00:00Z`); downstream may reject
-  responses that carry one.
-- Cache-friendly: this endpoint changes only when the operator imports
-  a new `official_price_observations` batch. Downstream may cache
-  aggressively (recommend 6-24 h TTL, matching our own
-  `Cache-Control: public, max-age=21600` header).
 
 ## 7. Lifecycle
 
@@ -622,20 +555,51 @@ Every downstream row MAY carry a `lifecycle` object at the model level
   decision made downstream, not a pricing-config decision made by
   higgsgo.
 
-## 10. Retail Pricing Rule (higgs-internal)
+## 10. Retail-Target Rule (higgs-internal, NOT a wire concept)
 
-This section is normative for the operator UI and for anyone importing
-`model_price_decisions` via script. It is informational for downstream:
-downstream reads the resulting `fixed_micros` — it does not need to
-re-check the floor.
+**Not part of the downstream contract.** This section describes an
+internal higgsgo tool that helps the operator decide when to publish
+an `override` value on §6.2 instead of the raw provider price. The
+resulting override still ships as a plain `fixed_micros` (§6.2) —
+downstream sees no evidence the number came from this rule vs a raw
+scrape, and does not need to.
 
-**Rule**: for every priced variant,
+**Setup**: for each priced variant, the operator maintains an
+internal **retail target** (`model_price_decisions.target_retail_micros`)
+— what higgsgo wants a typical customer to actually pay, on a typical
+downstream `group_ratio`. This target is decision-support only; it
+never crosses the wire.
+
+**Rule** (advisory, on the target itself, in higgs_cost markup terms):
 
 ```
-retail_price ≥ higgs_cost × 1.8         (soft floor, cost markup ≥ 80%)
-retail_price ≈ higgs_cost × 1.9-2.0     (recommended, cost markup 90-100%)
-retail_price <  higgs_cost × 1.8        (accepted with warning; ops alert)
+target_retail ≥ higgs_cost × 1.8         (soft floor, cost markup ≥ 80%)
+target_retail ≈ higgs_cost × 1.9-2.0     (recommended, cost markup 90-100%)
+target_retail <  higgs_cost × 1.8        (accepted with warning; ops alert)
 ```
+
+**Back-solve** (how the target drives the §6.2 override): the operator
+UI shows
+
+```
+projected_customer_charge = official_price × assumed_group_ratio
+```
+
+using the raw provider price and an operator-supplied
+`assumed_group_ratio` (what we think downstream will actually set for
+its main consumer group — 1.5×, 2.0×, whatever). When
+`projected_customer_charge < target_retail`, the raw price is too
+cheap: multiplying by the group ratio still lands below where we want.
+The operator publishes an override so that
+
+```
+override_price × assumed_group_ratio ≥ target_retail
+```
+
+That override becomes the `fixed_micros` for that tuple in §6.2. Yes,
+this means the number higgsgo publishes may be **higher** than the raw
+provider page — that is the correct behavior when we want customers
+to end up above our retail target after the downstream ratio applies.
 
 The floor is **advisory, not enforced**: `POST
 /admin/models/{alias}/pricing-decisions` returns `201 Created` with the
@@ -695,13 +659,14 @@ warnings are returned in the response body and mirrored in the Pricing
 WebUI's EditModal. `docs/OPERATIONS.md` carries the ops-side runbook
 for `retail_below_floor` review cadence.
 
-**Why this floor exists.** The floor protects the *anchor itself*, not
-the customer's final charge. Downstream group ratios can (and will) go
-in both directions — some groups will bill above retail, some below.
-Those are downstream business decisions and out of scope here (§9). By
-locking retail ≥ 1.8× Higgs cost, higgsgo guarantees only one thing:
-the wire value it publishes is provably above its own cost basis. That
-is what makes the number safe to use as an anchor at all. What each
-downstream group does with the anchor after multiplying its own ratio
-is not something higgsgo needs to gate or reason about.
+**Why the target lives internally.** The retail target is a business
+decision that mixes higgs_cost, competitor pricing, capacity, and
+promo intent. It does not belong on the wire — a downstream reading
+"our retail target is $X" would misread it as either a required floor
+(which higgsgo cannot enforce across a downstream operator's group
+ratios) or a discount anchor (which downstream is free to compute
+against any baseline it wants). Keeping the target on the internal
+admin surface, and only ever letting it move the wire number
+indirectly via §6.2 overrides, keeps the wire contract clean while
+still letting higgsgo enforce the economics of its own pool.
 

@@ -24,15 +24,10 @@ func TestDumpWireResponse(t *testing.T) {
 		t.Skip("set HIGGSGO_DUMP_WIRE=1 to write /tmp/higgsgo-wire-*.json")
 	}
 
-	// Real Kling-3 decisions as we'd emit them once operator approves
-	// the intl pricing (contract §3.1 expects sell prices, not raw
-	// observations — this endpoint is the billing feed).
-	decisions := []domain.ModelPriceDecision{
-		{ModelAlias: "kling-3", Unit: "per_second", PriceMicros: 250000, Resolution: "720p", Audio: "off", DurationSeconds: 5},
-		{ModelAlias: "kling-3", Unit: "per_second", PriceMicros: 380000, Resolution: "720p", Audio: "on", DurationSeconds: 5},
-		{ModelAlias: "kling-3", Unit: "per_second", PriceMicros: 340000, Resolution: "1080p", Audio: "off", DurationSeconds: 5},
-		{ModelAlias: "kling-3", Unit: "per_second", PriceMicros: 500000, Resolution: "1080p", Audio: "on", DurationSeconds: 5},
-	}
+	// No overrides in the baseline fixture: observations flow through
+	// unchanged. Populate `decisions` when we want to show an operator
+	// back-solve replacing a specific tuple.
+	decisions := []domain.ModelPriceDecision{}
 	// Fixed observed_at so the emitted /tmp fixture is diff-stable and
 	// matches what migration 029 seeds. Real production data comes from
 	// operator scrapes / imports with real timestamps; never zero.
@@ -54,15 +49,13 @@ func TestDumpWireResponse(t *testing.T) {
 
 	h := &Handler{Pricing: &wireStubStore{decisions: decisions, obs: obs}}
 
-	// /api/pricing (downstream billing feed)
+	// /api/pricing serves the aggregated provider-official prices
+	// (post-flip semantics). new-api's ratio_sync.go consumes this
+	// exactly like the basellm / models.dev presets — the numbers land
+	// in the operator's model_price field, group_ratio applies later.
 	rec := httptest.NewRecorder()
 	h.HandleDownstreamPricing(rec, httptest.NewRequest(http.MethodGet, "/api/pricing", nil))
 	writeWireFixture(t, "/tmp/higgsgo-wire-api-pricing.json", rec)
-
-	// /api/pricing/official-api (reference market data)
-	rec = httptest.NewRecorder()
-	h.HandleOfficialAPIPricing(rec, httptest.NewRequest(http.MethodGet, "/api/pricing/official-api", nil))
-	writeWireFixture(t, "/tmp/higgsgo-wire-official-api.json", rec)
 
 	// /api/pricing?model=kling-3 for filter sanity check
 	rec = httptest.NewRecorder()

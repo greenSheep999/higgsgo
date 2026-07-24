@@ -12,50 +12,75 @@ import (
 
 // HandleDownstreamPricing serves GET /api/pricing.
 //
-// Contract §6.2: the downstream feed new-api's ratio_sync.go consumes.
-// One row per Higgs alias that has ≥1 priced variant; each row carries a
-// billing_expr DSL string that new-api's parser resolves at request time
-// to the tier matching (resolution, audio, mode). Fields:
+// Contract §6.2 (post-2026-07-24 semantics flip): this endpoint is an
+// AGGREGATOR of provider-public "official API" prices. Downstream
+// (new-api's controller/ratio_sync.go) consumes it exactly like it
+// consumes the built-in "basellm.github.io" or "models.dev" presets:
+// the numbers land in the operator's `model_price` field, which is
+// then multiplied by group_ratio to derive the customer-facing price.
+//
+// higgsgo is the source of truth here because higgsfield-register/
+// docs/raw-pricing/ maintains hand-verified provider pages that the
+// public presets don't cover (Kuaishou Kling, Kuaishou Kolors, Higgs
+// self, etc. — especially audio/video pricing which basellm and
+// models.dev do not scrape).
+//
+// A higgsgo operator MAY override an entry via model_price_decisions
+// when we want the downstream `model_price` to be different from the
+// raw official page — the typical case being "back-solve so that
+// group_ratio × model_price ≥ our internal retail target". Such
+// overrides are picked over the raw observation for the same
+// (alias, resolution, audio, mode) tuple.
+//
+// Fields on each data[] row:
 //
 //	model_name   — Higgs public alias
-//	quota_type   — always 2 (tiered_expr; no quota_type=1 to avoid the
-//	               "per 500K tokens" ambiguity in new-api's model_price)
-//	billing_mode — "tiered_expr"
-//	billing_expr — DSL, see §6.2 grammar
-//	lifecycle    — {"status":"active"} today; §7 will grow deprecation
-//	               and sunset transitions
+//	quota_type   — 2 (tiered_expr) for models with ≥2 tiers, 1 (fixed)
+//	               for text-only single-price models. new-api handles
+//	               both in ratio_sync.go:381-425.
+//	billing_mode — "tiered_expr" when quota_type=2, otherwise omitted
+//	billing_expr — DSL, see §6.2 grammar (quota_type=2 only)
+//	model_price  — flat USD price (quota_type=1 only)
+//	lifecycle    — {"status":"active"} today; §7 grows deprecation edges
 //
-// Wire example for kling-3 (excerpt of contract §3.1):
+// Rows with no priced variant are OMITTED (contract §3.1). Downstream
+// falls back to its own defaults / other preset URLs for them.
 //
-//	has(param("resolution"),"1080p") ?
-//	  tier("1080p · audio=on", 840000, "per_second · duration_seconds=5") :
-//	  has(param("resolution"),"720p") ?
-//	    tier("720p · audio=on", 630000, "per_second · duration_seconds=5") :
-//	    tier("unpriced", 0, "no matching variant")
-//
-// Rows with no decisions are OMITTED (contract §3.1). Aliases with zero
-// priced variants do not appear in `data`; downstream falls back to its
-// own defaults for them.
-//
-// Auth: mounted under `/api/*` next to `/api/pricing/official-api`, so
-// the same sk-hg-* APIKeyAuth applies. This is a trusted-infra endpoint.
+// Auth: sk-hg-* APIKeyAuth (provisional; see §6 auth clarification).
 func (h *Handler) HandleDownstreamPricing(w http.ResponseWriter, r *http.Request) {
 	if h.Pricing == nil {
 		writeError(w, http.StatusServiceUnavailable, "pricing_store_unavailable",
 			"pricing persistence is not configured")
 		return
 	}
-	decisions, err := h.Pricing.ListLatestPriceDecisions(r.Context())
+
+	// Data source 1: raw provider prices from official_price_observations
+	// (fed by operator scrapes of docs/raw-pricing/*.md into migrations
+	// 029+). This is the *default* value emitted downstream.
+	observations, err := h.Pricing.ListAllOfficialPrices(r.Context())
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "pricing_read_failed", err.Error())
 		return
 	}
 
-	// Optional single-alias filter mirrors /v1/pricing and
-	// /api/pricing/official-api. Case-insensitive so callers don't
+	// Data source 2: operator overrides (model_price_decisions).
+	// These represent "back-solved" numbers where higgsgo operator wants
+	// the downstream model_price to differ from the raw official page.
+	// Typical trigger: raw × new-api group_ratio ends up below our
+	// internal retail target (see model_price_decisions.target_retail_*
+	// fields for the intent). When an override exists for an
+	// (alias, resolution, audio, mode) tuple it fully replaces the
+	// observation for that tuple in the emitted feed.
+	overrides, err := h.Pricing.ListLatestPriceDecisions(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "pricing_read_failed", err.Error())
+		return
+	}
+
+	// Optional single-alias filter — case-insensitive so callers don't
 	// have to remember the canonical form.
 	filter := strings.TrimSpace(r.URL.Query().Get("model"))
-	byAlias := groupDecisionsByAlias(decisions, filter)
+	byAlias := mergeObservationsAndOverrides(observations, overrides, filter)
 
 	type item struct {
 		ModelName   string         `json:"model_name"`
@@ -98,23 +123,88 @@ func (h *Handler) HandleDownstreamPricing(w http.ResponseWriter, r *http.Request
 	})
 }
 
-// groupDecisionsByAlias buckets decisions per alias and applies the
-// optional filter. Filter matching mirrors /v1/pricing: exact case-
-// insensitive on the model_alias field. JST-based lookup is left off
-// intentionally — /api/pricing keys downstream on the public alias so
-// letting a caller filter by JST would surface an alias the feed itself
-// exposes under a different name.
-func groupDecisionsByAlias(decisions []domain.ModelPriceDecision, filter string) map[string][]domain.ModelPriceDecision {
-	out := make(map[string][]domain.ModelPriceDecision, 8)
-	for _, d := range decisions {
-		if d.ModelAlias == "" || d.PriceMicros <= 0 {
+// mergeObservationsAndOverrides builds one bucket per alias, keyed by
+// model_alias. For every (resolution, audio, mode) variant the merge
+// prefers a model_price_decisions row over the raw observation for the
+// same tuple (see HandleDownstreamPricing doc for why). Observations
+// with estimated=true (from raw-pricing/*-cn.md derived rows) are
+// dropped here — the downstream feed only publishes prices we captured
+// from an authoritative page.
+//
+// The output shape is the same []domain.ModelPriceDecision the DSL
+// builder already consumes; observation → decision projection lets the
+// existing builder work unchanged whether the row came from a raw scrape
+// or an operator override.
+func mergeObservationsAndOverrides(
+	observations []domain.OfficialPriceObservation,
+	overrides []domain.ModelPriceDecision,
+	filter string,
+) map[string][]domain.ModelPriceDecision {
+	// Index overrides by (alias, resolution, audio, mode, unit) so the
+	// merge in the observations pass can look them up.
+	type overrideKey struct{ alias, res, audio, mode, unit string }
+	overrideByKey := make(map[overrideKey]domain.ModelPriceDecision, len(overrides))
+	overrideSeen := make(map[string]bool, 8) // alias → any override present
+	for _, o := range overrides {
+		if o.ModelAlias == "" || o.PriceMicros <= 0 {
 			continue
 		}
-		if filter != "" && !strings.EqualFold(d.ModelAlias, filter) {
+		if filter != "" && !strings.EqualFold(o.ModelAlias, filter) {
 			continue
 		}
-		out[d.ModelAlias] = append(out[d.ModelAlias], d)
+		overrideByKey[overrideKey{o.ModelAlias, o.Resolution, o.Audio, o.Mode, o.Unit}] = o
+		overrideSeen[o.ModelAlias] = true
 	}
+
+	// Pass 1: emit observations (converted to decisions) unless an
+	// override for the same tuple exists.
+	out := make(map[string][]domain.ModelPriceDecision, 8)
+	tupleTaken := make(map[overrideKey]bool, 8)
+	for _, p := range observations {
+		if p.ModelAlias == "" || p.PriceMicros <= 0 || p.Estimated {
+			continue
+		}
+		if filter != "" && !strings.EqualFold(p.ModelAlias, filter) {
+			continue
+		}
+		k := overrideKey{p.ModelAlias, p.Resolution, p.Audio, p.Mode, p.Unit}
+		if _, ok := overrideByKey[k]; ok {
+			// Override wins — skip this observation, we'll fold in
+			// all overrides for this alias in pass 2.
+			continue
+		}
+		out[p.ModelAlias] = append(out[p.ModelAlias], domain.ModelPriceDecision{
+			ModelAlias:      p.ModelAlias,
+			Unit:            p.Unit,
+			PriceMicros:     p.PriceMicros,
+			Resolution:      p.Resolution,
+			DurationSeconds: p.DurationSeconds,
+			Mode:            p.Mode,
+			Audio:           p.Audio,
+		})
+		tupleTaken[k] = true
+	}
+
+	// Pass 2: fold in every override for aliases that either had no
+	// observations (override-only) or where at least one tuple was
+	// replaced. Overrides always win for their tuple.
+	for _, o := range overrides {
+		if o.ModelAlias == "" || o.PriceMicros <= 0 {
+			continue
+		}
+		if filter != "" && !strings.EqualFold(o.ModelAlias, filter) {
+			continue
+		}
+		k := overrideKey{o.ModelAlias, o.Resolution, o.Audio, o.Mode, o.Unit}
+		if tupleTaken[k] {
+			// Already emitted via observation? Shouldn't happen given
+			// the pass-1 skip logic, but be defensive.
+			continue
+		}
+		out[o.ModelAlias] = append(out[o.ModelAlias], o)
+		tupleTaken[k] = true
+	}
+	_ = overrideSeen // reserved for future "override-only alias" telemetry
 	return out
 }
 

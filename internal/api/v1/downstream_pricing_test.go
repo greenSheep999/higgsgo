@@ -13,14 +13,17 @@ import (
 	"github.com/greensheep999/higgsgo/internal/ports"
 )
 
-// fakeDownstreamPricingStore is a tight fake that only exposes
-// ListLatestPriceDecisions. HandleDownstreamPricing MUST NOT reach for
-// anything else on the store — the embedded nil interface will panic
-// if it does, which is the desired signal in tests.
+// fakeDownstreamPricingStore stubs both ListLatestPriceDecisions
+// (operator overrides) and ListAllOfficialPrices (raw provider prices).
+// Existing tests seed `decisions` — post-semantics-flip these are
+// treated as overrides, i.e. they still land in the downstream feed
+// (override-only path when no observations exist).
 type fakeDownstreamPricingStore struct {
 	ports.PricingStore
-	decisions []domain.ModelPriceDecision
-	err       error
+	decisions    []domain.ModelPriceDecision
+	observations []domain.OfficialPriceObservation
+	err          error
+	obsErr       error
 }
 
 func (f *fakeDownstreamPricingStore) ListLatestPriceDecisions(context.Context) ([]domain.ModelPriceDecision, error) {
@@ -28,6 +31,13 @@ func (f *fakeDownstreamPricingStore) ListLatestPriceDecisions(context.Context) (
 		return nil, f.err
 	}
 	return f.decisions, nil
+}
+
+func (f *fakeDownstreamPricingStore) ListAllOfficialPrices(context.Context) ([]domain.OfficialPriceObservation, error) {
+	if f.obsErr != nil {
+		return nil, f.obsErr
+	}
+	return f.observations, nil
 }
 
 // TestDownstreamPricing_Unavailable exercises the "store not configured"
@@ -312,5 +322,129 @@ func TestDownstreamPricing_DeterministicOrder(t *testing.T) {
 	a, b := pull(), pull()
 	if a != b {
 		t.Fatalf("expr not deterministic:\nA: %s\nB: %s", a, b)
+	}
+}
+
+// TestDownstreamPricing_ObservationsOnly locks in the flipped-semantics
+// contract: /api/pricing serves raw provider prices from
+// official_price_observations when there is no operator override.
+// This is the primary path (basellm/models.dev-style aggregator behavior).
+func TestDownstreamPricing_ObservationsOnly(t *testing.T) {
+	store := &fakeDownstreamPricingStore{
+		observations: []domain.OfficialPriceObservation{
+			{ModelAlias: "kling-3", Provider: "Kuaishou Kling (Intl)", Unit: "per_second",
+				PriceMicros: 84000, Resolution: "720p", Audio: "off", DurationSeconds: 5, Region: "intl"},
+			{ModelAlias: "kling-3", Provider: "Kuaishou Kling (Intl)", Unit: "per_second",
+				PriceMicros: 112000, Resolution: "1080p", Audio: "off", DurationSeconds: 5, Region: "intl"},
+		},
+	}
+	h := &Handler{Pricing: store}
+	rec := httptest.NewRecorder()
+	h.HandleDownstreamPricing(rec, httptest.NewRequest(http.MethodGet, "/api/pricing", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var body struct {
+		Data []struct {
+			ModelName   string `json:"model_name"`
+			BillingExpr string `json:"billing_expr"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(body.Data) != 1 || body.Data[0].ModelName != "kling-3" {
+		t.Fatalf("expected kling-3 row from observations, got %+v", body.Data)
+	}
+	// 720p × 5s = 420_000; 1080p × 5s = 560_000
+	expr := body.Data[0].BillingExpr
+	if !strings.Contains(expr, "420000") || !strings.Contains(expr, "560000") {
+		t.Fatalf("expr missing observation-derived totals: %s", expr)
+	}
+}
+
+// TestDownstreamPricing_OverrideBeatsObservation confirms operator
+// overrides in model_price_decisions replace the raw observation for
+// the same (alias, resolution, audio, mode) tuple. The other tuples
+// on the same alias still flow through from observations.
+func TestDownstreamPricing_OverrideBeatsObservation(t *testing.T) {
+	store := &fakeDownstreamPricingStore{
+		observations: []domain.OfficialPriceObservation{
+			{ModelAlias: "kling-3", Provider: "Kuaishou Kling (Intl)", Unit: "per_second",
+				PriceMicros: 84000, Resolution: "720p", Audio: "off", DurationSeconds: 5},
+			{ModelAlias: "kling-3", Provider: "Kuaishou Kling (Intl)", Unit: "per_second",
+				PriceMicros: 112000, Resolution: "1080p", Audio: "off", DurationSeconds: 5},
+		},
+		decisions: []domain.ModelPriceDecision{
+			// Override just 720p — back-solved to keep retail floor
+			{ModelAlias: "kling-3", Unit: "per_second", PriceMicros: 100000,
+				Resolution: "720p", Audio: "off", DurationSeconds: 5},
+		},
+	}
+	h := &Handler{Pricing: store}
+	rec := httptest.NewRecorder()
+	h.HandleDownstreamPricing(rec, httptest.NewRequest(http.MethodGet, "/api/pricing", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var body struct {
+		Data []struct {
+			BillingExpr string `json:"billing_expr"`
+		} `json:"data"`
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &body)
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 row, got %d", len(body.Data))
+	}
+	expr := body.Data[0].BillingExpr
+	// 720p override: 100000 × 5 = 500_000
+	if !strings.Contains(expr, "500000") {
+		t.Fatalf("expected override 500000 in expr: %s", expr)
+	}
+	// 1080p untouched observation: 112000 × 5 = 560_000
+	if !strings.Contains(expr, "560000") {
+		t.Fatalf("expected untouched observation 560000 in expr: %s", expr)
+	}
+	// Old raw 720p (84000×5=420000) MUST NOT appear — override wins.
+	if strings.Contains(expr, "420000") {
+		t.Fatalf("raw 720p 420000 leaked into expr despite override: %s", expr)
+	}
+}
+
+// TestDownstreamPricing_EstimatedObservationsDropped confirms rows
+// flagged estimated=true (from raw-pricing/*-cn.md derivations) are
+// not published to the downstream feed. Operator can still see them
+// in the internal admin UI, but they don't ship to new-api.
+func TestDownstreamPricing_EstimatedObservationsDropped(t *testing.T) {
+	store := &fakeDownstreamPricingStore{
+		observations: []domain.OfficialPriceObservation{
+			{ModelAlias: "kling-3", Provider: "Kuaishou Kling (CN)", Unit: "per_second",
+				PriceMicros: 600000, Resolution: "720p", Audio: "off", DurationSeconds: 5,
+				Region: "cn", Estimated: true}, // ← should be filtered
+			{ModelAlias: "kling-3", Provider: "Kuaishou Kling (Intl)", Unit: "per_second",
+				PriceMicros: 84000, Resolution: "720p", Audio: "off", DurationSeconds: 5,
+				Region: "intl"},
+		},
+	}
+	h := &Handler{Pricing: store}
+	rec := httptest.NewRecorder()
+	h.HandleDownstreamPricing(rec, httptest.NewRequest(http.MethodGet, "/api/pricing", nil))
+	var body struct {
+		Data []struct {
+			BillingExpr string `json:"billing_expr"`
+		} `json:"data"`
+	}
+	_ = json.Unmarshal(rec.Body.Bytes(), &body)
+	if len(body.Data) != 1 {
+		t.Fatalf("expected 1 row, got %d", len(body.Data))
+	}
+	expr := body.Data[0].BillingExpr
+	// Only the intl (non-estimated) row should be present.
+	if !strings.Contains(expr, "420000") {
+		t.Fatalf("expected intl 420000 in expr: %s", expr)
+	}
+	// The CN estimated row (600000×5=3_000_000) must not appear.
+	if strings.Contains(expr, "3000000") {
+		t.Fatalf("estimated CN row leaked: %s", expr)
 	}
 }
