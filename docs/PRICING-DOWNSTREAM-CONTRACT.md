@@ -445,6 +445,18 @@ Distinct from §6.2:
 - §6.4 (`/api/pricing/official-api`) is the **official-price feed**.
   Raw provider prices, no derived fields. Low frequency.
 
+**Auth**: both endpoints today accept `Authorization: Bearer sk-hg-<key>`
+(user API keys, same middleware as `/v1/*`). This is a **provisional**
+choice for shipping the first integration; new-api's sync worker should
+use a **dedicated operator key** minted specifically for infra-to-infra
+calls, not a rotating user key. When higgsgo grows a distinct
+"operator-scope" API key type (tracked separately from consumer
+`sk-hg-*` keys), this endpoint will move to it and the user-key path
+will be deprecated with a coordinated deploy. Until then, consumers
+SHOULD provision one dedicated `sk-hg-*` key per downstream
+integration (never share with user traffic) so it can be rotated
+independently.
+
 Wired independently, the two syncs mirror new-api's existing
 `ratio_sync` vs. `model_list_sync` split: billing MUST stay simple and
 fast; the official-price feed is cacheable, independently failable, and
@@ -505,10 +517,25 @@ Rules:
 - `observed_at` is the timestamp we captured the provider's public
   price. Downstream SHOULD show a "last verified {n} days ago" note
   and treat entries older than 90 days as stale.
-- Models with zero references are omitted from `data`.
+- Models with zero references are omitted from `data`. This applies
+  both to the initial case (a model that has never had a reference) AND
+  the transition case (a model that used to have references and now has
+  none, e.g. after purging fabricated seed rows). Higgs never emits
+  `references: []` — the entire model entry drops out of `data`.
+  Downstream is expected to fully replace its in-memory reference map
+  on every sync (not merge-append), so a model that disappears from
+  `data` naturally clears from the consumer without an explicit
+  delete-tombstone signal. This mirrors the ratio_sync semantics on
+  `/api/pricing`.
+- `observed_at` is RFC 3339 in UTC and MUST be a real timestamp — the
+  moment the operator captured the provider's page (scrape time),
+  imported the batch, or hand-entered the value. Higgs never emits a
+  Go zero value (`0001-01-01T00:00:00Z`); downstream may reject
+  responses that carry one.
 - Cache-friendly: this endpoint changes only when the operator imports
   a new `official_price_observations` batch. Downstream may cache
-  aggressively (recommend 6-24 h TTL).
+  aggressively (recommend 6-24 h TTL, matching our own
+  `Cache-Control: public, max-age=21600` header).
 
 ## 7. Lifecycle
 

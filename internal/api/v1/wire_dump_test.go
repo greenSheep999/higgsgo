@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/greensheep999/higgsgo/internal/domain"
 	"github.com/greensheep999/higgsgo/internal/ports"
@@ -32,19 +33,23 @@ func TestDumpWireResponse(t *testing.T) {
 		{ModelAlias: "kling-3", Unit: "per_second", PriceMicros: 340000, Resolution: "1080p", Audio: "off", DurationSeconds: 5},
 		{ModelAlias: "kling-3", Unit: "per_second", PriceMicros: 500000, Resolution: "1080p", Audio: "on", DurationSeconds: 5},
 	}
+	// Fixed observed_at so the emitted /tmp fixture is diff-stable and
+	// matches what migration 029 seeds. Real production data comes from
+	// operator scrapes / imports with real timestamps; never zero.
+	scrapedAt := time.Date(2026, 7, 22, 0, 0, 0, 0, time.UTC)
 	obs := []domain.OfficialPriceObservation{
 		{ModelAlias: "kling-3", Provider: "Kuaishou Kling (Intl)", Unit: "per_second",
 			Resolution: "720p", Audio: "off", PriceMicros: 84000, Currency: "USD",
-			SourceURL: "https://kling.ai/dev/pricing", Region: "intl"},
+			SourceURL: "https://kling.ai/dev/pricing", Region: "intl", ObservedAt: scrapedAt},
 		{ModelAlias: "kling-3", Provider: "Kuaishou Kling (Intl)", Unit: "per_second",
 			Resolution: "720p", Audio: "on", PriceMicros: 126000, Currency: "USD",
-			SourceURL: "https://kling.ai/dev/pricing", Region: "intl"},
+			SourceURL: "https://kling.ai/dev/pricing", Region: "intl", ObservedAt: scrapedAt},
 		{ModelAlias: "kling-3", Provider: "Kuaishou Kling (Intl)", Unit: "per_second",
 			Resolution: "1080p", Audio: "off", PriceMicros: 112000, Currency: "USD",
-			SourceURL: "https://kling.ai/dev/pricing", Region: "intl"},
+			SourceURL: "https://kling.ai/dev/pricing", Region: "intl", ObservedAt: scrapedAt},
 		{ModelAlias: "kling-3", Provider: "Kuaishou Kling (Intl)", Unit: "per_second",
 			Resolution: "1080p", Audio: "on", PriceMicros: 168000, Currency: "USD",
-			SourceURL: "https://kling.ai/dev/pricing", Region: "intl"},
+			SourceURL: "https://kling.ai/dev/pricing", Region: "intl", ObservedAt: scrapedAt},
 	}
 
 	h := &Handler{Pricing: &wireStubStore{decisions: decisions, obs: obs}}
